@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>상태 기반 웹 에디터 샘플</title>
+  <style>
+    /* ───────── 기본 에디터 영역 ───────── */
+    #editor {
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-height: 200px;
+      outline: none;
+      position: relative;
+      background: #fff;
+      border-radius: 8px;
+      font-family: "Segoe UI", sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .cursor {
+      width: 2px;
+      background-color: black;
+      position: absolute;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .text-block {
+      height: 24px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .text-block span:empty::before {
+      content: "\200B"; /* zero-width space */
+    }
+
+    /* ───────── 툴바 스타일 ───────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 6px;
+      background-color: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .toolbar button {
+      border: none;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      position: relative;
+    }
+
+    .toolbar button:hover {
+      background: #e2e2e2;
+    }
+
+    .toolbar button.active {
+      background-color: #007bff;
+      color: white;
+    }
+
+    /* ───────── 정렬 버튼 아이콘 ───────── */
+    .align-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 3px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .align-icon div {
+      height: 2px;
+      background: currentColor;
+      border-radius: 1px;
+    }
+
+    .align-left div:nth-child(1) { width: 14px; }
+    .align-left div:nth-child(2) { width: 10px; }
+    .align-left div:nth-child(3) { width: 14px; }
+    .align-left div:nth-child(4) { width: 8px; }
+
+    .align-center { align-items: center; }
+    .align-center div:nth-child(1) { width: 12px; }
+    .align-center div:nth-child(2) { width: 16px; }
+    .align-center div:nth-child(3) { width: 10px; }
+    .align-center div:nth-child(4) { width: 14px; }
+
+    .align-right { align-items: flex-end; }
+    .align-right div:nth-child(1) { width: 8px; }
+    .align-right div:nth-child(2) { width: 12px; }
+    .align-right div:nth-child(3) { width: 14px; }
+    .align-right div:nth-child(4) { width: 10px; }
+  </style>
+</head>
+<body>
+  <div class="editor-container">
+    <div class="toolbar">
+      <!-- 인라인 스타일 버튼 -->
+      <button id="boldBtn" title="굵게"><b>B</b></button>
+      <button id="italicBtn" title="기울이기"><i>I</i></button>
+      <button id="underLineBtn" title="밑줄"><u>U</u></button>
+
+      <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
+
+      <!-- 정렬 버튼 -->
+      <button id="alignLeftBtn" title="왼쪽 정렬">
+        <div class="align-icon align-left">
+          <div></div><div></div><div></div><div></div>
+        </div>
+      </button>
+
+      <button id="alignCenterBtn" title="가운데 정렬">
+        <div class="align-icon align-center">
+          <div></div><div></div><div></div><div></div>
+        </div>
+      </button>
+
+      <button id="alignRightBtn" title="오른쪽 정렬">
+        <div class="align-icon align-right">
+          <div></div><div></div><div></div><div></div>
+        </div>
+      </button>
+    </div>
+
+    <div id="editor" contenteditable="true"></div>
+  </div>
+
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
