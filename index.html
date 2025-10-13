@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  
   <title>상태 기반 웹 에디터 샘플</title>
   <style>
     /* ───────── 기본 에디터 영역 ───────── */
@@ -36,7 +37,7 @@
     }
 
     .text-block span:empty::before {
-      content: "\200B"; /* zero-width space */
+      content: "\200B";
     }
 
     /* ───────── 툴바 스타일 ───────── */
@@ -109,6 +110,63 @@
     .align-right div:nth-child(2) { width: 12px; }
     .align-right div:nth-child(3) { width: 14px; }
     .align-right div:nth-child(4) { width: 10px; }
+
+    /* ───────── 동영상 추가 버튼 아이콘 ───────── */
+    .video-icon {
+      position: relative;
+      width: 16px;
+      height: 12px;
+      background: currentColor;
+      border-radius: 2px;
+    }
+    .video-icon::after {
+      content: "";
+      position: absolute;
+      right: -4px;
+      top: 2px;
+      border-left: 6px solid currentColor;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+    }
+
+    /* ───────── YouTube URL 입력창 ───────── */
+    .video-input-popup {
+      display: none;
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      padding: 10px;
+      z-index: 10;
+      width: 260px;
+    }
+
+    .video-input-popup input {
+      width: calc(100% - 60px);
+      padding: 5px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .video-input-popup button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 13px;
+      margin-left: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .video-input-popup button:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
@@ -138,6 +196,11 @@
         <div class="align-icon align-right">
           <div></div><div></div><div></div><div></div>
         </div>
+      </button>
+
+      <!-- 🎥 동영상 추가 버튼 -->
+      <button id="addVideoBtn" title="동영상 추가">
+        <div class="video-icon"></div>
       </button>
     </div>
 

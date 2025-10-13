@@ -10,6 +10,7 @@ import { bindInputEvent } from './service/editorInputService.js';
 import { bindKeydownEvent } from './service/editorKeyService.js';
 import { bindStyleButtons } from './service/editorStyleService.js';
 import { bindAlignButtons } from './service/editorAlignService.js';
+import { bindVideoButton } from './service/editorVideoService.js'; // 🎥 추가
 
 // ───────── 상태 관리 ─────────
 const app = createEditorApp({
@@ -30,7 +31,7 @@ const rendererRegistry = {
 // ───────── UI 애플리케이션 ─────────
 const ui = createUiApplication({
   rootId: "editor",
-  rendererRegistry // ← 추가
+  rendererRegistry
 });
 
 // ───────── 상태 렌더링 + 커서 복원 ─────────
@@ -41,29 +42,38 @@ function updateAndRestore(newPos) {
 }
 
 // ───────── 버튼 & 이벤트 바인딩 ─────────
-const editorEl = document.getElementById('editor');
-const boldBtn = document.getElementById('boldBtn');
-const italicBtn = document.getElementById('italicBtn');
-const underLineBtn = document.getElementById('underLineBtn');
-const alignLeftBtn = document.getElementById('alignLeftBtn');
+const editorEl       = document.getElementById('editor');
+const boldBtn        = document.getElementById('boldBtn');
+const italicBtn      = document.getElementById('italicBtn');
+const underLineBtn   = document.getElementById('underLineBtn');
+const alignLeftBtn   = document.getElementById('alignLeftBtn');
 const alignCenterBtn = document.getElementById('alignCenterBtn');
-const alignRightBtn = document.getElementById('alignRightBtn');
-
+const alignRightBtn  = document.getElementById('alignRightBtn');
+const videoBtn       = document.getElementById('addVideoBtn'); // 🎥 추가
 
 bindInputEvent(editorEl, app, ui);
 bindKeydownEvent(editorEl, app, ui, updateAndRestore);
 bindStyleButtons(
-    () => app.getState().present.editorState // getEditorState
-  , newState => app.saveEditorState(newState) // saveEditorState
-  , ui
-  , updateAndRestore
-  , { boldBtn, italicBtn, underLineBtn }
+    () => app.getState().present.editorState,   // getEditorState
+    newState => app.saveEditorState(newState), // saveEditorState
+    ui,
+    updateAndRestore,
+    { boldBtn, italicBtn, underLineBtn }
 );
 bindAlignButtons(app, ui, updateAndRestore, {
   leftBtn: alignLeftBtn,
   centerBtn: alignCenterBtn,
   rightBtn: alignRightBtn
 });
+
+// 🎥 동영상 추가 버튼 바인딩
+bindVideoButton(
+  videoBtn,
+  () => app.getState().present.editorState,   // getEditorState
+  newState => app.saveEditorState(newState),  // saveEditorState
+  ui,
+  updateAndRestore
+);
 
 // ───────── 초기 렌더링 ─────────
 updateAndRestore({ lineIndex: 0, offset: 0 });
