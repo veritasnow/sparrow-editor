@@ -26,8 +26,48 @@ export function createRenderService(rendererRegistry) {
       if (editorEl.children.length === 0) {
         const firstP = document.createElement("p");
         firstP.className = "text-block";
-        firstP.dataset.lineIndex = 0;
         editorEl.appendChild(firstP);
+      }
+    },
+
+    renderLine(editorId, lineIndex, lineData) {
+      const editorEl = document.getElementById(editorId);
+      const existingP = editorEl.children[lineIndex];
+      const p = existingP || document.createElement("p");
+      if (!existingP) editorEl.appendChild(p);
+
+      p.className = "text-block";
+      p.style.textAlign = lineData.align || "left";
+      p.innerHTML = "";
+
+      if (!lineData.chunks || lineData.chunks.length === 0 || (lineData.chunks.length === 1 && lineData.chunks[0].text === "")) {
+        // 내용 없는 줄 → <br>
+        p.appendChild(document.createElement("br"));
+      } else {
+        lineData.chunks.forEach(chunk => {
+          const renderer = rendererRegistry[chunk.type];
+          if (renderer && typeof renderer.render === "function") {
+            const el = renderer.render(chunk);
+            p.appendChild(el);
+          }
+        });
+      }
+    },
+
+    // ────────── 새 함수: 기존 줄 뒤 DOM 밀기 ──────────
+    shiftLinesDown(editorId, fromIndex) {
+      const editorEl = document.getElementById(editorId);
+      const children = Array.from(editorEl.children);
+
+      // 새 줄 바로 뒤부터 이동
+      for (let i = children.length - 1; i >= fromIndex; i--) {
+        const line = children[i];
+        const nextSibling = line.nextSibling; // 현재 줄 다음 형제
+        if (nextSibling) {
+          editorEl.insertBefore(line, nextSibling.nextSibling);
+        } else {
+          editorEl.appendChild(line);
+        }
       }
     }
   };
@@ -37,10 +77,9 @@ function syncParagraphCount(editorEl, state) {
   const lines = Array.from(editorEl.children);
   if (state.length > lines.length) {
     const newLines = state.slice(lines.length);
-    newLines.forEach((_, idx) => {
+    newLines.forEach(() => {
       const p = document.createElement("p");
       p.className = "text-block";
-      p.dataset.lineIndex = lines.length + idx;
       editorEl.appendChild(p);
     });
   } else if (state.length < lines.length) {
@@ -49,3 +88,4 @@ function syncParagraphCount(editorEl, state) {
     }
   }
 }
+

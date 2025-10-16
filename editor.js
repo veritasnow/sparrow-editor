@@ -52,7 +52,7 @@ const alignRightBtn  = document.getElementById('alignRightBtn');
 const videoBtn       = document.getElementById('addVideoBtn'); // 🎥 추가
 
 bindInputEvent(editorEl, app, ui);
-bindKeydownEvent(editorEl, app, ui, updateAndRestore);
+bindKeydownEvent(editorEl, app, ui);
 bindStyleButtons(
     () => app.getState().present.editorState,   // getEditorState
     newState => app.saveEditorState(newState), // saveEditorState
@@ -71,7 +71,6 @@ bindVideoButton(
   videoBtn,
   () => app.getState().present.editorState,   // getEditorState
   newState => app.saveEditorState(newState),  // saveEditorState
-  ui,
   updateAndRestore
 );
 

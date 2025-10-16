@@ -10,6 +10,7 @@
       border: 1px solid #ccc;
       padding: 10px;
       min-height: 200px;
+      height: 500px;
       outline: none;
       position: relative;
       background: #fff;
@@ -17,6 +18,29 @@
       font-family: "Segoe UI", sans-serif;
       font-size: 15px;
       line-height: 1.5;
+
+      /* 👇 추가 */
+      overflow-y: auto;     /* 세로 스크롤 자동 생성 */
+      overflow-x: hidden;   /* 가로 스크롤은 숨김 */
+      scrollbar-width: thin; /* (선택) 파이어폭스용 얇은 스크롤바 */
+    }
+      
+    /* 에디터 안에 있는 영상 wrapper 공통 스타일 */
+    #editor .video-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
+    }
+
+    #editor .video-wrapper iframe {
+      border-radius: 8px;
+      display: inline-block;
+      border: none;
+    }
+
+    /* 영상도 선택 불가로 (커서 방해 방지) */
+    #editor .video-wrapper iframe {
+      pointer-events: none;
     }
 
     .cursor {
@@ -31,13 +55,13 @@
     }
 
     .text-block {
-      height: 24px;
+      min-height: 24px;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
 
-    .text-block span:empty::before {
-      content: "\200B";
+    .text-block span{
+      height: 24px;
     }
 
     /* ───────── 툴바 스타일 ───────── */

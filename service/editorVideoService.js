@@ -1,7 +1,7 @@
 /**
  * 🎥 유튜브 버튼 이벤트 바인딩
  */
-export function bindVideoButton(videoBtn, getEditorState, saveEditorState, ui, updateAndRestore) {
+export function bindVideoButton(videoBtn, getEditorState, saveEditorState, updateAndRestore) {
     const toolbar = document.querySelector('.toolbar');
 
     let popup = document.querySelector('.video-input-popup');

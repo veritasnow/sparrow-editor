@@ -6,9 +6,13 @@ export function createUiApplication({ rootId, rendererRegistry }) {
   const selectionService = createSelectionService({ root: document.getElementById(rootId) });
 
   return {
-    // 렌더링    
+    // 기존
     render: (editorState) => renderService.render(editorState, rootId),
+    renderLine: (rootId, lineIndex, lineData) => renderService.renderLine(rootId, lineIndex, lineData),
     ensureFirstLine: () => renderService.ensureFirstLineP(rootId),
+
+    // 새로 추가
+    shiftLinesDown: (fromIndex) => renderService.shiftLinesDown(rootId, fromIndex),
 
     // 선택 영역
     getSelectionRangesInState: (editorState) => selectionService.getSelectionRangesInState(editorState),

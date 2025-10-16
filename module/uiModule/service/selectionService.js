@@ -6,6 +6,22 @@ export function createSelectionService({ root }) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return 0;
 
+    let el = sel.anchorNode.nodeType === Node.TEXT_NODE
+      ? sel.anchorNode.parentElement
+      : sel.anchorNode;
+
+    while (el && el !== root) {
+      if (el.tagName === 'P') return Array.from(root.childNodes).indexOf(el);
+      el = el.parentElement;
+    }
+
+    return 0;
+  }
+  /*
+  function getCurrentLineIndex() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return 0;
+
     let el = sel.anchorNode;
     if (el.nodeType === Node.TEXT_NODE) el = el.parentElement;
 
@@ -21,6 +37,7 @@ export function createSelectionService({ root }) {
 
     return 0;
   }
+  */
 
   // 현재 커서 위치를 lineIndex + offset 형태로 반환
   function getSelectionPosition() {
