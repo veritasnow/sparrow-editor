@@ -63,6 +63,38 @@ export function createSelectionService({ root }) {
     return { lineIndex: idx, offset };
   }
 
+  function restoreSelectionPosition2222({ lineIndex, chunkIndex, offset }) {
+    const editorEl = document.getElementById('editor'); // editorId 필요하면 전달
+    const lineEl = editorEl.children[lineIndex];
+    if (!lineEl) return;
+
+    // chunk 찾기
+    const chunkEl = Array.from(lineEl.children).find(
+      (el) => parseInt(el.dataset.index, 10) === chunkIndex
+    );
+    if (!chunkEl) return;
+
+    const textLength = chunkEl.textContent.length;
+    const safeOffset = Math.min(offset, textLength); // offset clamp
+
+    const range = document.createRange();
+    const sel = window.getSelection();
+
+    // chunk 안의 텍스트 노드 찾기
+    let textNode = null;
+    chunkEl.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) textNode = node;
+    });
+
+    if (!textNode) return;
+
+    range.setStart(textNode, safeOffset);
+    range.collapse(true);
+
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
   // lineIndex + offset 기준으로 커서 복원
   function restoreSelectionPosition(pos) {
       if (!pos) return;
@@ -155,5 +187,5 @@ export function createSelectionService({ root }) {
     return ranges.length ? ranges : null;
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, restoreSelectionPosition, getSelectionRangesInState };
+  return { getCurrentLineIndex, getSelectionPosition, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPosition2222 };
 }

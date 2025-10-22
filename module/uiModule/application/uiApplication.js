@@ -14,9 +14,17 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     // 새로 추가
     shiftLinesDown: (fromIndex) => renderService.shiftLinesDown(rootId, fromIndex),
 
+    renderChunk: (rootId, lineIndex, chunkIndex, chunkData) => renderService.renderChunk(rootId, lineIndex, chunkIndex, chunkData),
+
     // 선택 영역
     getSelectionRangesInState: (editorState) => selectionService.getSelectionRangesInState(editorState),
     getSelectionPosition: () => selectionService.getSelectionPosition(),
     restoreSelectionPosition: (pos) => selectionService.restoreSelectionPosition(pos),
+
+
+    
+
+    restoreSelectionPosition2222: (lineIndex, chunkIndex, offset) => selectionService.restoreSelectionPosition2222(lineIndex, chunkIndex, offset),
+
   };
 }
