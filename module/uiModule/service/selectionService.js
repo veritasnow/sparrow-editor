@@ -63,7 +63,7 @@ export function createSelectionService({ root }) {
     return { lineIndex: idx, offset };
   }
 
-  function restoreSelectionPosition2222({ lineIndex, chunkIndex, offset }) {
+  function restoreSelectionPositionByChunk({ lineIndex, chunkIndex, offset }) {
     const editorEl = document.getElementById('editor'); // editorId 필요하면 전달
     const lineEl = editorEl.children[lineIndex];
     if (!lineEl) return;
@@ -187,5 +187,5 @@ export function createSelectionService({ root }) {
     return ranges.length ? ranges : null;
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPosition2222 };
+  return { getCurrentLineIndex, getSelectionPosition, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPositionByChunk };
 }

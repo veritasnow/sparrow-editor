@@ -80,8 +80,6 @@ export function handleEnterKey(app, ui, editorEl, lineIndex, offset) {
   ui.restoreSelectionPosition({ lineIndex: lineIndex + 1, offset: 0 });
 }
 
-
-
 // ────────── backspace 처리 함수 ──────────
 export function handleBackspaceKey(app, ui, editorEl, lineIndex, offset) {
   const currentState = app.getState().present.editorState;

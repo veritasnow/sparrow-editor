@@ -21,10 +21,10 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     getSelectionPosition: () => selectionService.getSelectionPosition(),
     restoreSelectionPosition: (pos) => selectionService.restoreSelectionPosition(pos),
 
-
+    
     
 
-    restoreSelectionPosition2222: (lineIndex, chunkIndex, offset) => selectionService.restoreSelectionPosition2222(lineIndex, chunkIndex, offset),
+    restoreSelectionPositionByChunk: (lineIndex, chunkIndex, offset) => selectionService.restoreSelectionPositionByChunk(lineIndex, chunkIndex, offset),
 
   };
 }
