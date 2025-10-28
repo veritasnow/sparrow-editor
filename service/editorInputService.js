@@ -19,8 +19,11 @@ export function bindInputEvent(editorEl, app, ui) {
 
         const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
         const inputData = e.data || '';
-        const isPunctuationOrSpace = e.inputType === 'insertText' && (inputData === '.' || inputData === ' ');
+        
+        const PUNCTUATION_MARKS = ['.', ' ', '?', '!', ',', ':', ';', '"', "'"];
+        const isPunctuationOrSpace = e.inputType === 'insertText' && PUNCTUATION_MARKS.includes(inputData);
 
+        // 문장 부호가 아니면서, 한글 입력 직후 짧은 시간 내에 입력된 것은 무시 (중복 방지)
         if (!isPunctuationOrSpace && timeSinceCompositionEnd < 50) {
             return;
         }
@@ -29,45 +32,41 @@ export function bindInputEvent(editorEl, app, ui) {
     });
 
 
-// ----------------------------------------------------------------------
-// 리팩토링된 handleInput 함수
-// ----------------------------------------------------------------------
-
+    // ----------------------------------------------------------------------
+    // 리팩토링된 handleInput 함수
+    // ----------------------------------------------------------------------
     function handleInput() {
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-
+    // 💡 변경: window.getSelection()과 중복 DOM 탐색 대신 ui 서비스 호출
+        const selectionContext = ui.getSelectionContext(); // ui.getSelectionContext() 호출
+        
+        if (!selectionContext) return;
+        
+        // 1. ui모듈이 제공 - 선택영역 정보
+        const { 
+                lineIndex, 
+                parentP, 
+                container, 
+                cursorOffset,
+                activeNode,        
+                dataIndex          
+            } = selectionContext;
+            
         ui.ensureFirstLine();
 
-        const range = selection.getRangeAt(0);
-        const container = range.startContainer;
-        const cursorOffset = range.startOffset;
-
-        const parentP = container.nodeType === Node.TEXT_NODE
-            ? container.parentElement.closest('p')
-            : container.closest('p');
-        if (!parentP) return;
-
-        const lineIndex = Array.prototype.indexOf.call(editorEl.children, parentP);
         if (lineIndex < 0) return;
 
-        const currentState = app.getState().present.editorState;
-        const currentLine = currentState[lineIndex] || { align: "left", chunks: [] };
+        const currentState   = app.getState().present.editorState;
+        const currentLine    = currentState[lineIndex] || { align: "left", chunks: [] };
 
-        const activeNode = container.nodeType === Node.TEXT_NODE
-            ? container.parentElement.closest('[data-index]')
-            : container.closest('[data-index]');
-        const dataIndex = activeNode ? parseInt(activeNode.dataset.index, 10) : null;
-
-        const updatedLine = { ...currentLine, chunks: [...currentLine.chunks] };
-        let isNewChunk = false;
+        const updatedLine    = { ...currentLine, chunks: [...currentLine.chunks] };
+        let isNewChunk       = false;
         let isChunkRendering = false;
-        let restoreData = null;
+        let restoreData      = null;
 
         // 1. 기존 [data-index] 텍스트 청크 업데이트 (가장 일반적인 경우)
         if (dataIndex !== null && updatedLine.chunks[dataIndex] && updatedLine.chunks[dataIndex].type === 'text') {
             const oldChunk = updatedLine.chunks[dataIndex];
-            const newText = activeNode.textContent;
+            const newText  = activeNode.textContent;
 
             if (oldChunk.text !== newText) {
                 updatedLine.chunks[dataIndex] = { ...oldChunk, text: newText };
@@ -77,7 +76,7 @@ export function bindInputEvent(editorEl, app, ui) {
         } 
         // 2. 새로운 청크 추가 또는 청크 배열 재구성 (data-index 밖에서 입력 발생)
         else {
-            const { newChunks, restoreData: newRestoreData } = parseDOMToChunks(
+            const { newChunks, restoreData: newRestoreData } = ui.parseParentPToChunks(
                 parentP, 
                 currentLine.chunks, 
                 container, 
@@ -95,7 +94,7 @@ export function bindInputEvent(editorEl, app, ui) {
         }
 
         // 상태 저장
-        const nextState = [...currentState];
+        const nextState      = [...currentState];
         nextState[lineIndex] = updatedLine;
         app.saveEditorState(nextState);
 
@@ -125,62 +124,4 @@ export function bindInputEvent(editorEl, app, ui) {
             ui.restoreSelectionPositionByChunk(restoreData);
         }
     }
-}
-
-
-// 새로운 유틸리티 함수: DOM 구조를 읽어 청크 배열을 생성하고 커서 복원 데이터를 반환
-function parseDOMToChunks(parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
-    const newChunks = [];
-    let textBuffer = '';
-    let restoreData = null;
-    let newChunkIndex = 0; // 커서가 위치한 텍스트 청크의 최종 인덱스
-
-    Array.from(parentP.childNodes).forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            // 텍스트 노드는 버퍼에 추가
-            textBuffer += node.textContent;
-            
-            // 현재 커서가 이 텍스트 노드에 있으면 복원 정보 기록
-            if (node === selectionContainer) {
-                // 이 텍스트가 다음 번 청크로 추가될 것이므로, newChunks.length가 임시 인덱스
-                newChunkIndex = newChunks.length;
-                restoreData = { lineIndex, chunkIndex: newChunkIndex, offset: cursorOffset };
-            }
-
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            // 텍스트 버퍼가 차 있으면, 하나의 'text' 청크로 변환하여 추가
-            if (textBuffer.length > 0) {
-                newChunks.push({ type: 'text', text: textBuffer, style: {} });
-                textBuffer = '';
-            }
-
-            // [data-index]를 가진 청크 엘리먼트 (예: iframe) 처리
-            if (node.hasAttribute('data-index')) {
-                const oldIndex = parseInt(node.dataset.index, 10);
-                // 기존 상태에서 해당 청크를 찾아 복사
-                const existingChunk = currentLineChunks[oldIndex] || 
-                                      currentLineChunks.find(c => c.type !== 'text' && c.src === node.getAttribute('src')); 
-                
-                if (existingChunk) {
-                    newChunks.push(existingChunk);
-                }
-            }
-        }
-    });
-
-    // 순회 후 텍스트 버퍼에 남은 내용이 있다면 마지막 청크로 추가
-    if (textBuffer.length > 0) {
-        newChunks.push({ type: 'text', text: textBuffer, style: {} });
-    }
-    
-    // 만약 커서 위치를 찾지 못했고, 마지막에 텍스트 청크가 있다면 그 끝으로 복원
-    if (!restoreData && newChunks.length > 0 && newChunks[newChunks.length - 1].type === 'text' && selectionContainer.nodeType === Node.TEXT_NODE) {
-         restoreData = { 
-             lineIndex, 
-             chunkIndex: newChunks.length - 1, 
-             offset: newChunks[newChunks.length - 1].text.length 
-         };
-    }
-
-    return { newChunks, restoreData };
 }

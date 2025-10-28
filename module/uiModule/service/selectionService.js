@@ -17,27 +17,6 @@ export function createSelectionService({ root }) {
 
     return 0;
   }
-  /*
-  function getCurrentLineIndex() {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return 0;
-
-    let el = sel.anchorNode;
-    if (el.nodeType === Node.TEXT_NODE) el = el.parentElement;
-
-    // 부모 P 탐색
-    while (el && el !== root) {
-      if (el.tagName === 'P') return Array.from(root.childNodes).indexOf(el);
-      el = el.parentElement;
-    }
-
-    // 첫 P가 존재하면 첫 줄 반환
-    const firstP = root.querySelector('p.text-block');
-    if (firstP) return Array.from(root.childNodes).indexOf(firstP);
-
-    return 0;
-  }
-  */
 
   // 현재 커서 위치를 lineIndex + offset 형태로 반환
   function getSelectionPosition() {
@@ -187,5 +166,38 @@ export function createSelectionService({ root }) {
     return ranges.length ? ranges : null;
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPositionByChunk };
+  function getSelectionContext() {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return null;
+
+      const range = sel.getRangeAt(0);
+      const container = range.startContainer;
+      const cursorOffset = range.startOffset;
+      
+      // 1. P 엘리먼트 탐색
+      const parentP = container.nodeType === Node.TEXT_NODE
+          ? container.parentElement.closest('p')
+          : container.closest('p');
+      
+      if (!parentP || parentP.parentElement !== root) return null;
+
+      const lineIndex = Array.from(root.childNodes).indexOf(parentP);
+
+      // 2. 💡 [data-index]를 가진 Active Node 탐색 (추가 로직)
+      const activeNode = container.nodeType === Node.TEXT_NODE
+          ? container.parentElement.closest('[data-index]')
+          : container.closest('[data-index]');
+      const dataIndex = activeNode ? parseInt(activeNode.dataset.index, 10) : null;
+      
+      return { 
+          lineIndex, 
+          parentP, 
+          container, 
+          cursorOffset,
+          activeNode,      // 👈 추가
+          dataIndex        // 👈 추가
+      };
+  }
+
+  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPositionByChunk };
 }
