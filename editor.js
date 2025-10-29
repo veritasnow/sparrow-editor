@@ -1,13 +1,19 @@
 import { createEditorApp } from './module/stateModule/application/editorApplication.js';
 import { createUiApplication } from './module/uiModule/application/uiApplication.js';
+import { createInputApplication } from './module/inputModule/application/inputApplication.js'; 
 
 // 외부 렌더러 등록
 import { textRenderer } from './renderers/textRenderer.js';
 import { videoRenderer } from './renderers/videoRenderer.js';
 
 // 서비스
-import { bindInputEvent } from './service/editorInputService.js';
-import { bindKeydownEvent } from './service/editorKeyService.js';
+//import { bindInputEvent } from './service/editorInputService.js';
+//import { bindKeydownEvent } from './service/editorKeyService.js';
+
+import { createEditorInputService } from './service/editorInputService.js'; 
+import { createEditorKeyService } from './service/editorKeyService.js'; 
+
+
 import { bindStyleButtons } from './service/editorStyleService.js';
 import { bindAlignButtons } from './service/editorAlignService.js';
 import { bindVideoButton } from './service/editorVideoService.js'; // 🎥 변경된 함수 사용
@@ -54,8 +60,30 @@ const alignCenterBtn = document.getElementById('alignCenterBtn');
 const alignRightBtn  = document.getElementById('alignRightBtn');
 const videoBtn       = document.getElementById('addVideoBtn'); // 🎥 추가
 
-bindInputEvent(editorEl, app, ui);
-bindKeydownEvent(editorEl, app, ui);
+
+
+//bindInputEvent(editorEl, app, ui);
+const inputApp = createInputApplication({ editorEl }); 
+
+// 1. 입력 바인등
+const inputProcessor = createEditorInputService(app, ui);
+inputApp.bindInput(inputProcessor.processInput);
+
+
+// 2. 키입력 바인딩
+const keyProcessor = createEditorKeyService(app, ui); 
+inputApp.bindKeydown({
+    handleEnter: keyProcessor.processEnter,
+    handleBackspace: keyProcessor.processBackspace
+});
+
+
+
+
+
+
+
+
 bindStyleButtons(
     () => app.getState().present.editorState,   // getEditorState
     newState => app.saveEditorState(newState),  // saveEditorState
