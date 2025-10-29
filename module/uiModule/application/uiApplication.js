@@ -34,5 +34,8 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     // ───────── DOM 처리 ─────────
     parseParentPToChunks : (parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex) => 
         domService.parseParentPToChunks(parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex),
+    insertNewLineElement : (lineIndex, align) => renderService.insertNewLineElement(lineIndex, align),
+    removeLineElement : (lineIndex) => renderService.removeLineElement(lineIndex),
+
   };
 }
