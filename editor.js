@@ -2,6 +2,9 @@ import { createEditorApp } from './module/stateModule/application/editorApplicat
 import { createUiApplication } from './module/uiModule/application/uiApplication.js';
 import { createInputApplication } from './module/inputModule/application/inputApplication.js'; 
 
+// 에디터 모델
+import { EditorLineModel, TextChunkModel } from './model/editorModel.js';
+
 // 외부 렌더러 등록
 import { textRenderer } from './renderers/textRenderer.js';
 import { videoRenderer } from './renderers/videoRenderer.js';
@@ -11,11 +14,20 @@ import { createEditorInputService } from './service/input/editorInputService.js'
 import { createEditorKeyService } from './service/keyInput/editorKeyService.js'; 
 
 // 에디터 확장 서비스 바인드
-import { bindStyleButtons } from './service/editorStyleService.js';
-import { bindAlignButtons } from './service/editorAlignService.js';
+import { bindStyleButtons } from './service/style/styleFeatureBinder.js';
+import { bindAlignButtons } from './service/align/alignFeatureBinder.js';
 import { bindVideoButton } from './service/video/videoFeatureBinder.js'; // 🎥 변경된 함수 사용
 
 // ───────── 상태 관리 ─────────
+const app = createEditorApp({
+    // 모델을 사용하여 초기 상태 DTO 구조를 생성
+    editorState: [
+        EditorLineModel('left', [
+            TextChunkModel('', {})
+        ])
+    ]
+});
+/*
 const app = createEditorApp({
     editorState: [
         {
@@ -24,6 +36,10 @@ const app = createEditorApp({
         }
     ]
 });
+*/
+
+
+
 
 // ───────── 렌더러 등록 ─────────
 const rendererRegistry = {
