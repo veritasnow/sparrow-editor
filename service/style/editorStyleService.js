@@ -1,5 +1,5 @@
 // sparrow-editor\service\style\editorStyleService.js
-import { toggleInlineStyle } from "../../utils/styleUtils.js"; // 핵심 유틸리티는 그대로 사용
+import { toggleInlineStyle } from "./styleUtils.js"; // 핵심 유틸리티는 그대로 사용
 
 /**
  * 인라인 스타일 변경의 핵심 비즈니스 로직을 제공하는 서비스 모듈.

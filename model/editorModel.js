@@ -1,5 +1,3 @@
-// sparrow-editor/model/editorModel.js
-
 // ----------------------------------------------------------------------
 // 1. DTO/Interface 정의 (타입 정의 통합 유지)
 // ----------------------------------------------------------------------
@@ -23,9 +21,18 @@
  */
 
 /**
+ * @typedef {Object} VideoChunk - 동영상 블록 청크 모델입니다.
+ * @property {'video'} type - 청크의 종류.
+ * @property {string} videoId - 동영상의 고유 ID (예: YouTube ID).
+ * @property {string} src - 동영상 임베드 URL.
+ * @property {string} text - (비텍스트 블록이므로 항상 비어있음)
+ * @property {ChunkStyle} style - (비텍스트 블록이므로 항상 비어있음)
+ */
+
+/**
  * @typedef {Object} EditorLine - 에디터의 단일 라인(블록) 구조입니다.
  * @property {'left' | 'center' | 'right'} align - 라인의 정렬 상태.
- * @property {TextChunk[]} chunks - 라인을 구성하는 청크 배열.
+ * @property {(TextChunk | VideoChunk)[]} chunks - 라인을 구성하는 청크 배열.
  */
 
 
@@ -42,21 +49,38 @@
  * @returns {TextChunk}
  */
 export function TextChunkModel(type = 'text', text = '', style = {}) {
-    // 💡 type이 'text'로 고정된 DTO 정의와 맞지 않지만, 유연성을 위해 type 파라미터는 유지합니다.
     const model = {
         type: type, 
         text: text,
         style: style
     };
-    // ⚠️ 얕은 동결(Shallow Freeze): 최상위 속성만 동결됩니다. (충분함)
+    // ⚠️ 얕은 동결(Shallow Freeze)
     return Object.freeze(model); 
+}
+
+/**
+ * VideoChunk Entity 모델을 생성하여 반환합니다. 
+ * @param {string} videoId - 동영상의 고유 ID (예: YouTube ID).
+ * @param {string} src - 동영상 임베드 URL.
+ * @returns {VideoChunk}
+ */
+export function VideoChunkModel(videoId, src) {
+    const model = {
+        type: 'video',
+        videoId: videoId,
+        src: src,
+        text: '', // 비텍스트 청크
+        style: {} // 스타일 미적용
+    };
+    // ⚠️ 얕은 동결(Shallow Freeze)
+    return Object.freeze(model);
 }
 
 /**
  * EditorLine Entity 모델을 생성하여 반환합니다.
  * 💡 Object.freeze()를 사용하여 외부에서 속성을 직접 변경하는 것을 방지합니다.
  * @param {'left' | 'center' | 'right'} [align='left'] - 라인의 정렬 상태.
- * @param {TextChunk[]} [chunks] - 라인을 구성하는 청크 배열.
+ * @param {(TextChunk | VideoChunk)[]} [chunks] - 라인을 구성하는 청크 배열.
  * @returns {EditorLine}
  */
 export function EditorLineModel(align = 'left', chunks = [TextChunkModel()]) {

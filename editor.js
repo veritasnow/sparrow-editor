@@ -23,23 +23,10 @@ const app = createEditorApp({
     // 모델을 사용하여 초기 상태 DTO 구조를 생성
     editorState: [
         EditorLineModel('left', [
-            TextChunkModel('', {})
+            TextChunkModel("text", "", {})
         ])
     ]
 });
-/*
-const app = createEditorApp({
-    editorState: [
-        {
-            align: "left",
-            chunks: [{ type: "text", text: "", style: {} }]
-        }
-    ]
-});
-*/
-
-
-
 
 // ───────── 렌더러 등록 ─────────
 const rendererRegistry = {

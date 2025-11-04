@@ -1,6 +1,6 @@
 // service/input/editorInputService.js
-
 import { calculateNextLineState } from './inputStateUtil.js'; 
+import { EditorLineModel } from '../../model/editorModel.js'; // 💡 EditorLineModel 임포트 가정
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
@@ -22,15 +22,18 @@ export function createEditorInputService(app, ui) {
         // 1. 선택 영역 및 DOM 정보
         const { 
             lineIndex, 
-            dataIndex          
+            dataIndex          
         } = selectionContext; 
         
         ui.ensureFirstLine();
 
         if (lineIndex < 0) return;
 
-        const currentState   = app.getState().present.editorState;
-        const currentLine    = currentState[lineIndex] || { align: "left", chunks: [] };
+        const currentState   = app.getState().present.editorState;
+        
+        // 💡 [수정] 라인이 없을 경우 DTO 리터럴 대신 Model 팩토리 사용
+        //    -> Model이 불변성과 기본값을 보장
+        const currentLine    = currentState[lineIndex] || EditorLineModel(); // Model 사용
 
         // 💡 1. 상태 계산 위임 (Pure Logic)
         const { updatedLine, restoreData, isNewChunk, isChunkRendering } = calculateNextLineState(
@@ -41,7 +44,7 @@ export function createEditorInputService(app, ui) {
 
         // 💡 2. 상태 저장 (Core 책임: Side Effect)
         if (isNewChunk || isChunkRendering) {
-            const nextState      = [...currentState];
+            const nextState      = [...currentState];
             nextState[lineIndex] = updatedLine;
             app.saveEditorState(nextState);
         } else {

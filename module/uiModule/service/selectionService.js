@@ -4,7 +4,6 @@ export function createSelectionService({ root }) {
   
   // 현재 커서가 위치한 줄의 index를 반환
   function getCurrentLineIndex() {
-    // ... (로직 동일)
     const sel = window.getSelection();
     if (!sel.rangeCount) return 0;
 
@@ -22,7 +21,6 @@ export function createSelectionService({ root }) {
 
   // 현재 커서 위치를 lineIndex + offset 형태로 반환
   function getSelectionPosition() {
-    // ... (로직 동일)
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
 
@@ -116,16 +114,20 @@ export function createSelectionService({ root }) {
     sel.addRange(range);
   }
 
-  // 현재 선택 영역을 chunk 배열 기반으로 반환
-  function getSelectionRangesInState(getEditorState) {
-    // ... (로직 동일)
+// 현재 선택 영역을 chunk 배열 기반으로 반환
+  /**
+    * @param {Array<EditorLine>} editorState - 현재 에디터 상태 DTO 배열
+    * @returns {Array<{lineIndex: number, startIndex: number, endIndex: number}> | null}
+    */
+  function getSelectionRangesInState(editorState) {
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
 
     const domRange = sel.getRangeAt(0);
     const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
     const ranges = [];
-    const state = typeof getEditorState === 'function' ? getEditorState() : null;
+    // 💡 [수정] 인자로 받은 상태를 직접 사용
+    const state = editorState;
 
     paragraphs.forEach((p, idx) => {
       const pRange = document.createRange();
@@ -158,8 +160,9 @@ export function createSelectionService({ root }) {
         if (endOffset === 0) endOffset = total;
 
         // chunk 배열 기반으로 offset 클램프
-        if (state && state[idx]) {
-          const lineChunks = state[idx];
+        if (state && state[idx] && state[idx].chunks) {
+          // 💡 [수정] EditorLineModel에서 chunks 속성을 명시적으로 가져와야 합니다.
+          const lineChunks = state[idx].chunks;
           const lineLen = lineChunks.reduce((sum, chunk) => sum + (chunk.text?.length || 0), 0);
           startOffset = Math.max(0, Math.min(startOffset, lineLen));
           endOffset = Math.max(0, Math.min(endOffset, lineLen));
@@ -173,7 +176,6 @@ export function createSelectionService({ root }) {
   }
 
   function getSelectionContext() {
-    // ... (로직 동일)
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
 
