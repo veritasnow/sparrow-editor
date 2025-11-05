@@ -114,66 +114,58 @@ export function createSelectionService({ root }) {
     sel.addRange(range);
   }
 
-// 현재 선택 영역을 chunk 배열 기반으로 반환
-  /**
-    * @param {Array<EditorLine>} editorState - 현재 에디터 상태 DTO 배열
-    * @returns {Array<{lineIndex: number, startIndex: number, endIndex: number}> | null}
-    */
-  function getSelectionRangesInState(editorState) {
+// 💡 변경: getSelectionRangesInState -> getSelectionRangesInDOM 으로 변경
+// 💡 상태(state) 인자를 받지 않습니다.
+/**
+ * DOM의 선택 영역을 읽어, State 길이를 고려하지 않은 순수 DOM 기반 오프셋을 반환합니다.
+ * @returns {Array<{lineIndex: number, startIndex: number, endIndex: number}> | null}
+ */
+function getSelectionRangesInDOM() {
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
 
     const domRange = sel.getRangeAt(0);
     const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
     const ranges = [];
-    // 💡 [수정] 인자로 받은 상태를 직접 사용
-    const state = editorState;
 
     paragraphs.forEach((p, idx) => {
-      const pRange = document.createRange();
-      pRange.selectNodeContents(p);
+        const pRange = document.createRange();
+        pRange.selectNodeContents(p);
 
-      if (
-        domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
-        domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0
-      ) {
-        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
-        let started = false, total = 0;
-        let startOffset = 0, endOffset = 0;
+        // 해당 문단이 선택 영역에 포함되는지 확인
+        if (
+            domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
+            domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0
+        ) {
+            const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
+            let started = false, total = 0;
+            let startOffset = 0, endOffset = 0;
 
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          const len = node.textContent.length;
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                const len = node.textContent.length;
 
-          if (!started && domRange.startContainer === node) {
-            startOffset = total + domRange.startOffset;
-            started = true;
-          }
-          if (domRange.endContainer === node) {
-            endOffset = total + domRange.endOffset;
-            break;
-          }
-          total += len;
+                if (!started && domRange.startContainer === node) {
+                    startOffset = total + domRange.startOffset;
+                    started = true;
+                }
+                if (domRange.endContainer === node) {
+                    endOffset = total + domRange.endOffset;
+                    break;
+                }
+                total += len;
+            }
+
+            if (!started) startOffset = 0;
+            if (endOffset === 0) endOffset = total;
+
+            // 🔴 기존의 상태 기반 클램프 로직 제거! 순수 DOM 오프셋만 반환.
+            ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
         }
-
-        if (!started) startOffset = 0;
-        if (endOffset === 0) endOffset = total;
-
-        // chunk 배열 기반으로 offset 클램프
-        if (state && state[idx] && state[idx].chunks) {
-          // 💡 [수정] EditorLineModel에서 chunks 속성을 명시적으로 가져와야 합니다.
-          const lineChunks = state[idx].chunks;
-          const lineLen = lineChunks.reduce((sum, chunk) => sum + (chunk.text?.length || 0), 0);
-          startOffset = Math.max(0, Math.min(startOffset, lineLen));
-          endOffset = Math.max(0, Math.min(endOffset, lineLen));
-        }
-
-        ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
-      }
     });
 
     return ranges.length ? ranges : null;
-  }
+}
 
   function getSelectionContext() {
     const sel = window.getSelection();
@@ -208,5 +200,5 @@ export function createSelectionService({ root }) {
     };
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInState, restoreSelectionPositionByChunk };
+  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInDOM, restoreSelectionPositionByChunk };
 }

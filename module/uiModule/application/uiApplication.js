@@ -16,10 +16,10 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     renderLine     : (lineIndex, lineData) => renderService.renderLine(lineIndex, lineData),
     ensureFirstLine: () => renderService.ensureFirstLineP(),
     shiftLinesDown : (fromIndex) => renderService.shiftLinesDown(fromIndex),
-    renderChunk:    (lineIndex, chunkIndex, chunkData) => renderService.renderChunk(lineIndex, chunkIndex, chunkData),
+    renderChunk    : (lineIndex, chunkIndex, chunkData) => renderService.renderChunk(lineIndex, chunkIndex, chunkData),
 
     // ───────── 선택 영역 ─────────
-    getSelectionRangesInState: (editorState) => selectionService.getSelectionRangesInState(editorState),
+    getSelectionRangesInDOM: () => selectionService.getSelectionRangesInDOM(),
     getSelectionPosition: () => selectionService.getSelectionPosition(),
     getSelectionContext : () => selectionService.getSelectionContext(),
     restoreSelectionPosition: (pos) => selectionService.restoreSelectionPosition(pos),
