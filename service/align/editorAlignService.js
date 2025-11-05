@@ -15,8 +15,6 @@ export function createEditorAlignService(app, ui, updateAndRestore) {
         if (!selection.rangeCount) return;
 
         const currentState = app.getState().present.editorState;
-        // ui.getSelectionRangesInState는 UI 레이어의 기능(선택 영역 파악)입니다.
-        // getSelectionRangesInState 상태를 던져서 선택영역을 가져온다인데 state값만 넘기는 구조로 바꾸는게 좋을거 같음
         const ranges = ui.getSelectionRangesInState(currentState); 
         if (!ranges || ranges.length === 0) return;
 

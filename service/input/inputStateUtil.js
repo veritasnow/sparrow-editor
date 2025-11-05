@@ -1,15 +1,17 @@
 // service/input/inputStateUtil.js
 import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js'; // 💡 Model 팩토리 임포트 가정
+import { parseParentPToChunks } from '../../utils/domToChunkParseUtils.js'; // 💡 Model 팩토리 임포트 가정
+
+
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, 다음 라인 상태를 계산하는 순수 도메인 로직입니다.
  * 이 함수는 Side Effect(상태 저장, DOM 렌더링)가 없어야 합니다.
  * * @param {Object} currentLine - 현재 에디터 상태의 라인 데이터
  * @param {Object} selectionContext - UI에서 파악한 선택 영역 및 DOM 정보
- * @param {Function} uiParseFunction - ui.parseParentPToChunks 함수 (DOM 파싱 로직)
  * @returns {{ updatedLine: Object, restoreData: Object|null, isNewChunk: boolean, isChunkRendering: boolean }}
  */
-export function calculateNextLineState(currentLine, selectionContext, uiParseFunction) {
+export function calculateNextLineState(currentLine, selectionContext) {
     const { 
         parentP, container, cursorOffset, activeNode, dataIndex, lineIndex
     } = selectionContext;
@@ -45,7 +47,7 @@ export function calculateNextLineState(currentLine, selectionContext, uiParseFun
     // 2. 새로운 청크 추가 또는 청크 배열 재구성 (data-index 밖에서 입력 발생)
     else {
         // uiParseFunction 호출 (ui.parseParentPToChunks)
-        const { newChunks, restoreData: newRestoreData } = uiParseFunction(
+        const { newChunks, restoreData: newRestoreData } = parseParentPToChunks(
             parentP, currentLine.chunks, container, cursorOffset, lineIndex
         );
         

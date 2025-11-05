@@ -1,14 +1,4 @@
-// /module/uiModule/service/domService.js
-
-/**
- * DOM 관련 유틸리티 기능을 제공하는 서비스 팩토리
- * @returns {{ parseParentPToChunks: Function }}
- */
-export function createDomService() {
-    return {
-        parseParentPToChunks
-    };
-}
+// /utils/domToChunkParseUtils.js
 
 /**
  * DOM 구조(parentP)를 읽어 청크 배열을 생성하고 커서 복원 데이터를 반환합니다.
@@ -20,7 +10,7 @@ export function createDomService() {
  * @param {number} lineIndex - 현재 라인 인덱스
  * @returns {{ newChunks: Array, restoreData: Object }}
  */
-function parseParentPToChunks(parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
+export function parseParentPToChunks(parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
     const newChunks = [];
     let textBuffer = '';
     let restoreData = null;

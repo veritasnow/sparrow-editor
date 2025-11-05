@@ -39,7 +39,6 @@ export function createEditorInputService(app, ui) {
         const { updatedLine, restoreData, isNewChunk, isChunkRendering } = calculateNextLineState(
             currentLine, 
             selectionContext, 
-            ui.parseParentPToChunks // ui 모듈의 파싱 함수를 유틸리티로 전달
         );
 
         // 💡 2. 상태 저장 (Core 책임: Side Effect)
