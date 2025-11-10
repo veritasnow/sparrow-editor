@@ -2,117 +2,87 @@ import { createEditorApp } from './state/application/editorApplication.js';
 import { createUiApplication } from './ui/application/uiApplication.js';
 import { createInputApplication } from './input/application/inputApplication.js'; 
 
-// 에디터 모델
 import { EditorLineModel, TextChunkModel } from './model/editorModel.js';
-
-// 외부 렌더러 등록
 import { textRenderer } from './renderers/textRenderer.js';
 import { videoRenderer } from './renderers/videoRenderer.js';
 
-// 에디터 기본 서비스
 import { createEditorInputService } from './core/editorInputService.js'; 
 import { createEditorKeyService } from './core/editorKeyService.js'; 
 
-// 에디터 확장 서비스 바인드
 import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
 import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
-import { bindVideoButton } from './features/video/videoFeatureBinder.js'; // 🎥 변경된 함수 사용
+import { bindVideoButton } from './features/video/videoFeatureBinder.js';
 
-// ───────── 상태 관리 ─────────
-const app = createEditorApp({
-    // 모델을 사용하여 초기 상태 DTO 구조를 생성
+import { createDOMCreateService } from './features/domCreateService.js';
+
+// 🧩 외부에서 호출할 메인 엔트리
+export function createEditor(rootId) {
+  // 1️⃣ DOM 구성
+  createDOMCreateService(rootId);
+
+  // 2️⃣ 상태 관리
+  const app = createEditorApp({
     editorState: [
-        EditorLineModel('left', [
-            TextChunkModel("text", "", {})
-        ])
+      EditorLineModel('left', [ TextChunkModel('text', '', {}) ])
     ]
-});
+  });
 
-// ───────── 렌더러 등록 ─────────
-const rendererRegistry = {
-    text: textRenderer,
-    video: videoRenderer
-};
+  // 3️⃣ 렌더러 등록
+  const rendererRegistry = { text: textRenderer, video: videoRenderer };
 
-// ───────── UI 애플리케이션 ─────────
-// ui 객체는 selectionService의 함수들(getSelectionPosition 등)을 포함하고 있다고 가정합니다.
-const ui = createUiApplication({
-    rootId: "editor",
+  // 4️⃣ UI 애플리케이션 생성
+  const ui = createUiApplication({
+    rootId: `${rootId}-content`,
     rendererRegistry
-});
+  });
 
-// ───────── 상태 렌더링 + 커서 복원 ─────────
-function updateAndRestore(newPos) {
+  // 5️⃣ 상태 렌더링 + 커서 복원
+  function updateAndRestore(newPos) {
     const currentState = app.getState().present.editorState;
     ui.render(currentState);
-    ui.restoreSelectionPosition(newPos); 
-}
+    ui.restoreSelectionPosition(newPos);
+  }
 
-// ───────── 버튼 & 이벤트 바인딩 ─────────
-const editorEl       = document.getElementById('editor');
-const boldBtn        = document.getElementById('boldBtn');
-const italicBtn      = document.getElementById('italicBtn');
-const underLineBtn   = document.getElementById('underLineBtn');
-const alignLeftBtn   = document.getElementById('alignLeftBtn');
-const alignCenterBtn = document.getElementById('alignCenterBtn');
-const alignRightBtn  = document.getElementById('alignRightBtn');
-const videoBtn       = document.getElementById('addVideoBtn'); // 🎥 추가
+  // 6️⃣ 입력 및 키 이벤트 바인딩
+  const editorEl = document.getElementById(`${rootId}-content`);
+  const inputApp = createInputApplication({ editorEl });
 
+  const inputProcessor = createEditorInputService(app, ui);
+  inputApp.bindInput(inputProcessor.processInput);
 
-
-// ───────── 입력 및 키 이벤트 바인딩 ─────────
-const inputApp = createInputApplication({ editorEl }); 
-
-// 1. 입력 바인등
-const inputProcessor = createEditorInputService(app, ui);
-inputApp.bindInput(inputProcessor.processInput);
-
-// 2. 키입력 바인딩
-const keyProcessor = createEditorKeyService(app, ui); 
-inputApp.bindKeydown({
+  const keyProcessor = createEditorKeyService(app, ui);
+  inputApp.bindKeydown({
     handleEnter: keyProcessor.processEnter,
     handleBackspace: keyProcessor.processBackspace
-});
+  });
 
+  // 7️⃣ 버튼 바인딩
+  const getEditorState = () => app.getState().present.editorState;
+  const saveEditorState = newState => app.saveEditorState(newState);
 
+  bindStyleButtons(getEditorState, saveEditorState, ui, updateAndRestore, {
+    boldBtn: document.getElementById(`${rootId}-boldBtn`),
+    italicBtn: document.getElementById(`${rootId}-italicBtn`),
+    underLineBtn: document.getElementById(`${rootId}-underLineBtn`)
+  });
 
+  bindAlignButtons(app, ui, updateAndRestore, {
+    leftBtn: document.getElementById(`${rootId}-alignLeftBtn`),
+    centerBtn: document.getElementById(`${rootId}-alignCenterBtn`),
+    rightBtn: document.getElementById(`${rootId}-alignRightBtn`)
+  });
 
+  bindVideoButton(
+    document.getElementById(`${rootId}-addVideoBtn`),
+    getEditorState,
+    saveEditorState,
+    updateAndRestore,
+    ui.getSelectionPosition
+  );
 
+  // 8️⃣ 초기 렌더링
+  updateAndRestore({ lineIndex: 0, offset: 0 });
 
-// ───────── 버튼 이벤트 초기화 함수 ─────────
-function initializeButtons() {
-    // 💡 상태 접근자 정의: 반복되는 인라인 함수를 변수로 추출하여 가독성 개선
-    const getEditorState = () => app.getState().present.editorState;
-    const saveEditorState = newState => app.saveEditorState(newState);
-
-    // 1. 스타일 버튼 바인딩
-    bindStyleButtons(
-        getEditorState,
-        saveEditorState,
-        ui,
-        updateAndRestore,
-        { boldBtn, italicBtn, underLineBtn }
-    );
-
-    // 2. 정렬 버튼 바인딩
-    bindAlignButtons(app, ui, updateAndRestore, {
-        leftBtn: alignLeftBtn,
-        centerBtn: alignCenterBtn,
-        rightBtn: alignRightBtn
-    });
-
-    // 3. 동영상 추가 버튼 바인딩 - [개선된 부분]
-    bindVideoButton(
-        videoBtn,
-        getEditorState,
-        saveEditorState,
-        updateAndRestore,
-        ui.getSelectionPosition // 👈 커서 위치 파악 함수 전달
-    );
+  // 외부 제어용 핸들 반환
+  return { app, ui, updateAndRestore };
 }
-
-// ───────── 버튼 초기화 실행 ─────────
-initializeButtons();
-
-// ───────── 초기 렌더링 ─────────
-updateAndRestore({ lineIndex: 0, offset: 0 });

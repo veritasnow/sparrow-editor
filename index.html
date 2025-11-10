@@ -6,7 +6,7 @@
   <title>상태 기반 웹 에디터 샘플</title>
   <style>
     /* ───────── 기본 에디터 영역 ───────── */
-    #editor {
+     .sparrow-contents {
       border: 1px solid #ccc;
       padding: 10px;
       min-height: 200px;
@@ -26,20 +26,20 @@
     }
       
     /* 에디터 안에 있는 영상 wrapper 공통 스타일 */
-    #editor .video-wrapper {
+     .sparrow-contents .video-wrapper {
       display: flex;
       justify-content: center;
       margin: 12px 0;
     }
 
-    #editor .video-wrapper iframe {
+     .sparrow-contents .video-wrapper iframe {
       border-radius: 8px;
       display: inline-block;
       border: none;
     }
 
     /* 영상도 선택 불가로 (커서 방해 방지) */
-    #editor .video-wrapper iframe {
+     .sparrow-contents .video-wrapper iframe {
       pointer-events: none;
     }
 
@@ -194,52 +194,10 @@
   </style>
 </head>
 <body>
-  <div class="editor-container">
-    <div class="toolbar">
-      <!-- 인라인 스타일 버튼 -->
-      <button id="boldBtn" title="굵게"><b>B</b></button>
-      <button id="italicBtn" title="기울이기"><i>I</i></button>
-      <button id="underLineBtn" title="밑줄"><u>U</u></button>
-
-      <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
-
-      <!-- 정렬 버튼 -->
-      <button id="alignLeftBtn" title="왼쪽 정렬">
-        <div class="align-icon align-left">
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
-      </button>
-
-      <button id="alignCenterBtn" title="가운데 정렬">
-        <div class="align-icon align-center">
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
-      </button>
-
-      <button id="alignRightBtn" title="오른쪽 정렬">
-        <div class="align-icon align-right">
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
-      </button>
-
-      <!-- 🎥 동영상 추가 버튼 -->
-      <button id="addVideoBtn" title="동영상 추가">
-        <div class="video-icon"></div>
-      </button>
-    </div>
-
-    <div id="editor" contenteditable="true"></div>
-  </div>
-
-  <script type="module" src="editor.js"></script>
+  <div class="editor-container" id="myEditor"></div>
+  <script type="module">
+    import { createEditor } from './editor.js';
+    const editor = createEditor('myEditor');
+  </script>
 </body>
 </html>
