@@ -1,72 +1,138 @@
-// service/input/editorInputService.js
-import { calculateNextLineState } from '../utils/inputUtils/inputStateUtil.js'; 
-import { EditorLineModel } from '../model/editorModel.js'; // 💡 EditorLineModel 임포트 가정
+import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js';
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
  * UI 렌더링을 요청하는 핵심 도메인 로직을 처리하는 서비스 팩토리입니다.
- * * @param {Object} app - Editor State Application
- * @param {Object} ui - UI Application (DOM/Selection/Rendering)
- * @returns {Object} processInput 함수
  */
 export function createEditorInputService(app, ui) {
 
-    /**
-     * DOM의 현재 상태를 읽어 State에 반영하고, 필요한 UI 갱신을 요청합니다.
-     */
     function processInput() {
-        
-        const selectionContext = ui.getSelectionContext();
-        if (!selectionContext) return;
-        
-        // 1. 선택 영역 및 DOM 정보
-        const { 
-            lineIndex, 
-            dataIndex          
-        } = selectionContext; 
-        
+        const selection = ui.getSelectionContext();
+        if (!selection) return;
+
         ui.ensureFirstLine();
+        if (selection.lineIndex < 0) return;
 
-        if (lineIndex < 0) return;
+        const currentState = app.getState().present.editorState;
+        const currentLine = currentState[selection.lineIndex] || EditorLineModel();
 
-        const currentState   = app.getState().present.editorState;
-        
-        // 💡 [수정] 라인이 없을 경우 DTO 리터럴 대신 Model 팩토리 사용
-        //    -> Model이 불변성과 기본값을 보장
-        const currentLine    = currentState[lineIndex] || EditorLineModel(); // Model 사용
+        const { updatedLine, flags, restoreData } = updateLineModel(currentLine, selection);
+        if (!flags.hasChange) return;
 
-        // 💡 1. 상태 계산 위임 (Pure Logic)
-        const { updatedLine, restoreData, isNewChunk, isChunkRendering } = calculateNextLineState(
-            currentLine, 
-            selectionContext, 
-        );
+        saveEditorState(currentState, selection.lineIndex, updatedLine);
+        renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, restoreData);
+    }
 
-        // 💡 2. 상태 저장 (Core 책임: Side Effect)
-        if (isNewChunk || isChunkRendering) {
-            const nextState      = [...currentState];
-            nextState[lineIndex] = updatedLine;
-            app.saveEditorState(nextState);
+    // ----------------------------
+    // [1] 라인 모델 업데이트 단계
+    // ----------------------------
+    function updateLineModel(currentLine, selection) {
+        let updatedLine = EditorLineModel(currentLine.align, [...currentLine.chunks]);
+        let isNewChunk = false;
+        let isChunkRendering = false;
+        let restoreData = null;
+
+        const { dataIndex, cursorOffset, activeNode, lineIndex } = selection;
+
+        if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'text') {
+            const result = updateExistingChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex);
+            if (result) {
+                ({ updatedLine, restoreData } = result);
+                isChunkRendering = true;
+            }
         } else {
-            // 상태 변화가 없으면 저장하지 않음 (undo/redo 히스토리 절약)
-            return;
+            const result = createOrRebuildChunks(updatedLine, currentLine, selection);
+            if (result) {
+                ({ updatedLine, restoreData } = result);
+                isNewChunk = true;
+            }
         }
 
+        if (isNewChunk && !restoreData) {
+            restoreData = createDefaultRestoreData(updatedLine, selection.lineIndex);
+        }
 
-        // 💡 3. 렌더링 및 커서 복원 (UI 요청: Side Effect)
+        return {
+            updatedLine,
+            flags: { isNewChunk, isChunkRendering, hasChange: isNewChunk || isChunkRendering },
+            restoreData
+        };
+    }
+
+    // ----------------------------
+    // [2] 기존 청크 업데이트
+    // ----------------------------
+    function updateExistingChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex) {
+        const oldChunk = updatedLine.chunks[dataIndex];
+        const newText = activeNode.textContent;
+
+        if (oldChunk.text === newText) return null;
+
+        const newChunk = TextChunkModel(oldChunk.type, newText, oldChunk.style);
+        const newChunks = [...updatedLine.chunks];
+        newChunks[dataIndex] = newChunk;
+
+        return {
+            updatedLine: EditorLineModel(updatedLine.align, newChunks),
+            restoreData: { lineIndex, chunkIndex: dataIndex, offset: cursorOffset }
+        };
+    }
+
+    // ----------------------------
+    // [3] 새로운 청크 구성
+    // ----------------------------
+    function createOrRebuildChunks(updatedLine, currentLine, selection) {
+        const { parentP, container, cursorOffset, lineIndex } = selection;
+
+        const { newChunks, restoreData } = ui.parseLineDOM(
+            parentP, currentLine.chunks, container, cursorOffset, lineIndex
+        );
+
+        if (JSON.stringify(newChunks) === JSON.stringify(currentLine.chunks)) return null;
+
+        return {
+            updatedLine: EditorLineModel(updatedLine.align, newChunks),
+            restoreData
+        };
+    }
+
+    // ----------------------------
+    // [4] 기본 커서 복원 데이터 생성
+    // ----------------------------
+    function createDefaultRestoreData(updatedLine, lineIndex) {
+        const lastChunk = updatedLine.chunks[updatedLine.chunks.length - 1];
+        if (!lastChunk || lastChunk.type !== 'text') return null;
+        return {
+            lineIndex,
+            chunkIndex: updatedLine.chunks.length - 1,
+            offset: lastChunk.text.length
+        };
+    }
+
+    // ----------------------------
+    // [5] 상태 저장
+    // ----------------------------
+    function saveEditorState(currentState, lineIndex, updatedLine) {
+        const nextState = [...currentState];
+        nextState[lineIndex] = updatedLine;
+        app.saveEditorState(nextState);
+    }
+
+    // ----------------------------
+    // [6] 렌더링 및 커서 복원
+    // ----------------------------
+    function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
+        const { isNewChunk, isChunkRendering } = flags;
+
         if (isNewChunk) {
             ui.renderLine(lineIndex, updatedLine);
-            
-            if (restoreData) {
-                ui.restoreSelectionPositionByChunk(restoreData);
-            }
+            if (restoreData) ui.restoreSelectionPositionByChunk(restoreData);
         } else if (isChunkRendering) {
-            // 청크 부분만 업데이트 (성능 최적화)
-            ui.renderChunk(lineIndex, dataIndex, updatedLine.chunks[dataIndex]);
+            const { chunkIndex } = restoreData;
+            ui.renderChunk(lineIndex, chunkIndex, updatedLine.chunks[chunkIndex]);
             ui.restoreSelectionPositionByChunk(restoreData);
         }
     }
 
-    return {
-        processInput
-    };
+    return { processInput };
 }

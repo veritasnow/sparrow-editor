@@ -1,5 +1,5 @@
 // service/keyInput/editorKeyService.js
-import { calculateEnterState, calculateBackspaceState } from '../utils/inputUtils/keyStateUtil.js'; 
+import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js'; 
 import { getLineLengthFromState } from '../utils/editorStateUtils.js'; // 💡 신규 유틸리티 임포트
 
 /**

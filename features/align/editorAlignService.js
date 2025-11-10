@@ -1,4 +1,5 @@
 // sparrow-editor\service\align\editorAlignService.js
+import { EditorLineModel } from '../../model/editorModel.js'; 
 
 /**
  * 텍스트 정렬 변경의 핵심 비즈니스 로직을 제공하는 서비스 모듈.
@@ -32,10 +33,7 @@ export function createEditorAlignService(app, ui, updateAndRestore) {
         for (let i = startLineIndex; i <= endLineIndex; i++) {
             if (!newState[i]) continue;
             // 💡 [개선] EditorLineModel DTO를 사용한다고 가정하고 불변성 유지
-            newState[i] = {
-                ...newState[i],
-                align: alignType // 정렬 타입 변경
-            };
+            newState[i] = EditorLineModel(alignType, newState[i].chunks);
         }
 
         // 3. 상태 저장 및 UI 업데이트 요청

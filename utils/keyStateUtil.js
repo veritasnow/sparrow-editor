@@ -1,4 +1,4 @@
-import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js'; // Model 팩토리 임포트
+import { EditorLineModel, TextChunkModel } from '../model/editorModel.js'; // Model 팩토리 임포트
 
 // === Enter Logic ===
 /**
