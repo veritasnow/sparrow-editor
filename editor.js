@@ -1,6 +1,6 @@
-import { createEditorApp } from './module/stateModule/application/editorApplication.js';
-import { createUiApplication } from './module/uiModule/application/uiApplication.js';
-import { createInputApplication } from './module/inputModule/application/inputApplication.js'; 
+import { createEditorApp } from './state/application/editorApplication.js';
+import { createUiApplication } from './ui/application/uiApplication.js';
+import { createInputApplication } from './input/application/inputApplication.js'; 
 
 // 에디터 모델
 import { EditorLineModel, TextChunkModel } from './model/editorModel.js';
@@ -10,13 +10,13 @@ import { textRenderer } from './renderers/textRenderer.js';
 import { videoRenderer } from './renderers/videoRenderer.js';
 
 // 에디터 기본 서비스
-import { createEditorInputService } from './service/input/editorInputService.js'; 
-import { createEditorKeyService } from './service/keyInput/editorKeyService.js'; 
+import { createEditorInputService } from './core/editorInputService.js'; 
+import { createEditorKeyService } from './core/editorKeyService.js'; 
 
 // 에디터 확장 서비스 바인드
-import { bindStyleButtons } from './service/style/styleFeatureBinder.js';
-import { bindAlignButtons } from './service/align/alignFeatureBinder.js';
-import { bindVideoButton } from './service/video/videoFeatureBinder.js'; // 🎥 변경된 함수 사용
+import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
+import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
+import { bindVideoButton } from './features/video/videoFeatureBinder.js'; // 🎥 변경된 함수 사용
 
 // ───────── 상태 관리 ─────────
 const app = createEditorApp({

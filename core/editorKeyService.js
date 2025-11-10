@@ -1,6 +1,6 @@
 // service/keyInput/editorKeyService.js
-import { calculateEnterState, calculateBackspaceState } from './keyStateUtil.js'; 
-import { getLineLengthFromState } from '../../utils/editorStateUtils.js'; // 💡 신규 유틸리티 임포트
+import { calculateEnterState, calculateBackspaceState } from '../utils/inputUtils/keyStateUtil.js'; 
+import { getLineLengthFromState } from '../utils/editorStateUtils.js'; // 💡 신규 유틸리티 임포트
 
 /**
  * 에디터의 Enter 및 Backspace 키다운 이벤트에 따른 핵심 상태 관리 로직을 처리하는 서비스 팩토리입니다.

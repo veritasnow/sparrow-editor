@@ -1,6 +1,6 @@
 // service/input/inputStateUtil.js
 import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js'; // 💡 Model 팩토리 임포트 가정
-import { parseParentPToChunks } from '../../utils/domToChunkParseUtils.js'; // 💡 Model 팩토리 임포트 가정
+import { parseParentPToChunks } from '../domToChunkParseUtils.js'; // 💡 Model 팩토리 임포트 가정
 
 
 

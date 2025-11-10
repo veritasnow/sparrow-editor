@@ -1,6 +1,6 @@
 // sparrow-editor\service\video\videoFeatureBinder.js
 
-import { createVideoPopupView } from '../../component/video/videoPopupView.js';      // 💡 View Component
+import { createVideoPopupView } from '../../components/video/videoPopupView.js';      // 💡 View Component
 import { createVideoInsertService } from './videoInsertService.js'; // 💡 Application Service/Hook
 
 /**

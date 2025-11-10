@@ -1,6 +1,6 @@
 // service/input/editorInputService.js
-import { calculateNextLineState } from './inputStateUtil.js'; 
-import { EditorLineModel } from '../../model/editorModel.js'; // 💡 EditorLineModel 임포트 가정
+import { calculateNextLineState } from '../utils/inputUtils/inputStateUtil.js'; 
+import { EditorLineModel } from '../model/editorModel.js'; // 💡 EditorLineModel 임포트 가정
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
