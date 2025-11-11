@@ -12,7 +12,8 @@ export function createEditorSnapshotService(store) {
           return patch;
         });
 
-      console.log(store.getState());        
+        console.log(store.getState());
+        
         return;
       }
 

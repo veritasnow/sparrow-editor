@@ -52,8 +52,10 @@ export function createEditor(rootId) {
 
   const keyProcessor = createEditorKeyService(app, ui);
   inputApp.bindKeydown({
-    handleEnter: keyProcessor.processEnter,
-    handleBackspace: keyProcessor.processBackspace
+    handleEnter     : keyProcessor.processEnter,
+    handleBackspace : keyProcessor.processBackspace,
+    undo            : keyProcessor.undo,
+    redo            : keyProcessor.redo,
   });
 
   // 7️⃣ 버튼 바인딩

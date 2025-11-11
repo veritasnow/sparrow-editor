@@ -1,33 +1,45 @@
-// /module/inputModule/service/keyBindingService.js
-
 /**
- * 키보드 이벤트 리스너를 바인딩하고, 특정 키 이벤트가 발생했을 때
- * 외부(Core)에서 주입된 핸들러를 호출하는 역할을 담당합니다.
- * @param {HTMLElement} editorEl - 에디터 DOM 엘리먼트
+ * 🎧 에디터 키보드 입력 이벤트 바인딩 서비스
+ * 단일 진입점으로 모든 키 입력을 Core 로직에 위임합니다.
  */
 export function createKeyBindingService(editorEl) {
     return {
         /**
-         * @param {Object} handlers - { handleEnter: Function, handleBackspace: Function }
+         * @param {Object} handlers - { handleEnter, handleBackspace, handleUndo, handleRedo }
          */
         bindEvents(handlers) {
             editorEl.addEventListener("keydown", (e) => {
-                // Keydown 이벤트는 항상 Core 로직이 판단할 수 있도록 인풋 이벤트처럼 필터링하지 않습니다.
-                
-                if (e.key === "Enter") {
+                const { key, ctrlKey, shiftKey } = e;
+
+                // ENTER
+                if (key === "Enter") {
                     e.preventDefault();
-                    handlers.handleEnter(); // 💡 Core 로직 실행
+                    handlers.handleEnter();
                     return;
                 }
 
-                if (e.key === "Backspace") {
-                    // Backspace는 항상 Core에서 처리하도록 막습니다.
-                    e.preventDefault(); 
-                    handlers.handleBackspace(); // 💡 Core 로직 실행
+                // BACKSPACE
+                if (key === "Backspace") {
+                    e.preventDefault();
+                    handlers.handleBackspace();
                     return;
                 }
-                
-                // 기타 다른 키 이벤트 (Ctrl+B 등) 처리 영역을 여기에 추가할 수 있습니다.
+
+                // UNDO (Ctrl + Z)
+                if (ctrlKey && key === "z" && !shiftKey) {
+                    e.preventDefault();
+                    handlers.undo();
+                    return;
+                }
+
+                // REDO (Ctrl + Shift + Z)
+                if (ctrlKey && key === "Z" && shiftKey) {
+                    e.preventDefault();
+                    handlers.redo();
+                    return;
+                }
+
+                // 🔧 여기에 Ctrl+B, Ctrl+I 등 단축키 추가 가능
             });
         }
     };

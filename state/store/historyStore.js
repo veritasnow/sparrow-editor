@@ -1,76 +1,49 @@
-// store/historyStore.js
 export function createHistoryStore(initialState = { editorState: [] }) {
-  let state = {
-    past: [],
-    present: initialState,
-    future: []
-  };
-
-  const getEditorState = (obj) => obj?.editorState || [];
+  const MAX_HISTORY = 30;
+  let history = [initialState];
+  let currentIndex = 0;
 
   return {
-    getState: () => state,
+    getState: () => ({
+      pastCount: currentIndex,
+      present: history[currentIndex],
+      futureCount: history.length - currentIndex - 1
+    }),
 
-    // patch 단위 저장 (undo/redo 기록 포함)
     applyPatch: (patch, reducer) => {
-      const prev = state.present;
+      const prev = history[currentIndex];
       const newPresent = reducer(prev, patch);
 
-      // 변경 없으면 저장 안함
+      // 변경 없으면 무시
       if (JSON.stringify(prev.editorState) === JSON.stringify(newPresent.editorState)) return;
 
-      const MAX_HISTORY = 30;
-      const newPast = [...state.past, prev].slice(-MAX_HISTORY);
+      // 현재 인덱스 이후 이력 삭제 (redo 경로 제거)
+      history = history.slice(0, currentIndex + 1);
+      history.push(newPresent);
 
-      state = {
-        past: newPast,
-        present: newPresent,
-        future: []
-      };
+      // 최대 30개 유지
+      if (history.length > MAX_HISTORY) {
+        history = history.slice(history.length - MAX_HISTORY);
+      }
+
+      currentIndex = history.length - 1;
     },
 
     undo: () => {
-      if (state.past.length === 0) return;
-
-      const prevPresent = state.past[state.past.length - 1];
-      const newPast = state.past.slice(0, -1);
-
-      state = {
-        past: newPast,
-        present: prevPresent,
-        future: [state.present, ...state.future]
-      };
+      if (currentIndex > 0) currentIndex--;
     },
 
     redo: () => {
-      if (state.future.length === 0) return;
-
-      const nextPresent = state.future[0];
-      const newFuture = state.future.slice(1);
-
-      state = {
-        past: [...state.past, state.present],
-        present: nextPresent,
-        future: newFuture
-      };
-    },
-
-    reset: (initial = { editorState: [] }) => {
-      state = { past: [], present: initial, future: [] };
+      if (currentIndex < history.length - 1) currentIndex++;
     },
 
     replacePresent: (editorState) => {
-      state = { ...state, present: { editorState } };
+      history[currentIndex] = { editorState };
     },
 
-    saveSnapshot: (editorState) => {
-      state = { past: [], present: { editorState }, future: [] };
-    },
-
-    // ✅ 변경된 라인만 key-value 형태로 반환
     getChangedMap: () => {
-      const prev = getEditorState(state.past[state.past.length - 1] || {});
-      const curr = getEditorState(state.present);
+      const prev = history[currentIndex - 1]?.editorState || [];
+      const curr = history[currentIndex]?.editorState || [];
 
       const changed = {};
       const maxLen = Math.max(prev.length, curr.length);
@@ -83,6 +56,8 @@ export function createHistoryStore(initialState = { editorState: [] }) {
         }
       }
       return changed;
-    }
+    },
+
+    getHistory: () => history,
   };
 }
