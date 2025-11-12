@@ -19,7 +19,11 @@ export function createEditorInputService(app, ui) {
         const { updatedLine, flags, restoreData } = updateLineModel(currentLine, selection);
         if (!flags.hasChange) return;
 
+        // 1. 상태저장
         saveEditorState(currentState, selection.lineIndex, updatedLine);
+        // 2. 커서저장
+        saveCursorState(restoreData);        
+        // 3. 렌더링 및 복원
         renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, restoreData);
     }
 
@@ -119,7 +123,19 @@ export function createEditorInputService(app, ui) {
     }
 
     // ----------------------------
-    // [6] 렌더링 및 커서 복원
+    // [6] 커서 위치 저장
+    // ----------------------------
+    function saveCursorState(restoreData) {
+       if (!restoreData) return;
+        app.saveCursorState({
+            lineIndex  : restoreData.lineIndex,
+            startOffset: restoreData.chunkIndex,
+            endOffset  : restoreData.offset
+        });
+    }
+
+    // ----------------------------
+    // [7] 렌더링 및 커서 복원
     // ----------------------------
     function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
         const { isNewChunk, isChunkRendering } = flags;

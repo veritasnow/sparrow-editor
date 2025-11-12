@@ -87,38 +87,15 @@ export function createEditorKeyService(app, ui) {
      * Undo / Redo
      */
     function undo() {
-        app.undo();
-        const state = app.getState().present.editorState;;
-        ui.render(state);
+        const { state, cursor } = app.undo();
+        ui.render(state.editorState);
+        if (cursor) ui.restoreSelectionPosition({lineIndex: cursor.lineIndex, offset: cursor.endOffset});
     }
 
-
-    /*
-            function undoRedo(e) {
-            const isRedo = e.shiftKey;
-            const snapshot = isRedo ? app.redo() : app.undo();
-            if (!snapshot) return;
-
-            const { editorState, selection } = snapshot.present;
-            
-            ui.render(editorState);
-            
-            if (selection) {
-                ui.restoreSelectionPosition(selection);
-            } else {
-                // selection 정보가 없으면 마지막 라인 끝으로 이동
-                const lastLine = editorState.length - 1;
-                const lastOffset = editorState[lastLine].chunks.join("").length;
-                ui.restoreSelectionPosition({ lineIndex: lastLine, startOffset: lastOffset, endOffset: lastOffset });
-            }
-            }    
-    
-    */
-
     function redo() {
-        app.redo();
-        const state = app.getState().present.editorState;;
-        ui.render(state);
+        const { state, cursor } = app.redo();
+        ui.render(state.editorState);
+        if (cursor) ui.restoreSelectionPosition({lineIndex: cursor.lineIndex, offset: cursor.endOffset});
     }
 
     return {

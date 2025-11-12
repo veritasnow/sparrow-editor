@@ -1,46 +1,75 @@
 // application/editorApplication.js
 import { createHistoryStore } from "../store/historyStore.js";
+import { createCursorHistoryStore } from "../store/cursorHistoryStore.js";
 import { createEditorSnapshotService } from "../service/editorSnapshotService.js";
 
 export function createEditorApp(initialState = { editorState: [] }) {
-  const store = createHistoryStore(initialState);
-  const snapshotService = createEditorSnapshotService(store);
+  // ----------------------------
+  // [1] 상태 저장소 초기화
+  // ----------------------------
+  const store = createHistoryStore(initialState);           // 에디터 본문 상태
+  const cursorStore = createCursorHistoryStore(null);       // 커서/선택영역 상태
+  const snapshotService = createEditorSnapshotService(store); // 스냅샷 기반 저장
 
+  // ----------------------------
+  // [2] 외부 제공 API
+  // ----------------------------
   return {
-    /** 현재 상태 조회 */
+    /** 🔹 현재 상태 조회 */
     getState: store.getState,
+    getCursor: cursorStore.getCursor,
 
-    /** 전체 상태 저장 (snapshot 기반) */
+    /** 🔹 전체 상태 저장 (snapshot 기반) */
     saveEditorState: snapshotService.saveEditorState,
 
-    /** 이전 상태로 복원 */
+    /** 🔹 커서 상태 저장 (restoreData 등) */
+    saveCursorState: cursorStore.saveCursor,
+
+    /** 🔹 이전 상태로 복원 (수동 스냅샷용) */
     setPrevEditorState: snapshotService.setPrevEditorState,
 
-    // patch 기반
+    // ----------------------------
+    // [3] patch 기반 reducer 처리
+    // ----------------------------
     insertText: (lineIndex, offset, text) => {
-      store.applyPatch({ action: "insertText", payload: { lineIndex, offset, text } }, editorReducer);
+      store.applyPatch(
+        { action: "insertText", payload: { lineIndex, offset, text } },
+        editorReducer
+      );
     },
     
     toggleStyle: (lineIndex, start, end, styleKey, styleValue) => {
-      store.applyPatch({ action: "toggleStyle", payload: { lineIndex, start, end, styleKey, styleValue } }, editorReducer);
+      store.applyPatch(
+        { action: "toggleStyle", payload: { lineIndex, start, end, styleKey, styleValue } },
+        editorReducer
+      );
     },
 
-
-    /** Undo / Redo */
+    // ----------------------------
+    // [4] Undo / Redo
+    // ----------------------------
     undo: () => {
       store.undo();
-      return store.getState().present;
+      const state = store.getState().present;
+      const cursor = cursorStore.undo();
+      return { state, cursor };
     },
 
     redo: () => {
       store.redo();
-      return store.getState().present;
+      const state = store.getState().present;
+      const cursor = cursorStore.redo();
+      return { state, cursor };
     },
 
-    /** 상태 초기화 */
-    reset: store.reset,
+    // ----------------------------
+    // [5] 초기화 및 부가 기능
+    // ----------------------------
+    reset: () => {
+      store.reset?.();
+      cursorStore.reset?.();
+    },
 
-    /** 변경된 맵 조회 (추후 diff 관리용) */
     getChangedMap: store.getChangedMap,
   };
 }
