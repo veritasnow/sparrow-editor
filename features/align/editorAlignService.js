@@ -41,6 +41,14 @@ export function createEditorAlignService(app, ui, updateAndRestore) {
 
         // ✅ 선택 영역이 유지되도록 커서 복원 위치 파악
         const pos = ui.getSelectionPosition();
+
+        // 4. 커서저장
+        app.saveCursorState({
+            lineIndex  : pos.lineIndex,
+            startOffset: 0,
+            endOffset  : pos.offset
+        });      
+
         updateAndRestore(pos);
     }
 

@@ -6,7 +6,7 @@ import { extractYouTubeId, applyVideoBlock } from './videoBlockUtil.js';
  * 비디오 삽입의 핵심 비즈니스 로직을 제공하는 서비스/훅 모듈.
  * (DOM에 의존하지 않고, 주입된 콜백을 통해 에디터 상태를 변경합니다.)
  */
-export function createVideoInsertService(getEditorState, saveEditorState, updateAndRestore, getSelectionPosition) {
+export function createVideoInsertService(getEditorState, saveEditorState, updateAndRestore, getSelectionPosition, saveCursorState) {
 
     /**
      * URL을 받아 비디오 블록을 에디터에 삽입하는 메인 핸들러
@@ -48,6 +48,7 @@ export function createVideoInsertService(getEditorState, saveEditorState, update
         );
 
         saveEditorState(newState); // 상태 모듈에 저장
+        saveCursorState({ lineIndex: restoreLineIndex, offset: restoreOffset });
         updateAndRestore({ lineIndex: restoreLineIndex, offset: restoreOffset }); // UI 렌더링 요청
 
         return true;

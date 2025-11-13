@@ -33,12 +33,19 @@ export function createEditorKeyService(app, ui) {
         // 3. 상태 저장 (Side Effect)
         app.saveEditorState(newState);
 
-        // 4. DOM 구조 반영 및 렌더링 (Side Effect)
+        // 4. 커서저장
+        app.saveCursorState({
+            lineIndex  : newPos.lineIndex,
+            startOffset: 0,
+            endOffset  : newPos.offset
+        });
+
+        // 5. DOM 구조 반영 및 렌더링 (Side Effect)
         ui.insertNewLineElement(lineIndex + 1, newLineData.align); 
         ui.renderLine(lineIndex, newState[lineIndex]);
         ui.renderLine(lineIndex + 1, newLineData);
 
-        // 5. 커서 이동 (Side Effect)
+        // 6. 커서 이동 (Side Effect)
         ui.restoreSelectionPosition(newPos);
     }
 
@@ -70,7 +77,14 @@ export function createEditorKeyService(app, ui) {
         // 3. 상태 저장 (Side Effect)
         app.saveEditorState(newState);
 
-        // 4. DOM 구조 반영 및 렌더링 (Side Effect)
+        // 4. 커서저장
+        app.saveCursorState({
+            lineIndex  : newPos.lineIndex,
+            startOffset: 0,
+            endOffset  : newPos.offset
+        });
+
+        // 5. DOM 구조 반영 및 렌더링 (Side Effect)
         if (deletedLineIndex !== null) {
             ui.removeLineElement(deletedLineIndex); // UI 구조 변경 요청
         }
@@ -79,7 +93,7 @@ export function createEditorKeyService(app, ui) {
             ui.renderLine(updatedLineIndex, newState[updatedLineIndex]); // UI 내용 렌더링 요청
         }
         
-        // 5. 커서 이동 (Side Effect)
+        // 6. 커서 이동 (Side Effect)
         if (newPos) ui.restoreSelectionPosition(newPos);
     }
 

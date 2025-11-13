@@ -7,7 +7,7 @@ import { createVideoInsertService } from './videoInsertService.js'; // 💡 Appl
  * 🎥 유튜브 버튼 이벤트 바인딩 (최상위 컴포지션 레이어)
  * 이 함수는 View와 Service를 초기화하고 이벤트를 연결합니다.
  */
-export function bindVideoButton(videoBtn, getEditorState, saveEditorState, updateAndRestore, getSelectionPosition) {
+export function bindVideoButton(videoBtn, getEditorState, saveEditorState, updateAndRestore, getSelectionPosition, saveCursorState) {
     const toolbar = document.querySelector('.toolbar');
 
     // 1. View 모듈 초기화 (DOM 생성)
@@ -18,7 +18,8 @@ export function bindVideoButton(videoBtn, getEditorState, saveEditorState, updat
         getEditorState, 
         saveEditorState, 
         updateAndRestore, 
-        getSelectionPosition
+        getSelectionPosition,
+        saveCursorState
     );
 
     // 3. 이벤트 연결 (Binding)

@@ -61,17 +61,21 @@ export function createEditor(rootId) {
   // 7️⃣ 버튼 바인딩
   const getEditorState = () => app.getState().present.editorState;
   const saveEditorState = newState => app.saveEditorState(newState);
+  const saveCursorState = newCursor => app.saveCursorState(newCursor);
 
-  bindStyleButtons(getEditorState, saveEditorState, ui, updateAndRestore, {
-    boldBtn: document.getElementById(`${rootId}-boldBtn`),
-    italicBtn: document.getElementById(`${rootId}-italicBtn`),
-    underLineBtn: document.getElementById(`${rootId}-underLineBtn`)
-  });
+  bindStyleButtons(getEditorState, saveEditorState, ui, updateAndRestore,
+    {
+      boldBtn: document.getElementById(`${rootId}-boldBtn`),
+      italicBtn: document.getElementById(`${rootId}-italicBtn`),
+      underLineBtn: document.getElementById(`${rootId}-underLineBtn`)
+    },
+    saveCursorState => app.saveCursorState(saveCursorState)
+  );
 
   bindAlignButtons(app, ui, updateAndRestore, {
-    leftBtn: document.getElementById(`${rootId}-alignLeftBtn`),
+    leftBtn  : document.getElementById(`${rootId}-alignLeftBtn`),
     centerBtn: document.getElementById(`${rootId}-alignCenterBtn`),
-    rightBtn: document.getElementById(`${rootId}-alignRightBtn`)
+    rightBtn : document.getElementById(`${rootId}-alignRightBtn`)
   });
 
   bindVideoButton(
@@ -79,7 +83,8 @@ export function createEditor(rootId) {
     getEditorState,
     saveEditorState,
     updateAndRestore,
-    ui.getSelectionPosition
+    ui.getSelectionPosition,
+    saveCursorState
   );
 
   // 8️⃣ 초기 렌더링

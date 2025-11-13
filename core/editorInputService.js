@@ -22,7 +22,7 @@ export function createEditorInputService(app, ui) {
         // 1. 상태저장
         saveEditorState(currentState, selection.lineIndex, updatedLine);
         // 2. 커서저장
-        saveCursorState(restoreData);        
+        saveCursorState(restoreData);
         // 3. 렌더링 및 복원
         renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, restoreData);
     }

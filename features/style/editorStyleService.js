@@ -5,7 +5,7 @@ import { getLineLengthFromState } from '../../utils/editorStateUtils.js'; // �
 /**
  * 인라인 스타일 변경의 핵심 비즈니스 로직을 제공하는 서비스 모듈.
  */
-export function createEditorStyleService(getEditorState, saveEditorState, ui, updateAndRestore) {
+export function createEditorStyleService(getEditorState, saveEditorState, ui, updateAndRestore, saveCursorState) {
 
     /**
      * 현재 선택된 텍스트 영역의 인라인 스타일을 토글(적용/해제)합니다.
@@ -40,6 +40,14 @@ export function createEditorStyleService(getEditorState, saveEditorState, ui, up
 
         // ✅ 선택 영역이 유지되도록 커서 복원 위치 파악
         const pos = ui.getSelectionPosition();
+
+        // 4. 커서저장
+        saveCursorState({
+            lineIndex  : pos.lineIndex,
+            startOffset: 0,
+            endOffset  : pos.offset
+        });      
+
         updateAndRestore(pos);
     }
 

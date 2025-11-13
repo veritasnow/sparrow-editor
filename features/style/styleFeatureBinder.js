@@ -6,14 +6,15 @@ import { createEditorStyleService } from '../style/editorStyleService.js'; // �
  * 🎨 스타일 버튼 이벤트 바인딩 (최상위 컴포지션 레이어)
  * 이 함수는 Style Service를 초기화하고 이벤트 리스너를 연결합니다.
  */
-export function bindStyleButtons(getEditorState, saveEditorState, ui, updateAndRestore, { boldBtn, italicBtn, underLineBtn }) {
+export function bindStyleButtons(getEditorState, saveEditorState, ui, updateAndRestore, { boldBtn, italicBtn, underLineBtn }, saveCursorState) {
 
     // 1. Logic 모듈 초기화 (필요한 의존성 주입)
     const { applyStyle } = createEditorStyleService(
         getEditorState, 
         saveEditorState, 
         ui, 
-        updateAndRestore
+        updateAndRestore,
+        saveCursorState
     );
 
     // 2. 이벤트 연결 (Binding) - 뷰 이벤트와 로직 연결
