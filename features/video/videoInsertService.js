@@ -3,16 +3,11 @@
 import { extractYouTubeId, applyVideoBlock } from './videoBlockUtil.js';
 
 /**
- * 비디오 삽입의 핵심 비즈니스 로직을 제공하는 서비스/훅 모듈.
- * (DOM에 의존하지 않고, 주입된 콜백을 통해 에디터 상태를 변경합니다.)
+ * 🎬 비디오 삽입 핵심 로직
+ * stateAPI, uiAPI를 통해 상태 변경/커서 이동/렌더링 처리
  */
-export function createVideoInsertService(getEditorState, saveEditorState, updateAndRestore, getSelectionPosition, saveCursorState) {
+export function createVideoInsertService(stateAPI, uiAPI) {
 
-    /**
-     * URL을 받아 비디오 블록을 에디터에 삽입하는 메인 핸들러
-     * @param {string} url - 입력된 유튜브 URL
-     * @returns {boolean} 성공 여부 (UI에서 팝업을 닫을지 결정)
-     */
     function insertVideo(url) {
         if (!url) {
             alert('유튜브 URL을 입력하세요.');
@@ -25,31 +20,33 @@ export function createVideoInsertService(getEditorState, saveEditorState, update
             return false;
         }
 
-        // 🟢 1. 현재 커서 위치 파악 (주입된 콜백 사용)
-        const pos = getSelectionPosition();
-        
-        const editorState = getEditorState();
-        let currentLineIndex = (pos && pos.lineIndex !== undefined) ? pos.lineIndex : editorState.length;
-        let cursorOffset = (pos && pos.offset !== undefined) ? pos.offset : 0;
-        
-        // 커서 위치 안전 장치 로직
-        if (currentLineIndex >= editorState.length) {
-            currentLineIndex = editorState.length > 0 ? editorState.length - 1 : 0;
-            cursorOffset = (editorState.length > 0 && editorState[currentLineIndex].chunks.length > 0) ? 
-                            editorState[currentLineIndex].chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0) : 0;
+        // 1. 현재 커서 위치
+        const pos = uiAPI.getSelectionPosition();
+        const editorState = stateAPI.get();
+        let lineIndex  = pos?.lineIndex ?? editorState.length;
+        let offset     = pos?.offset ?? 0;
+
+        // 안전 장치: 커서가 상태 범위를 벗어나지 않도록
+        if (lineIndex >= editorState.length) {
+            lineIndex = Math.max(0, editorState.length - 1);
+            offset = editorState[lineIndex]?.chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0) || 0;
         }
 
-        // 🟢 2. 상태 변경 위임 및 적용
+        // 2. 상태 변경 위임
         const { newState, restoreLineIndex, restoreOffset } = applyVideoBlock(
-            editorState, 
-            videoId, 
-            currentLineIndex, 
-            cursorOffset
+            editorState,
+            videoId,
+            lineIndex,
+            offset
         );
 
-        saveEditorState(newState); // 상태 모듈에 저장
-        saveCursorState({ lineIndex: restoreLineIndex, offset: restoreOffset });
-        updateAndRestore({ lineIndex: restoreLineIndex, offset: restoreOffset }); // UI 렌더링 요청
+        // 3. 상태/커서 저장
+        stateAPI.save(newState);
+        stateAPI.saveCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
+
+        // 4. UI 반영
+        uiAPI.render(newState);
+        uiAPI.restoreCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
 
         return true;
     }

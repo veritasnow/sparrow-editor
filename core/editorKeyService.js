@@ -1,121 +1,167 @@
 // service/keyInput/editorKeyService.js
-import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js'; 
-import { getLineLengthFromState } from '../utils/editorStateUtils.js'; // 💡 신규 유틸리티 임포트
+import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js';
+import { getLineLengthFromState } from '../utils/editorStateUtils.js';
 
 /**
- * 에디터의 Enter 및 Backspace 키다운 이벤트에 따른 핵심 상태 관리 로직을 처리하는 서비스 팩토리입니다.
- * @param {Object} app - Editor State Application
- * @param {Object} ui - UI Application (DOM/Selection/Rendering)
- * @returns {Object} processEnter, processBackspace 함수를 포함하는 객체
+ * 💚 EditorKeyService
+ * -------------------------------------------------------
+ * 에디터의 Enter / Backspace / Undo / Redo 키 입력을 처리하는 서비스.
+ *
+ * 이 모듈은 "Controller" 역할만 담당한다:
+ *  - 상태 읽기
+ *  - 순수 상태 계산 함수 호출
+ *  - 변경된 상태 저장
+ *  - UI에 반영하기 위한 Side Effect 실행
+ *
+ * "State Logic" 은 calculateEnterState(), calculateBackspaceState() 등에서만 담당한다.
+ * "UI Rendering" 은 ui.renderLine(), ui.insertLine(), ui.removeLine() 등에서 담당한다.
+ *
+ * 즉 다음 구조를 따른다:
+ *   DOM Selection → Offset 보정 → 순수 상태 계산 → 상태 저장 → UI 업데이트 → 커서 복원
  */
-export function createEditorKeyService(app, ui) {
+export function createEditorKeyService({ state, ui }) {
 
     /**
-     * 현재 커서 위치를 파악하고, 상태 및 DOM에 Enter 키 입력을 반영하여 줄바꿈을 수행합니다.
+     * ENTER 처리
+     * -------------------------------------------------------
+     * - DOM Selection 읽기
+     * - State 기반 offset 보정
+     * - 순수 상태 계산 함수로 줄바꿈 로직 위임
+     * - 변경된 상태 저장
+     * - DOM 라인 추가 및 렌더링
+     * - 커서 위치 복원
      */
     function processEnter() {
-        // 1. 상태 및 위치 파악 (Controller/Service 책임)
-        const currentState = app.getState().present.editorState;
-        
-        // 💡 [변경] UI에서 순수 DOM 범위만 가져옵니다.
-        const domRanges = ui.getSelectionRangesInDOM(); 
+        const currentState = state.get();
+
+        // 🎨 DOM selection 가져오기
+        const domRanges = ui.getDomSelection();
         if (!domRanges || domRanges.length === 0) return;
 
-        // 💡 [추가] 단일 커서 위치를 State 길이에 맞춰 클램프합니다. (도메인 책임)
         const { lineIndex, endIndex: domOffset } = domRanges[0];
+
+        // 현재 라인 길이를 기반으로 DOM offset 보정(클램프)
         const lineState = currentState[lineIndex];
         const lineLen = getLineLengthFromState(lineState);
-        const offset = Math.max(0, Math.min(domOffset, lineLen)); // State 기반 오프셋
+        const offset = Math.max(0, Math.min(domOffset, lineLen));
 
-        // 💡 2. 상태 계산 위임 (Pure Logic)
-        const { newState, newPos, newLineData } = calculateEnterState(currentState, lineIndex, offset);
+        // 🧠 순수 상태 계산 (줄바꿈 로직)
+        const { newState, newPos, newLineData } =
+            calculateEnterState(currentState, lineIndex, offset);
 
-        // 3. 상태 저장 (Side Effect)
-        app.saveEditorState(newState);
-
-        // 4. 커서저장
-        app.saveCursorState({
+        // 💚 상태 + 커서 저장
+        state.save(newState);
+        state.saveCursor({
             lineIndex  : newPos.lineIndex,
             startOffset: 0,
             endOffset  : newPos.offset
         });
 
-        // 5. DOM 구조 반영 및 렌더링 (Side Effect)
-        ui.insertNewLineElement(lineIndex + 1, newLineData.align); 
+        // 🎨 UI 반영 (DOM 라인 삽입 + 렌더링)
+        ui.insertLine(lineIndex + 1, newLineData.align);
         ui.renderLine(lineIndex, newState[lineIndex]);
         ui.renderLine(lineIndex + 1, newLineData);
 
-        // 6. 커서 이동 (Side Effect)
-        ui.restoreSelectionPosition(newPos);
+        // 🎨 커서 복원
+        ui.restoreCursor(newPos);
     }
 
     /**
-     * 현재 커서 위치를 파악하고, 상태 및 DOM에 Backspace 키 입력을 반영하여 삭제/줄 병합을 수행합니다.
+     * BACKSPACE 처리
+     * -------------------------------------------------------
+     * - DOM Selection 읽기
+     * - State 기반 offset 보정
+     * - 순수 상태 계산 함수에서 삭제/줄 병합 로직 처리
+     * - 변경된 상태 저장
+     * - 삭제된 라인/업데이트된 라인 UI에 반영
+     * - 커서 위치 복원
      */
     function processBackspace() {
-        // 1. 상태 및 위치 파악 (Controller/Service 책임)
-        const currentState = app.getState().present.editorState;
-        
-        // 💡 [변경] UI에서 순수 DOM 범위만 가져옵니다.
-        const domRanges = ui.getSelectionRangesInDOM(); 
+        const currentState = state.get();
+        const domRanges = ui.getDomSelection();
         if (!domRanges || domRanges.length === 0) return;
 
-        // 💡 [추가] 단일 커서 위치를 State 길이에 맞춰 클램프합니다. (도메인 책임)
         const { lineIndex, endIndex: domOffset } = domRanges[0];
+
+        // offset 보정
         const lineState = currentState[lineIndex];
         const lineLen = getLineLengthFromState(lineState);
-        const offset = Math.max(0, Math.min(domOffset, lineLen)); // State 기반 오프셋
+        const offset = Math.max(0, Math.min(domOffset, lineLen));
 
-        // 💡 2. 상태 계산 위임 (Pure Logic)
-        const { newState, newPos, deletedLineIndex, updatedLineIndex } = calculateBackspaceState(
-            currentState, lineIndex, offset
-        );
-        
-        // 상태 변화가 없으면 바로 종료
+        // 🧠 순수 상태 계산 (삭제/병합)
+        const { newState, newPos, deletedLineIndex, updatedLineIndex } =
+            calculateBackspaceState(currentState, lineIndex, offset);
+
+        // 상태 변화가 없으면 종료
         if (newState === currentState) return;
 
-        // 3. 상태 저장 (Side Effect)
-        app.saveEditorState(newState);
-
-        // 4. 커서저장
-        app.saveCursorState({
+        // 💚 상태 + 커서 저장
+        state.save(newState);
+        state.saveCursor({
             lineIndex  : newPos.lineIndex,
             startOffset: 0,
             endOffset  : newPos.offset
         });
 
-        // 5. DOM 구조 반영 및 렌더링 (Side Effect)
+        // 🎨 UI 반영
         if (deletedLineIndex !== null) {
-            ui.removeLineElement(deletedLineIndex); // UI 구조 변경 요청
+            ui.removeLine(deletedLineIndex);
+        }
+        if (updatedLineIndex !== null) {
+            ui.renderLine(updatedLineIndex, newState[updatedLineIndex]);
         }
 
-        if (updatedLineIndex !== null) {
-            ui.renderLine(updatedLineIndex, newState[updatedLineIndex]); // UI 내용 렌더링 요청
-        }
-        
-        // 6. 커서 이동 (Side Effect)
-        if (newPos) ui.restoreSelectionPosition(newPos);
+        // 🎨 커서 복원
+        ui.restoreCursor(newPos);
     }
 
     /**
-     * Undo / Redo
+     * UNDO
+     * -------------------------------------------------------
+     * - 히스토리에서 이전 상태 꺼내기
+     * - 전체 UI 렌더링
+     * - 커서 복원
      */
-    function undo() {
-        const { state, cursor } = app.undo();
-        ui.render(state.editorState);
-        if (cursor) ui.restoreSelectionPosition({lineIndex: cursor.lineIndex, offset: cursor.endOffset});
+    function callUndo() {
+        const { state: newState, cursor } = state.undo();
+
+        // 🎨 전체 렌더링
+        ui.render(newState.editorState);
+
+        // 커서 복원
+        if (cursor) {
+            ui.restoreCursor({
+                lineIndex: cursor.lineIndex,
+                offset   : cursor.endOffset
+            });
+        }
     }
 
-    function redo() {
-        const { state, cursor } = app.redo();
-        ui.render(state.editorState);
-        if (cursor) ui.restoreSelectionPosition({lineIndex: cursor.lineIndex, offset: cursor.endOffset});
+    /**
+     * REDO
+     * -------------------------------------------------------
+     * - 다음 상태 꺼내기
+     * - UI 렌더링
+     * - 커서 복원
+     */
+    function callRedo() {
+        const { state: newState, cursor } = state.redo();
+
+        ui.render(newState.editorState);
+
+        if (cursor) {
+            ui.restoreCursor({
+                lineIndex: cursor.lineIndex,
+                offset   : cursor.endOffset
+            });
+        }
     }
 
+    // 외부 API
     return {
         processEnter,
         processBackspace,
-        undo,
-        redo
+        undo : callUndo,
+        redo : callRedo
     };
 }
