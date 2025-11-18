@@ -1,4 +1,4 @@
-import { EditorLineModel, TextChunkModel } from '../model/editorModel.js'; // Model 팩토리 임포트
+import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../model/editorModel.js'; // Model 팩토리 임포트
 
 // === Enter Logic ===
 /**
@@ -20,27 +20,28 @@ export function calculateEnterState(currentState, lineIndex, offset) {
 
     // 2. 청크 분할 로직 (상태 계산)
     lineChunks.forEach(chunk => {
-        const start = acc;
-        const end   = acc + chunk.text.length;
+        console.log('chunk.type  :', chunk.type);
+        if (chunk.type === "text") {
+            const start = acc;
+            const end   = acc + chunk.text.length;
 
-        if (offset <= start) {
-            // 💡 TextChunkModel로 불변 객체 복사
-            textAfterCursor.push(TextChunkModel(chunk.type, chunk.text, chunk.style));
-        }
-        else if (offset >= end) {
-            // 💡 TextChunkModel로 불변 객체 복사
-            textBeforeCursor.push(TextChunkModel(chunk.type, chunk.text, chunk.style));
-        }
-        else {
-            // 💡 TextChunkModel로 새로운 텍스트를 가진 불변 객체 생성
-            const textBefore = chunk.text.slice(0, offset - start);
-            const textAfter  = chunk.text.slice(offset - start);
+            if (offset <= start) {
+                textAfterCursor.push(TextChunkModel(chunk.type, chunk.text, chunk.style));
+            } else if (offset >= end) {
+                textBeforeCursor.push(TextChunkModel(chunk.type, chunk.text, chunk.style));
+            } else {
+                const textBefore = chunk.text.slice(0, offset - start);
+                const textAfter  = chunk.text.slice(offset - start);
 
-            textBeforeCursor.push(TextChunkModel(chunk.type, textBefore, chunk.style));
-            textAfterCursor.push(TextChunkModel(chunk.type, textAfter, chunk.style));
+                if (textBefore) textBeforeCursor.push(TextChunkModel("text", textBefore, chunk.style));
+                if (textAfter)  textAfterCursor.push(TextChunkModel("text", textAfter, chunk.style));
+            }
+
+            acc += chunk.text.length;
+        } else {
+            textBeforeCursor.push(VideoChunkModel(chunk.videoId, chunk.src));
         }
-        acc = end;
-    });
+    });    
 
     // 3. 상태 업데이트
     // 💡 [수정] 현재 라인(lineIndex)의 업데이트된 불변 모델 생성
