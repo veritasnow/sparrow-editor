@@ -30,8 +30,7 @@ export function createEditorStyleService(stateAPI, uiAPI) {
             currentState,
             ranges,
             styleKey,
-            styleValue,
-            { type: 'text' }
+            styleValue
         );
 
         // 상태 저장
