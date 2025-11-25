@@ -73,6 +73,19 @@ export function createRenderService({ rootId, rendererRegistry }) {
         }
     }
 
+
+    function renderLineChunks(line, parentEl) {
+      line.chunks.forEach((chunk, chunkIndex) => {
+        const renderer = rendererRegistry[chunk.type];
+        if (!renderer || typeof renderer.render !== "function") return;
+
+        const el = renderer.render(chunk);
+        el.dataset.index = chunkIndex;
+        el.classList.add(`chunk-${chunk.type}`);
+        parentEl.appendChild(el);
+      });
+    }
+
     // -----------------------------------------------------
 
     return {
@@ -88,16 +101,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
               const p = editorEl.children[i];
               p.innerHTML = "";
               p.style.textAlign = line.align || "left";
-
-              line.chunks.forEach((chunk, chunkIndex) => {
-                const renderer = rendererRegistry[chunk.type];
-                if (renderer && typeof renderer.render === "function") {
-                  const el = renderer.render(chunk);
-                  el.dataset.index = chunkIndex;
-                  el.classList.add(`chunk-${chunk.type}`);
-                  p.appendChild(el);
-                }
-              });
+              renderLineChunks(lineData, p);
             });
         },
 
@@ -138,15 +142,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
               br.dataset.marker = "empty";
               p.appendChild(br);
             } else {
-              lineData.chunks.forEach((chunk, chunkIndex) => {
-                const renderer = rendererRegistry[chunk.type];
-                if (renderer && typeof renderer.render === "function") {
-                  const el = renderer.render(chunk);
-                  el.dataset.index = chunkIndex;
-                  el.classList.add(`chunk-${chunk.type}`);
-                  p.appendChild(el);
-                }
-              });
+              renderLineChunks(lineData, p);
             }
         },
 
@@ -206,6 +202,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
               }
             }
         },
+
         
         // 💡 Key Processor Service에서 이관된 DOM 구조 조작 함수 공개
         insertNewLineElement,
