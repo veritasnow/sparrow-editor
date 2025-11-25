@@ -125,16 +125,20 @@ export function createEditorKeyService({ state, ui }) {
     function callUndo() {
         const { state: newState, cursor } = state.undo();
 
-        // 🎨 전체 렌더링
-        ui.render(newState.editorState);
+        // cursor가 null이면 전체 렌더링
+        if (!cursor) {
+            ui.render(newState.editorState);
+            return;
+        }
+
+        // 특정 라인만 렌더링
+        ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
 
         // 커서 복원
-        if (cursor) {
-            ui.restoreCursor({
-                lineIndex: cursor.lineIndex,
-                offset   : cursor.endOffset
-            });
-        }
+        ui.restoreCursor({
+            lineIndex: cursor.lineIndex,
+            offset: cursor.endOffset
+        });
     }
 
     /**
@@ -146,15 +150,20 @@ export function createEditorKeyService({ state, ui }) {
      */
     function callRedo() {
         const { state: newState, cursor } = state.redo();
-
-        ui.render(newState.editorState);
-
-        if (cursor) {
-            ui.restoreCursor({
-                lineIndex: cursor.lineIndex,
-                offset   : cursor.endOffset
-            });
+        // cursor가 null이면 전체 렌더링
+        if (!cursor) {
+            ui.render(newState.editorState);
+            return;
         }
+
+        // 특정 라인만 렌더링
+        ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+
+        // 커서 복원
+        ui.restoreCursor({
+            lineIndex: cursor.lineIndex,
+            offset: cursor.endOffset
+        });
     }
 
     // 외부 API

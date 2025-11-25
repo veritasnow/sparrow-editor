@@ -101,7 +101,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
               const p = editorEl.children[i];
               p.innerHTML = "";
               p.style.textAlign = line.align || "left";
-              renderLineChunks(lineData, p);
+              renderLineChunks(line, p);
             });
         },
 

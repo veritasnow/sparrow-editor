@@ -48,9 +48,18 @@ export function createEditorStyleService(stateAPI, uiAPI) {
             endOffset: pos.offset
         });
 
-        // 상태 렌더링 + 커서 복원
-        uiAPI.render(newState);
-        uiAPI.restoreCursor(pos);
+        // 상태 렌더링 + 커서 복원 (전체 렌더링 → 라인 단위로 변경)
+        ranges.forEach(({ lineIndex }) => {
+            uiAPI.renderLine(lineIndex, newState[lineIndex]);
+        });
+
+        // 커서 복원: 마지막 라인 기준
+        const lastRange = ranges[ranges.length - 1];
+        uiAPI.restoreCursor({
+            lineIndex: lastRange.lineIndex,
+            offset: lastRange.endIndex
+        });
+
     }
 
     return { applyStyle };
