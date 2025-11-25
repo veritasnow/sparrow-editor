@@ -32,12 +32,17 @@ export function applyStylePatch(editorState, ranges, patch) {
                 newChunks.push(...before);
 
                 if (target.length) {
-                    const patched = target.map(t => {
+                    target.forEach(t => {
                         const newStyle = { ...t.style, ...patch };
                         Object.keys(newStyle).forEach(k => newStyle[k] === undefined && delete newStyle[k]);
-                        return TextChunkModel(t.type, t.text, newStyle);
+
+                        if (t.type === 'text') {
+                            newChunks.push(TextChunkModel(t.type, t.text, newStyle));
+                        } else {
+                            // 비텍스트(chunk.type !== 'text')는 기존 속성을 유지, style만 업데이트
+                            newChunks.push({ ...t, style: newStyle });
+                        }
                     });
-                    newChunks.push(...patched);
                 }
 
                 newChunks.push(...after);
