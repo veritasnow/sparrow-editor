@@ -46,8 +46,10 @@ export function createEditorAlignService(stateAPI, uiAPI) {
             endOffset: pos.offset
         });
 
-        // 7. UI 리렌더 및 커서 복원
-        uiAPI.render(newState);
+        // 7. UI 리렌더 및 커서 복원 (전체 렌더 → 라인 단위)
+        for (let i = startLineIndex; i <= endLineIndex; i++) {
+            uiAPI.renderLine(i, newState[i]);
+        }        
         uiAPI.restoreCursor(pos);
     }
 
