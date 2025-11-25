@@ -1,95 +1,84 @@
-import { mergeSameStyleBlocks } from "../../utils/mergeUtils.js";
-import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js'; 
-
-// ───────── 선택 영역에 스타일 patch 적용 ─────────
+// ───────── styleUtils.js ─────────
+import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js';
+import { splitChunkByOffset, mergeChunks } from "../../utils/mergeUtils.js";
 /**
- * 선택 영역에 스타일 패치(patch)를 적용하여 새로운 에디터 상태를 생성합니다. (순수 함수)
+ * 선택 영역에 스타일 patch 적용
  */
-export function applyInlineStyle(editorState, ranges, patch) {
-    const newState = editorState.slice(); 
+export function applyStylePatch(editorState, ranges, patch) {
+    const newState = [...editorState];
 
     ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
         const line = editorState[lineIndex];
         if (!line) return;
 
-        let charCount = 0;
+        let offset = 0;
         const newChunks = [];
 
         line.chunks.forEach(chunk => {
-            const chunkStart = charCount;
-            const chunkEnd = charCount + chunk.text.length;
+            const chunkStart = offset;
+            const chunkEnd   = offset + (chunk.text?.length || 0);
 
-            // 🟥 텍스트가 아닌 chunk는 절대 split하면 안 됨!!!
-            if (chunk.type !== 'text') {
-                newChunks.push(chunk);
-                charCount += chunk.text.length;
-                return;
-            }
-
-            // --- 텍스트 처리 ---
             if (endIndex <= chunkStart || startIndex >= chunkEnd) {
+                // 영역 밖
                 newChunks.push(chunk);
             } else {
-                const beforeText = chunk.text.slice(0, Math.max(0, startIndex - chunkStart));
-                const targetText = chunk.text.slice(
+                // 영역 안 → 분리 후 patch 적용
+                const { before, target, after } = splitChunkByOffset(
+                    chunk,
                     Math.max(0, startIndex - chunkStart),
-                    Math.min(chunk.text.length, endIndex - chunkStart)
+                    Math.min(chunk.text?.length || 0, endIndex - chunkStart)
                 );
-                const afterText = chunk.text.slice(Math.min(chunk.text.length, endIndex - chunkStart));
 
-                if (beforeText) {
-                    newChunks.push(TextChunkModel(chunk.type, beforeText, chunk.style));
+                newChunks.push(...before);
+
+                if (target.length) {
+                    const patched = target.map(t => {
+                        const newStyle = { ...t.style, ...patch };
+                        Object.keys(newStyle).forEach(k => newStyle[k] === undefined && delete newStyle[k]);
+                        return TextChunkModel(t.type, t.text, newStyle);
+                    });
+                    newChunks.push(...patched);
                 }
 
-                if (targetText) {
-                    const newStyle = { ...chunk.style, ...patch };
-                    Object.keys(newStyle).forEach(key => newStyle[key] === undefined && delete newStyle[key]);
-                    newChunks.push(TextChunkModel('text', targetText, newStyle));
-                }
-
-                if (afterText) {
-                    newChunks.push(TextChunkModel(chunk.type, afterText, chunk.style));
-                }
+                newChunks.push(...after);
             }
 
-            charCount += chunk.text.length;
+            offset += chunk.text?.length || 0;
         });
 
-        const mergedChunks = mergeSameStyleBlocks(newChunks);
-        newState[lineIndex] = EditorLineModel(line.align, mergedChunks);
+        newState[lineIndex] = EditorLineModel(line.align, mergeChunks(newChunks));
     });
 
     return newState;
 }
 
-
-// ───────── 토글 스타일 적용 ─────────
+/**
+ * 토글 스타일
+ */
 export function toggleInlineStyle(editorState, ranges, styleKey, styleValue) {
     let allApplied = true;
 
-    // ... (적용 여부 확인 로직은 DTO를 생성하지 않으므로 그대로 유지) ...
     ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
         const line = editorState[lineIndex];
         if (!line) return;
 
-        let charCount = 0;
-        line.chunks.forEach(chunk => {
-            const chunkStart = charCount;
-            const chunkEnd   = charCount + chunk.text.length;
+        let offset = 0;
+        for (const chunk of line.chunks) {
+            const chunkStart = offset;
+            const chunkEnd = offset + (chunk.text?.length || 0);
 
             if (endIndex > chunkStart && startIndex < chunkEnd) {
                 if (!(chunk.style && chunk.style[styleKey] === styleValue)) {
                     allApplied = false;
                 }
             }
-            charCount += chunk.text.length;
-        });
+            offset += chunk.text?.length || 0;
+        }
     });
 
     const patch = allApplied
-        ? { [styleKey]: undefined }   // 이미 적용되어 있으면 제거
-        : { [styleKey]: styleValue }; // 아니면 적용
+        ? { [styleKey]: undefined }   // 제거
+        : { [styleKey]: styleValue }; // 적용
 
-    // applyInlineStyle 함수가 이제 Model 기반의 새로운 상태를 반환
-    return applyInlineStyle(editorState, ranges, patch);
+    return applyStylePatch(editorState, ranges, patch);
 }
