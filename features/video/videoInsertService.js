@@ -46,7 +46,11 @@ export function createVideoInsertService(stateAPI, uiAPI) {
         stateAPI.saveCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
 
         // UI 반영
-        uiAPI.renderLine(lineIndex, newState[lineIndex]);        
+        // 특정 라인만 렌더링
+        if (stateAPI.isLineChanged(lineIndex)) {
+            uiAPI.renderLine(lineIndex, newState[lineIndex]);   
+        }
+        
         uiAPI.restoreCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
 
         return true;

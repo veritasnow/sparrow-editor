@@ -28,6 +28,9 @@ export function createEditorApp(initialState = { editorState: [] }) {
     /** 🔹 이전 상태로 복원 (수동 스냅샷용) */
     setPrevEditorState: snapshotService.setPrevEditorState,
 
+    /** 🔹 특정 라인이 직전 상태와 변경되었는지 확인 */
+    isLineChanged: store.isLineChanged,    
+
     // ----------------------------
     // [3] patch 기반 reducer 처리
     // ----------------------------
@@ -71,5 +74,6 @@ export function createEditorApp(initialState = { editorState: [] }) {
     },
 
     getChangedMap: store.getChangedMap,
+    
   };
 }

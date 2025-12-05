@@ -49,11 +49,12 @@ export function createEditor(rootId) {
   // ───────── 6️⃣ 상태 & UI API 정의 ─────────
   // 서비스와 버튼 바인딩에서 사용할 공통 인터페이스
   const stateAPI = {
-      get        : ()          => app.getState().present.editorState,
-      save       : (newState)  => app.saveEditorState(newState),
-      saveCursor : (newCursor) => app.saveCursorState(newCursor),
-      undo       : ()          => app.undo(),
-      redo       : ()          => app.redo()
+      get          : ()          => app.getState().present.editorState,
+      save         : (newState)  => app.saveEditorState(newState),
+      saveCursor   : (newCursor) => app.saveCursorState(newCursor),
+      undo         : ()          => app.undo(),
+      redo         : ()          => app.redo(),
+      isLineChanged: (lineIndex) => app.isLineChanged(lineIndex)
   };
 
   const uiAPI = {

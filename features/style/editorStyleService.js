@@ -50,9 +50,11 @@ export function createEditorStyleService(stateAPI, uiAPI) {
 
         // 상태 렌더링 + 커서 복원 (전체 렌더링 → 라인 단위로 변경)
         ranges.forEach(({ lineIndex }) => {
-            uiAPI.renderLine(lineIndex, newState[lineIndex]);
+            // 💡 변경되지 않았다면 렌더링 스킵!
+            if (stateAPI.isLineChanged(lineIndex)) {
+                uiAPI.renderLine(lineIndex, newState[lineIndex]);
+            }
         });
-
         // 커서 복원: 마지막 라인 기준
         const lastRange = ranges[ranges.length - 1];
         uiAPI.restoreCursor({

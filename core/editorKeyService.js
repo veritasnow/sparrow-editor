@@ -59,8 +59,17 @@ export function createEditorKeyService({ state, ui }) {
 
         // 🎨 UI 반영 (DOM 라인 삽입 + 렌더링)
         ui.insertLine(lineIndex + 1, newLineData.align);
-        ui.renderLine(lineIndex, newState[lineIndex]);
-        ui.renderLine(lineIndex + 1, newLineData);
+
+        if (state.isLineChanged(lineIndex)) {
+            ui.renderLine(lineIndex, newState[lineIndex]);
+        }
+
+        if (state.isLineChanged(lineIndex + 1)) {
+            ui.renderLine(lineIndex + 1, newLineData); 
+        }        
+
+
+
 
         // 🎨 커서 복원
         ui.restoreCursor(newPos);
@@ -108,7 +117,9 @@ export function createEditorKeyService({ state, ui }) {
             ui.removeLine(deletedLineIndex);
         }
         if (updatedLineIndex !== null) {
-            ui.renderLine(updatedLineIndex, newState[updatedLineIndex]);
+            if (state.isLineChanged(updatedLineIndex)) {
+                ui.renderLine(updatedLineIndex, newState[updatedLineIndex]);
+            }
         }
 
         // 🎨 커서 복원
@@ -132,7 +143,9 @@ export function createEditorKeyService({ state, ui }) {
         }
 
         // 특정 라인만 렌더링
-        ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        if (state.isLineChanged(lineIndex)) {
+            ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        }
 
         // 커서 복원
         ui.restoreCursor({
@@ -157,7 +170,9 @@ export function createEditorKeyService({ state, ui }) {
         }
 
         // 특정 라인만 렌더링
-        ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        if (state.isLineChanged(lineIndex)) {
+            ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        }
 
         // 커서 복원
         ui.restoreCursor({
