@@ -1,6 +1,5 @@
 sparrow-editor
 ├─ components
-│  ├─ table
 │  └─ video
 │     └─ videoPopupView.js
 ├─ core
@@ -41,6 +40,7 @@ sparrow-editor
 │  ├─ service
 │  │  └─ editorSnapshotService.js
 │  └─ store
+│     ├─ cursorHistoryStore.js
 │     └─ historyStore.js
 ├─ ui
 │  ├─ application

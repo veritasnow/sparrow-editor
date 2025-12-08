@@ -86,9 +86,10 @@ export function createEditor(rootId) {
     stateAPI,
     uiAPI,
     {
-      boldBtn      : document.getElementById(`${rootId}-boldBtn`),
-      italicBtn    : document.getElementById(`${rootId}-italicBtn`),
-      underLineBtn : document.getElementById(`${rootId}-underLineBtn`)
+      boldBtn        : document.getElementById(`${rootId}-boldBtn`),
+      italicBtn      : document.getElementById(`${rootId}-italicBtn`),
+      underLineBtn   : document.getElementById(`${rootId}-underLineBtn`),
+      fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`)
     }
   );
 
@@ -109,6 +110,8 @@ export function createEditor(rootId) {
     stateAPI,
     uiAPI
   );
+
+
 
   // ───────── 9️⃣ 초기 렌더링 호출 ─────────
   init({ lineIndex: 0, offset: 0 });
