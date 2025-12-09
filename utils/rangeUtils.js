@@ -1,5 +1,4 @@
 // utils/rangeUtils.js
-
 import { getLineLengthFromState } from "./editorStateUtils.js"; // 경로가 맞다고 가정
 
 /**
