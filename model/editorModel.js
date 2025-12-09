@@ -50,8 +50,8 @@
  */
 export function TextChunkModel(type = 'text', text = '', style = {}) {
     const model = {
-        type: type, 
-        text: text,
+        type : type, 
+        text : text,
         style: style
     };
     // ⚠️ 얕은 동결(Shallow Freeze)
@@ -66,11 +66,11 @@ export function TextChunkModel(type = 'text', text = '', style = {}) {
  */
 export function VideoChunkModel(videoId, src) {
     const model = {
-        type: 'video',
+        type   : 'video',
         videoId: videoId,
-        src: src,
-        text: '', // 비텍스트 청크
-        style: {} // 스타일 미적용
+        src    : src,
+        text   : '', // 비텍스트 청크
+        style  : {} // 스타일 미적용
     };
     // ⚠️ 얕은 동결(Shallow Freeze)
     return Object.freeze(model);
@@ -85,7 +85,7 @@ export function VideoChunkModel(videoId, src) {
  */
 export function EditorLineModel(align = 'left', chunks = [TextChunkModel()]) {
     const model = {
-        align: align,
+        align : align,
         chunks: chunks 
     };
     // ⚠️ 얕은 동결(Shallow Freeze)

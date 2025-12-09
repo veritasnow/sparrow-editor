@@ -1,21 +1,7 @@
 // features/inline/inlineServiceBase.js
-import { getLineLengthFromState } from "../../utils/editorStateUtils.js";
+import { getRanges } from "../../utils/rangeUtils.js";
 
 export function createInlineServiceBase(stateAPI, uiAPI) {
-
-    function getRanges(currentState, domRanges) {
-        return domRanges.map(domRange => {
-            const lineState = currentState[domRange.lineIndex];
-            const lineLen = getLineLengthFromState(lineState);
-
-            return {
-                lineIndex: domRange.lineIndex,
-                startIndex: Math.max(0, Math.min(domRange.startIndex, lineLen)),
-                endIndex: Math.max(0, Math.min(domRange.endIndex, lineLen))
-            };
-        });
-    }
-
     /**
      * updateFn: (currentState, ranges) => newState
      * options: { saveCursorFromUI: boolean } (기본 true)

@@ -11,6 +11,8 @@ sparrow-editor
 │  │  ├─ alignFeatureBinder.js
 │  │  └─ editorAlignService.js
 │  ├─ domCreateService.js
+│  ├─ inline
+│  │  └─ inlineServiceBase.js
 │  ├─ style
 │  │  ├─ editorStyleService.js
 │  │  ├─ styleFeatureBinder.js
@@ -35,8 +37,6 @@ sparrow-editor
 ├─ state
 │  ├─ application
 │  │  └─ editorApplication.js
-│  ├─ reducer
-│  │  └─ editorReducer.js
 │  ├─ service
 │  │  └─ editorSnapshotService.js
 │  └─ store
