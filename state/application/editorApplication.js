@@ -32,23 +32,6 @@ export function createEditorApp(initialState = { editorState: [] }) {
     isLineChanged: store.isLineChanged,    
 
     // ----------------------------
-    // [3] patch 기반 reducer 처리
-    // ----------------------------
-    insertText: (lineIndex, offset, text) => {
-      store.applyPatch(
-        { action: "insertText", payload: { lineIndex, offset, text } },
-        editorReducer
-      );
-    },
-    
-    toggleStyle: (lineIndex, start, end, styleKey, styleValue) => {
-      store.applyPatch(
-        { action: "toggleStyle", payload: { lineIndex, start, end, styleKey, styleValue } },
-        editorReducer
-      );
-    },
-
-    // ----------------------------
     // [4] Undo / Redo
     // ----------------------------
     undo: () => {
