@@ -6,72 +6,70 @@ import { textRenderer } from './renderers/textRenderer.js';
 import { videoRenderer } from './renderers/videoRenderer.js';
 import { createEditorInputService } from './core/editorInputService.js'; 
 import { createEditorKeyService } from './core/editorKeyService.js'; 
+
+// 🔥 새로 추가됨
+import { bindSelectionFeature } from './features/selection/selectionFeatureBinder.js';
+
 import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
 import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
 import { bindVideoButton } from './features/video/videoFeatureBinder.js';
 import { createDOMCreateService } from './features/domCreateService.js';
 
-// 🧩 메인 엔트리: 외부에서 호출
+// 🧩 메인 엔트리
 export function createEditor(rootId) {
 
-  // ───────── 1️⃣ DOM 생성 ─────────
-  // 에디터의 기본 DOM 구조를 생성
+  // ───────── 1️⃣ DOM 생성
   createDOMCreateService(rootId);
 
-  // ───────── 2️⃣ 상태 관리 초기화 ─────────
+  // ───────── 2️⃣ 상태 관리
   const app = createEditorApp({
     editorState: [
       EditorLineModel('left', [ TextChunkModel('text', '', {}) ])
     ]
   });
 
-  // ───────── 3️⃣ UI 애플리케이션 생성 ─────────
-  // 렌더러 등록: 텍스트/비디오
+  // ───────── 3️⃣ UI 애플리케이션
   const ui = createUiApplication({
     rootId           : `${rootId}-content`,
     rendererRegistry : { text: textRenderer, video: videoRenderer }
   });
 
-  // ───────── 4️⃣ 초기 렌더링 함수 정의 ─────────
-  // 상태 기반 렌더링 + 커서 복원
   function init(newPos) {
-    const currentState = app.getState().present.editorState;
-    ui.render(currentState);
+    const state = app.getState().present.editorState;
+    ui.render(state);
     ui.restoreSelectionPosition(newPos);
   }
 
-  // ───────── 5️⃣ 입력 이벤트 처리 바인딩 ─────────
-  const editorEl = document.getElementById(`${rootId}-content`);
-  const inputApp = createInputApplication({ editorEl });
+  // ───────── 5️⃣ 입력 이벤트
+  const editorEl       = document.getElementById(`${rootId}-content`);
+  const inputApp       = createInputApplication({ editorEl });
   const inputProcessor = createEditorInputService(app, ui);
   inputApp.bindInput(inputProcessor.processInput);
 
-  // ───────── 6️⃣ 상태 & UI API 정의 ─────────
-  // 서비스와 버튼 바인딩에서 사용할 공통 인터페이스
+  // ───────── 6️⃣ 상태 & UI API
   const stateAPI = {
-      get          : ()          => app.getState().present.editorState,
-      save         : (newState)  => app.saveEditorState(newState),
-      saveCursor   : (newCursor) => app.saveCursorState(newCursor),
-      undo         : ()          => app.undo(),
-      redo         : ()          => app.redo(),
-      isLineChanged: (lineIndex) => app.isLineChanged(lineIndex)
+      get          : ()            => app.getState().present.editorState,
+      save         : (newState)    => app.saveEditorState(newState),
+      saveCursor   : (cur)         => app.saveCursorState(cur),
+      undo         : ()            => app.undo(),
+      redo         : ()            => app.redo(),
+      isLineChanged: (i)           => app.isLineChanged(i),
+      getLines     : (idxs)        => app.getLines(idxs),
+      getLineRange : (s, e)        => app.getLineRange(s, e)
   };
 
   const uiAPI = {
       render              : (state)               => ui.render(state),
-      renderLine          : (lineIndex, lineData) => ui.renderLine(lineIndex, lineData),
+      renderLine          : (i, data)            => ui.renderLine(i, data),
       restoreCursor       : (pos)                 => ui.restoreSelectionPosition(pos),
-      insertLine          : (lineIndex, align)    => ui.insertNewLineElement(lineIndex, align),
-      removeLine          : (lineIndex)           => ui.removeLineElement(lineIndex),
+      insertLine          : (i, align)            => ui.insertNewLineElement(i, align),
+      removeLine          : (i)                   => ui.removeLineElement(i),
       getDomSelection     : ()                    => ui.getSelectionRangesInDOM(),
       getSelectionPosition: ()                    => ui.getSelectionPosition()
   };
 
-  // ───────── 7️⃣ 키 이벤트 처리 ─────────
-  const keyProcessor = createEditorKeyService({
-      state : stateAPI,
-      ui    : uiAPI
-  });
+  // ───────── 7️⃣ 키 이벤트
+  const keyProcessor = createEditorKeyService({ state: stateAPI, ui: uiAPI });
 
   inputApp.bindKeydown({
     handleEnter     : keyProcessor.processEnter,
@@ -80,20 +78,24 @@ export function createEditor(rootId) {
     redo            : keyProcessor.redo
   });
 
-  // ───────── 8️⃣ 버튼 이벤트 바인딩 ─────────
-  // 스타일 버튼 (Bold, Italic, Underline)
-  bindStyleButtons(
+  const toolbarElements = {
+    boldBtn        : document.getElementById(`${rootId}-boldBtn`),
+    italicBtn      : document.getElementById(`${rootId}-italicBtn`),
+    underLineBtn   : document.getElementById(`${rootId}-underLineBtn`),
+    fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`)
+  };
+
+  // ───────── 8️⃣ Selection Feature 바인딩 (🔥 추가됨)
+  bindSelectionFeature(
     stateAPI,
     uiAPI,
-    {
-      boldBtn        : document.getElementById(`${rootId}-boldBtn`),
-      italicBtn      : document.getElementById(`${rootId}-italicBtn`),
-      underLineBtn   : document.getElementById(`${rootId}-underLineBtn`),
-      fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`)
-    }
+    editorEl,
+    toolbarElements
   );
 
-  // 정렬 버튼 (Left, Center, Right)
+  // ───────── 9️⃣ 버튼 바인딩
+  bindStyleButtons(stateAPI, uiAPI, toolbarElements);
+
   bindAlignButtons(
     stateAPI,
     uiAPI,
@@ -104,15 +106,12 @@ export function createEditor(rootId) {
     }
   );
 
-  // 비디오 버튼 (YouTube 삽입)
   bindVideoButton(
     document.getElementById(`${rootId}-addVideoBtn`),
     stateAPI,
     uiAPI
   );
 
-
-
-  // ───────── 9️⃣ 초기 렌더링 호출 ─────────
+  // ───────── 1️⃣0️⃣ 초기 렌더링
   init({ lineIndex: 0, offset: 0 });
 }

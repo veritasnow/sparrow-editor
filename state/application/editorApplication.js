@@ -57,6 +57,14 @@ export function createEditorApp(initialState = { editorState: [] }) {
     },
 
     getChangedMap: store.getChangedMap,
+
+    getLines: (lineIndexes) => {
+      return store.getLines(lineIndexes);
+    },
+
+    getLineRange: (start, end) => {
+      return store.getLineRange(start, end);
+    }
     
   };
 }

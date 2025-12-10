@@ -87,5 +87,15 @@ export function createHistoryStore(initialState = { editorState: [] }) {
     },
 
     getHistory: () => history,
+
+    getLines: (lineIndexes) => {
+      const curr = history[currentIndex].editorState;
+      return lineIndexes.map(i => curr[i]).filter(Boolean);
+    },
+
+    getLineRange: (start, end) => {
+      const curr = history[currentIndex].editorState;
+      return curr.slice(start, end + 1);
+    },    
   };
 }
