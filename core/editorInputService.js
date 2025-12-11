@@ -1,4 +1,4 @@
-import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js';
+import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
@@ -91,6 +91,9 @@ export function createEditorInputService(app, ui) {
         const { newChunks, restoreData } = ui.parseLineDOM(
             parentP, currentLine.chunks, container, cursorOffset, lineIndex
         );
+
+
+        //fontSize: '14px'
 
         if (JSON.stringify(newChunks) === JSON.stringify(currentLine.chunks)) return null;
 

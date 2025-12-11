@@ -1,6 +1,8 @@
 // ----------------------------------------------------------------------
 // 1. DTO/Interface 정의 (타입 정의 통합 유지)
 // ----------------------------------------------------------------------
+import {DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
+
 
 /**
  * @typedef {'text' | 'video' | 'image'} ChunkType - 청크의 종류를 정의합니다.
@@ -49,13 +51,11 @@
  * @returns {TextChunk}
  */
 export function TextChunkModel(type = 'text', text = '', style = {}) {
-    const model = {
-        type : type, 
-        text : text,
-        style: style
-    };
-    // ⚠️ 얕은 동결(Shallow Freeze)
-    return Object.freeze(model); 
+  return Object.freeze({
+    type,
+    text,
+    style: { ...DEFAULT_TEXT_STYLE, ...style }
+  });
 }
 
 /**

@@ -24,7 +24,7 @@ export function createEditor(rootId) {
   // ───────── 2️⃣ 상태 관리
   const app = createEditorApp({
     editorState: [
-      EditorLineModel('left', [ TextChunkModel('text', '', {}) ])
+      EditorLineModel('left', [ TextChunkModel('text', '', {fontSize: '14px'}) ])
     ]
   });
 

@@ -1,10 +1,12 @@
+import {DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
+
 // core/editorSelectionService.js
 export function createEditorSelectionService(stateAPI, uiAPI) {
 
   function analyzeSelection() {
     const ranges = uiAPI.getDomSelection();
     if (!ranges || ranges.length === 0) {
-      return { isUniform: false, style: null };
+      return { isUniform: true, style: DEFAULT_TEXT_STYLE };      
     }
 
     const lineIndexes = ranges.map(r => r.lineIndex);
@@ -30,7 +32,7 @@ export function createEditorSelectionService(stateAPI, uiAPI) {
     });
 
     if (collected.length === 0)
-      return { isUniform: false, style: null };
+      return { isUniform: true, style: DEFAULT_TEXT_STYLE };
 
     const base = JSON.stringify(collected[0]);
     const allSame = collected.every(st => JSON.stringify(st) === base);

@@ -4,7 +4,8 @@ sparrow-editor
 │     └─ videoPopupView.js
 ├─ core
 │  ├─ editorInputService.js
-│  └─ editorKeyService.js
+│  ├─ editorKeyService.js
+│  └─ editorSelectionService.js
 ├─ editor.js
 ├─ features
 │  ├─ align
@@ -13,6 +14,9 @@ sparrow-editor
 │  ├─ domCreateService.js
 │  ├─ inline
 │  │  └─ inlineServiceBase.js
+│  ├─ selection
+│  │  ├─ selectionFeatureBinder.js
+│  │  └─ selectionUiService.js
 │  ├─ style
 │  │  ├─ editorStyleService.js
 │  │  ├─ styleFeatureBinder.js
@@ -52,4 +56,7 @@ sparrow-editor
 └─ utils
    ├─ editorStateUtils.js
    ├─ keyStateUtil.js
-   └─ mergeUtils.js
+   ├─ mergeUtils.js
+   └─ rangeUtils.js
+
+```
