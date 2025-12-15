@@ -11,11 +11,22 @@ export function createDOMCreateService(rootId) {
       <button id="${rootId}-italicBtn" title="기울이기"><i>I</i></button>
       <button id="${rootId}-underLineBtn" title="밑줄"><u>U</u></button>
 
-      <!-- 글자 크기 콤보박스 추가 -->
+      <!-- 글자 색상 -->
+      <button id="${rootId}-textColorBtn" title="글자 색상" class="color-btn">
+        <span class="color-preview"></span>
+        <span class="color-text">C</span>
+      </button>
+      <input
+        type="color"
+        id="${rootId}-textColorInput"
+        class="color-input"
+      />
+
+      <!-- 글자 크기 -->
       <select id="${rootId}-fontSizeSelect" class="font-size-select" title="글자 크기">
         <option value="10px">10</option>
-        <option value="12px" selected>12</option>
-        <option value="14px">14</option>
+        <option value="12px">12</option>
+        <option value="14px" selected>14</option>
         <option value="16px">16</option>
         <option value="18px">18</option>
         <option value="20px">20</option>

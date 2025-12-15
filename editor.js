@@ -11,6 +11,8 @@ import { createEditorKeyService } from './core/editorKeyService.js';
 
 import { bindSelectionFeature } from './features/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
+import { bindStylePopupButton } from './features/style/stylePopupFeatureBinder.js';
+
 import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
 import { bindVideoButton } from './features/video/videoFeatureBinder.js';
 
@@ -113,7 +115,8 @@ export function createEditor(rootId) {
     boldBtn        : document.getElementById(`${rootId}-boldBtn`),
     italicBtn      : document.getElementById(`${rootId}-italicBtn`),
     underLineBtn   : document.getElementById(`${rootId}-underLineBtn`),
-    fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`)
+    fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`),
+    textColorBtn   : document.getElementById(`${rootId}-textColorBtn`),
   };
 
   const alignToolbar = {
@@ -137,6 +140,11 @@ export function createEditor(rootId) {
   // ─────────────────────────────
   // 9️⃣ 버튼 기능 바인딩
   // ─────────────────────────────
+  bindStylePopupButton(
+    styleToolbar.textColorBtn,
+    stateAPI,
+    uiAPI
+  );  
   bindStyleButtons(stateAPI, uiAPI, styleToolbar);
   bindAlignButtons(stateAPI, uiAPI, alignToolbar);
 
