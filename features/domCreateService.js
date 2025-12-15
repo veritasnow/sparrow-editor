@@ -15,12 +15,8 @@ export function createDOMCreateService(rootId) {
       <button id="${rootId}-textColorBtn" title="글자 색상" class="color-btn">
         <span class="color-preview"></span>
         <span class="color-text">C</span>
+        <input type="color" id="${rootId}-textColorInput" class="color-input" />
       </button>
-      <input
-        type="color"
-        id="${rootId}-textColorInput"
-        class="color-input"
-      />
 
       <!-- 글자 크기 -->
       <select id="${rootId}-fontSizeSelect" class="font-size-select" title="글자 크기">

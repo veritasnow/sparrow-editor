@@ -11,7 +11,6 @@ import { createEditorKeyService } from './core/editorKeyService.js';
 
 import { bindSelectionFeature } from './features/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
-import { bindStylePopupButton } from './features/style/stylePopupFeatureBinder.js';
 
 import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
 import { bindVideoButton } from './features/video/videoFeatureBinder.js';
@@ -140,11 +139,6 @@ export function createEditor(rootId) {
   // ─────────────────────────────
   // 9️⃣ 버튼 기능 바인딩
   // ─────────────────────────────
-  bindStylePopupButton(
-    styleToolbar.textColorBtn,
-    stateAPI,
-    uiAPI
-  );  
   bindStyleButtons(stateAPI, uiAPI, styleToolbar);
   bindAlignButtons(stateAPI, uiAPI, alignToolbar);
 
