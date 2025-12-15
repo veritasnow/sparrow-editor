@@ -1,61 +1,112 @@
-// UI 업데이트 전담 서비스 (피처)
+// features/selection/selectionUiService.js
 export function createSelectionUIService(toolbarElements = {}) {
   const {
+    // text style
     boldBtn,
     italicBtn,
     underLineBtn,
-    fontSizeSelect
+    fontSizeSelect,
+
+    // line style
+    leftBtn,
+    centerBtn,
+    rightBtn
   } = toolbarElements;
 
-  function clearAll() {
+  /* -----------------------------
+   * 공통 유틸
+   * ----------------------------- */
+  function clearTextUI() {
     boldBtn?.classList.remove('active');
     italicBtn?.classList.remove('active');
     underLineBtn?.classList.remove('active');
+
     if (fontSizeSelect) {
-      // 툴바에서 중립 상태로 보이게 기본값(빈 값 또는 선택 해제)
-      // 선택을 비활성화하려면 빈값을 허용하거나, 현재 옵션 중 기본을 선택
-      fontSizeSelect.value = ''; // HTML에 빈 option이 없다면 set to default idx:
-      // fontSizeSelect.selectedIndex = 1; // 예: 12pt 기본으로 복원하려면 사용
+      fontSizeSelect.value = '';
     }
   }
 
-  function updateUI(result) {
-    if (!result || !result.isUniform) {
-      clearAll();
+  function clearLineUI() {
+    leftBtn?.classList.remove('active');
+    centerBtn?.classList.remove('active');
+    rightBtn?.classList.remove('active');
+  }
+
+  function clearAll() {
+    clearTextUI();
+    clearLineUI();
+  }
+
+  /* -----------------------------
+   * 텍스트 스타일 반영
+   * ----------------------------- */
+  function updateTextUI(textResult) {
+    if (!textResult || !textResult.isUniform) {
+      clearTextUI();
       return;
     }
 
-    const style = result.style || {};
+    const style = textResult.style || {};
 
     // bold
     if (boldBtn) {
-      const isBold = style.fontWeight === 'bold' || style.fontWeight === '700';
+      const isBold =
+        style.fontWeight === 'bold' ||
+        style.fontWeight === '700';
       boldBtn.classList.toggle('active', !!isBold);
     }
 
     // italic
     if (italicBtn) {
-      const isItalic = style.fontStyle === 'italic';
-      italicBtn.classList.toggle('active', !!isItalic);
+      italicBtn.classList.toggle(
+        'active',
+        style.fontStyle === 'italic'
+      );
     }
 
     // underline
     if (underLineBtn) {
-      const isUnderline = (style.textDecoration === 'underline') || (style.textDecoration && style.textDecoration.includes('underline'));
+      const isUnderline = style.textDecoration === 'underline' || (typeof style.textDecoration === 'string' && style.textDecoration.includes('underline'));
       underLineBtn.classList.toggle('active', !!isUnderline);
     }
 
-    // fontSize (style.fontSize expected like "12px" or "12pt")
+    // font size
     if (fontSizeSelect) {
-      if (style.fontSize) {
-        // 폰트값이 "12px" 같은 형태이면 select에서 같은 value를 찾아 셋
-        fontSizeSelect.value = style.fontSize;
-      } else {
-        // 일관된 폰트 크기가 없으면 중립 상태로 (빈값 허용 시)
-        fontSizeSelect.value = '';
-      }
+      fontSizeSelect.value = style.fontSize || '';
     }
   }
 
-  return { updateUI, clearAll };
+  /* -----------------------------
+   * 라인 스타일 반영 (align)
+   * ----------------------------- */
+  function updateLineUI(lineResult) {
+    if (!lineResult || !lineResult.isUniform) {
+      clearLineUI();
+      return;
+    }
+
+    const align = lineResult.style?.align;
+
+    leftBtn?.classList.toggle('active', align === 'left');
+    centerBtn?.classList.toggle('active', align === 'center');
+    rightBtn?.classList.toggle('active', align === 'right');
+  }
+
+  /* -----------------------------
+   * 외부 API
+   * ----------------------------- */
+  function updateUI(result) {
+    if (!result) {
+      clearAll();
+      return;
+    }
+
+    updateTextUI(result.text);
+    updateLineUI(result.line);
+  }
+
+  return {
+    updateUI,
+    clearAll
+  };
 }

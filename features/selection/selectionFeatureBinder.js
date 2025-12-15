@@ -22,9 +22,9 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
   return {
     // 테스트용/외부 호출용 API
     analyzeNow: () => {
-      const res = selectionService.analyzeSelection();
-      uiService.updateUI(res);
-      return res;
+      const result = selectionService.analyzeSelection();
+      uiService.updateUI(result);
+      return result;
     }
   };
 }
