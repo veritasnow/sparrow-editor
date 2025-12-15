@@ -15,6 +15,8 @@ import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
 import { bindVideoButton } from './features/video/videoFeatureBinder.js';
 import { createDOMCreateService } from './features/domCreateService.js';
 
+import { DEFAULT_LINE_STYLE } from './constants/styleConstants.js';
+
 // 🧩 메인 엔트리
 export function createEditor(rootId) {
 
@@ -24,7 +26,7 @@ export function createEditor(rootId) {
   // ───────── 2️⃣ 상태 관리
   const app = createEditorApp({
     editorState: [
-      EditorLineModel('left', [ TextChunkModel('text', '', {fontSize: '14px'}) ])
+      EditorLineModel(DEFAULT_LINE_STYLE.align, [ TextChunkModel('text', '', {fontSize: '14px'}) ])
     ]
   });
 

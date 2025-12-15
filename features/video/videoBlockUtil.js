@@ -1,4 +1,5 @@
 import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../../model/editorModel.js';
+import { DEFAULT_LINE_STYLE } from '../../constants/styleConstants.js';
 
 // ======================================================================
 // 1. 청크 배열을 오프셋 기준으로 두 부분으로 나누는 함수
@@ -94,7 +95,7 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
         newState[currentLineIndex] = newVideoLine;
 
         // 다음 줄에 빈 라인 생성
-        const nextLine = EditorLineModel('left', [
+        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
             TextChunkModel('text', '', {})
         ]);
         newState.splice(currentLineIndex + 1, 0, nextLine);

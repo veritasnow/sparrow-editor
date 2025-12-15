@@ -2,6 +2,7 @@
 // 1. DTO/Interface 정의 (타입 정의 통합 유지)
 // ----------------------------------------------------------------------
 import {DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
+import {DEFAULT_LINE_STYLE } from '../constants/styleConstants.js';
 
 
 /**
@@ -83,7 +84,7 @@ export function VideoChunkModel(videoId, src) {
  * @param {(TextChunk | VideoChunk)[]} [chunks] - 라인을 구성하는 청크 배열.
  * @returns {EditorLine}
  */
-export function EditorLineModel(align = 'left', chunks = [TextChunkModel()]) {
+export function EditorLineModel(align = DEFAULT_LINE_STYLE.align, chunks = [TextChunkModel()]) {
     const model = {
         align : align,
         chunks: chunks 
