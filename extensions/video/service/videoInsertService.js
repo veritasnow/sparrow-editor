@@ -1,6 +1,6 @@
-// sparrow-editor\service\video\videoInsertService.js
-// 상태 변경 로직
-import { extractYouTubeId, applyVideoBlock } from './videoBlockUtil.js';
+// extensions/video/service/videoInsertService.js
+
+import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
 
 /**
  * 🎬 비디오 삽입 핵심 로직

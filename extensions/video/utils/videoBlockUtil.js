@@ -1,5 +1,5 @@
-import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../../model/editorModel.js';
-import { DEFAULT_LINE_STYLE } from '../../constants/styleConstants.js';
+import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../../../model/editorModel.js';
+import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 
 // ======================================================================
 // 1. 청크 배열을 오프셋 기준으로 두 부분으로 나누는 함수

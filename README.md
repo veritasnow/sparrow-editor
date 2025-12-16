@@ -1,12 +1,22 @@
 sparrow-editor
-├─ components
-│  └─ video
-│     └─ videoPopupView.js
+├─ constants
+│  └─ styleConstants.js
 ├─ core
 │  ├─ editorInputService.js
 │  ├─ editorKeyService.js
 │  └─ editorSelectionService.js
 ├─ editor.js
+├─ extensions
+│  ├─ image
+│  └─ video
+│     ├─ compoents
+│     │  └─ videoPopupView.js
+│     ├─ service
+│     │  └─ videoInsertService.js
+│     ├─ utils
+│     │  └─ videoBlockUtil.js
+│     ├─ videoExtension.js
+│     └─ videoFeatureBinder.js
 ├─ features
 │  ├─ align
 │  │  ├─ alignFeatureBinder.js
@@ -17,14 +27,10 @@ sparrow-editor
 │  ├─ selection
 │  │  ├─ selectionFeatureBinder.js
 │  │  └─ selectionUiService.js
-│  ├─ style
-│  │  ├─ editorStyleService.js
-│  │  ├─ styleFeatureBinder.js
-│  │  └─ styleUtils.js
-│  └─ video
-│     ├─ videoBlockUtil.js
-│     ├─ videoFeatureBinder.js
-│     └─ videoInsertService.js
+│  └─ style
+│     ├─ editorStyleService.js
+│     ├─ styleFeatureBinder.js
+│     └─ styleUtils.js
 ├─ index.html
 ├─ input
 │  ├─ application

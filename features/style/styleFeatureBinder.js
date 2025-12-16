@@ -36,7 +36,7 @@ export function bindStyleButtons(stateAPI, uiAPI, elements) {
     }
 
     if (textColorBtn) {
-        const input = textColorBtn.querySelector('.color-input');
+        const input   = textColorBtn.querySelector('.color-input');
         const preview = textColorBtn.querySelector('.color-preview');
 
         textColorBtn.addEventListener('click', (e) => {

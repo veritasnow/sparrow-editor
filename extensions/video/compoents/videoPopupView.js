@@ -1,4 +1,4 @@
-// sparrow-editor\component\video\videoPopupView.js
+// extensions/video/ui/videoPopupView.js
 
 /**
  * 비디오 삽입 팝업의 DOM 구조 및 기본 UI 동작을 관리하는 뷰 모듈.

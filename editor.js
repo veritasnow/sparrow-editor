@@ -13,23 +13,26 @@ import { bindSelectionFeature } from './features/selection/selectionFeatureBinde
 import { bindStyleButtons } from './features/style/styleFeatureBinder.js';
 
 import { bindAlignButtons } from './features/align/alignFeatureBinder.js';
-import { bindVideoButton } from './features/video/videoFeatureBinder.js';
+import { createVideoExtension } from './extensions/video/videoExtension.js';
 
 import { createDOMCreateService } from './features/domCreateService.js';
 import { DEFAULT_LINE_STYLE, DEFAULT_TEXT_STYLE } from './constants/styleConstants.js';
 
 
 // 🧩 메인 엔트리
+// 🧩 메인 엔트리
 export function createEditor(rootId) {
 
   // ─────────────────────────────
-  // 1️⃣ DOM 생성
+  // 1️⃣ DOM / Layout 생성
+  // 에디터가 사용할 기본 DOM 구조 생성
   // ─────────────────────────────
   createDOMCreateService(rootId);
 
 
   // ─────────────────────────────
-  // 2️⃣ 상태 관리(App)
+  // 2️⃣ Editor State(App) 생성
+  // 에디터의 단일 상태 트리
   // ─────────────────────────────
   const app = createEditorApp({
     editorState: [
@@ -42,7 +45,8 @@ export function createEditor(rootId) {
 
 
   // ─────────────────────────────
-  // 3️⃣ UI 애플리케이션
+  // 3️⃣ UI Application 생성
+  // 상태를 DOM으로 렌더링하는 책임
   // ─────────────────────────────
   const ui = createUiApplication({
     rootId           : `${rootId}-content`,
@@ -52,15 +56,10 @@ export function createEditor(rootId) {
     }
   });
 
-  function initCursor(pos) {
-    const state = app.getState().present.editorState;
-    ui.render(state);
-    ui.restoreSelectionPosition(pos);
-  }
-
 
   // ─────────────────────────────
-  // 4️⃣ 입력(Input) 처리
+  // 4️⃣ Input 시스템 생성
+  // 브라우저 입력 → Editor 명령 변환
   // ─────────────────────────────
   const editorEl       = document.getElementById(`${rootId}-content`);
   const inputApp       = createInputApplication({ editorEl });
@@ -70,32 +69,44 @@ export function createEditor(rootId) {
 
 
   // ─────────────────────────────
-  // 5️⃣ State / UI API 노출
+  // 5️⃣ Editor API 노출 (Core ↔ Feature ↔ Extension 접점)
   // ─────────────────────────────
   const stateAPI = {
-    get          : ()         => app.getState().present.editorState,
-    save         : (state)    => app.saveEditorState(state),
-    saveCursor   : (cursor)  => app.saveCursorState(cursor),
-    undo         : ()         => app.undo(),
-    redo         : ()         => app.redo(),
-    isLineChanged: (i)        => app.isLineChanged(i),
-    getLines     : (idxs)     => app.getLines(idxs),
-    getLineRange : (s, e)     => app.getLineRange(s, e)
+    get           : ()        => app.getState().present.editorState,
+    save          : (state)   => app.saveEditorState(state),
+    saveCursor    : (cursor) => app.saveCursorState(cursor),
+    undo          : ()        => app.undo(),
+    redo          : ()        => app.redo(),
+    isLineChanged : (i)       => app.isLineChanged(i),
+    getLines      : (idxs)    => app.getLines(idxs),
+    getLineRange  : (s, e)    => app.getLineRange(s, e)
   };
 
   const uiAPI = {
-    render                  : (state) => ui.render(state),
-    renderLine              : (i, d)  => ui.renderLine(i, d),
-    restoreCursor           : (pos)   => ui.restoreSelectionPosition(pos),
-    insertLine              : (i, a)  => ui.insertNewLineElement(i, a),
-    removeLine              : (i)     => ui.removeLineElement(i),
-    getDomSelection         : ()      => ui.getSelectionRangesInDOM(),
-    getSelectionPosition    : ()      => ui.getSelectionPosition()
+    render               : (state) => ui.render(state),
+    renderLine           : (i, d)  => ui.renderLine(i, d),
+    restoreCursor        : (pos)   => ui.restoreSelectionPosition(pos),
+    insertLine           : (i, a)  => ui.insertNewLineElement(i, a),
+    removeLine           : (i)     => ui.removeLineElement(i),
+    getDomSelection      : ()      => ui.getSelectionRangesInDOM(),
+    getSelectionPosition : ()      => ui.getSelectionPosition()
+  };
+
+  const editorAPI = {
+    getToolbarButton(name) {
+      switch (name) {
+        case 'video':
+          return document.getElementById(`${rootId}-addVideoBtn`);
+        default:
+          return null;
+      }
+    }
   };
 
 
   // ─────────────────────────────
-  // 6️⃣ 키 이벤트
+  // 6️⃣ 키보드 입력 처리
+  // Enter / Backspace / Undo / Redo
   // ─────────────────────────────
   const keyProcessor = createEditorKeyService({ state: stateAPI, ui: uiAPI });
 
@@ -108,14 +119,14 @@ export function createEditor(rootId) {
 
 
   // ─────────────────────────────
-  // 7️⃣ 툴바 엘리먼트 수집
+  // 7️⃣ 기본 Feature 바인딩 (Editor 기본 기능)
   // ─────────────────────────────
   const styleToolbar = {
     boldBtn        : document.getElementById(`${rootId}-boldBtn`),
     italicBtn      : document.getElementById(`${rootId}-italicBtn`),
     underLineBtn   : document.getElementById(`${rootId}-underLineBtn`),
     fontSizeSelect : document.getElementById(`${rootId}-fontSizeSelect`),
-    textColorBtn   : document.getElementById(`${rootId}-textColorBtn`),
+    textColorBtn   : document.getElementById(`${rootId}-textColorBtn`)
   };
 
   const alignToolbar = {
@@ -124,10 +135,7 @@ export function createEditor(rootId) {
     rightBtn  : document.getElementById(`${rootId}-alignRightBtn`)
   };
 
-
-  // ─────────────────────────────
-  // 8️⃣ Selection Feature (UI 동기화 전담)
-  // ─────────────────────────────
+  // Selection은 UI 동기화의 핵심 Feature
   bindSelectionFeature(
     stateAPI,
     uiAPI,
@@ -135,22 +143,29 @@ export function createEditor(rootId) {
     { ...styleToolbar, ...alignToolbar }
   );
 
-
-  // ─────────────────────────────
-  // 9️⃣ 버튼 기능 바인딩
-  // ─────────────────────────────
   bindStyleButtons(stateAPI, uiAPI, styleToolbar);
   bindAlignButtons(stateAPI, uiAPI, alignToolbar);
 
-  bindVideoButton(
-    document.getElementById(`${rootId}-addVideoBtn`),
-    stateAPI,
-    uiAPI
-  );
+
+  // ─────────────────────────────
+  // 8️⃣ Extension 시스템 (선택적 기능)
+  // ─────────────────────────────
+  const extensions = [];
+
+  function registerExtension(extension) {
+    if (!extension || typeof extension.setup !== 'function') return;
+
+    extensions.push(extension);
+    extension.setup({ stateAPI, uiAPI, editorAPI });
+  }
+
+  registerExtension(createVideoExtension());
 
 
   // ─────────────────────────────
-  // 🔟 초기 렌더링
+  // 9️⃣ 초기 렌더링 & 커서 위치 설정
   // ─────────────────────────────
-  initCursor({ lineIndex: 0, offset: 0 });
+  const state = app.getState().present.editorState;
+  ui.render(state);
+  ui.restoreSelectionPosition({ lineIndex: 0, offset: 0 });
 }
