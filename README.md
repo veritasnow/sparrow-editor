@@ -17,6 +17,9 @@ sparrow-editor
 │     │  └─ videoBlockUtil.js
 │     ├─ videoExtension.js
 │     └─ videoFeatureBinder.js
+├─ factory
+│  ├─ editorContext.js
+│  └─ editorFactory.js
 ├─ features
 │  ├─ align
 │  │  ├─ alignFeatureBinder.js
