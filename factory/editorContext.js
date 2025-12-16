@@ -1,20 +1,26 @@
 // factory/editorContext.js
 export function createEditorContext({
-  app,
-  ui,
-  inputApp,
-  stateAPI,
-  uiAPI,
-  editorAPI,
-  extensions
+  mount,
+  destroy,
+  getAPI
 }) {
+  let mounted = false;
+
   return {
-    app,
-    ui,
-    inputApp,
-    stateAPI,
-    uiAPI,
-    editorAPI,
-    extensions
+    mount() {
+      if (mounted) return;
+      mounted = true;
+      mount();
+    },
+
+    destroy() {
+      if (!mounted) return;
+      mounted = false;
+      destroy();
+    },
+
+    getAPI() {
+      return getAPI();
+    }
   };
 }

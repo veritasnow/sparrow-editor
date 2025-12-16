@@ -239,9 +239,18 @@
 </head>
 <body>
   <div class="editor-container" id="myEditor"></div>
+
+  <button id="destroyBtn">에디터 종료</button>
+
   <script type="module">
     import { createEditor } from './editor.js';
     const editor = createEditor('myEditor');
+
+    document.getElementById('destroyBtn').onclick = () => {
+
+      // 파괴가 인스턴스 및 관련 리소스 정리에 도움을 주지 못함. 정리하는 로직 개선이 필요함
+      editor.destroy();
+    };  
   </script>
 </body>
 </html>
