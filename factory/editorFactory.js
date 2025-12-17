@@ -35,7 +35,7 @@ export function createEditorFactory() {
     /* ─────────────────────────────
      * 2️⃣ Editor State
      * ───────────────────────────── */
-    const app = createEditorApp({
+    const state = createEditorApp({
       editorState: [
         EditorLineModel(
           DEFAULT_LINE_STYLE.align,
@@ -60,20 +60,20 @@ export function createEditorFactory() {
      * ───────────────────────────── */
     const editorEl = document.getElementById(`${rootId}-content`);
     const inputApp = createInputApplication({ editorEl });
-    const inputProcessor = createEditorInputService(app, ui);
+    const inputProcessor = createEditorInputService(state, ui);
 
     /* ─────────────────────────────
      * 5️⃣ API 정의
      * ───────────────────────────── */
     const stateAPI = {
-      get: () => app.getState().present.editorState,
-      save: (state) => app.saveEditorState(state),
-      saveCursor: (cursor) => app.saveCursorState(cursor),
-      undo: () => app.undo(),
-      redo: () => app.redo(),
-      isLineChanged: (i) => app.isLineChanged(i),
-      getLines: (idxs) => app.getLines(idxs),
-      getLineRange: (s, e) => app.getLineRange(s, e)
+      get: () => state.getState().present.editorState,
+      save: (newState) => state.saveEditorState(newState),
+      saveCursor: (cursor) => state.saveCursorState(cursor),
+      undo: () => state.undo(),
+      redo: () => state.redo(),
+      isLineChanged: (i) => state.isLineChanged(i),
+      getLines: (idxs) => state.getLines(idxs),
+      getLineRange: (s, e) => state.getLineRange(s, e)
     };
 
     const uiAPI = {
@@ -151,8 +151,8 @@ export function createEditorFactory() {
       });
 
       // initial render
-      const state = app.getState().present.editorState;
-      ui.render(state);
+      const mountState = state.getState().present.editorState;
+      ui.render(mountState);
       ui.restoreSelectionPosition({ lineIndex: 0, offset: 0 });
     }
 
@@ -166,16 +166,18 @@ export function createEditorFactory() {
       while (disposers.length) {
         disposers.pop()();
       }
-
-      ui.destroy?.();
-      app.destroy?.();
+      
+      ui.destroy();
+      state.destroy();
+      input.destroy();
+      root.innerHTML = ""; // 🔥 여기서 toolbar 포함 제거
     }
 
     /* ─────────────────────────────
      * Context 반환
      * ───────────────────────────── */
     return {
-      app,
+      state,
       ui,
       inputApp,
       stateAPI,

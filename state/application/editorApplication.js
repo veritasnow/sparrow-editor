@@ -9,9 +9,9 @@ export function createEditorApp(initialState = { editorState: [] }) {
   // ----------------------------
   let destroyed = false;
 
-  const store           = createHistoryStore(initialState);             // 에디터 본문 상태
-  const cursorStore     = createCursorHistoryStore(null);         // 커서/선택영역 상태
-  const snapshotService = createEditorSnapshotService(store); // 스냅샷 기반 저장
+  let store           = createHistoryStore(initialState);             // 에디터 본문 상태
+  let cursorStore     = createCursorHistoryStore(null);         // 커서/선택영역 상태
+  let snapshotService = createEditorSnapshotService(store); // 스냅샷 기반 저장
 
   function assertAlive() {
     if (destroyed) {
@@ -101,9 +101,15 @@ export function createEditorApp(initialState = { editorState: [] }) {
     if (destroyed) return;
     destroyed = true;
 
-    // 상태 초기화 (선택)
+    // 1️⃣ 상태 완전 파기
     store.reset?.();
     cursorStore.reset?.();
+
+    // 2️⃣ 참조 제거 (GC 친화)
+    // (선택이지만 강력 추천)
+    store           = null;
+    cursorStore     = null;
+    snapshotService = null;
   };
 
   // ----------------------------

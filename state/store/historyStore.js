@@ -1,24 +1,42 @@
-// ✅ store/historyStore.js (개선된 최종 버전)
+// store/historyStore.js
 export function createHistoryStore(initialState = { editorState: [] }) {
   const MAX_HISTORY = 30;
-  let history = [initialState];
+
+  // ----------------------------
+  // [0] 내부 유틸
+  // ----------------------------
+  const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+  // 🔑 초기 상태 스냅샷 (절대 변하지 않음)
+  const baseState = deepClone(initialState);
+
+  let history = [deepClone(baseState)];
   let currentIndex = 0;
 
   return {
+    // ----------------------------
+    // [1] 상태 조회
+    // ----------------------------
     getState: () => ({
       pastCount: currentIndex,
       present: history[currentIndex],
       futureCount: history.length - currentIndex - 1
     }),
 
+    // ----------------------------
+    // [2] 상태 변경
+    // ----------------------------
     applyPatch: (patch, reducer) => {
       const prev = history[currentIndex];
       const newPresent = reducer(prev, patch);
 
       // 변경 없으면 무시
-      if (JSON.stringify(prev.editorState) === JSON.stringify(newPresent.editorState)) return;
+      if (
+        JSON.stringify(prev.editorState) ===
+        JSON.stringify(newPresent.editorState)
+      ) return;
 
-      // 현재 인덱스 이후 이력 삭제 (redo 경로 제거)
+      // redo 경로 제거
       history = history.slice(0, currentIndex + 1);
       history.push(newPresent);
 
@@ -42,29 +60,23 @@ export function createHistoryStore(initialState = { editorState: [] }) {
       history[currentIndex] = { editorState };
     },
 
-    // 💡 신규 함수: 특정 라인의 변경 여부 확인 (현재 상태 vs 직전 상태)
+    // ----------------------------
+    // [3] 변경 감지
+    // ----------------------------
     isLineChanged: (lineIndex) => {
-      // 직전 상태를 가져옵니다.
       const prevEditorState = history[currentIndex - 1]?.editorState;
-      // 현재 상태를 가져옵니다.
       const currEditorState = history[currentIndex].editorState;
 
-      // 1. 이전 상태가 없으면 (최초 렌더링 등) 무조건 변경된 것으로 간주
       if (!prevEditorState) return true;
 
       const prevLine = prevEditorState[lineIndex];
       const currLine = currEditorState[lineIndex];
 
-      // 2. 라인 자체가 존재하지 않으면 (삭제, 삽입 시 배열 길이 변경) 변경된 것으로 간주
       if (!prevLine || !currLine) {
-        // 현재 라인이 있거나, 이전 라인이 있었으면 (배열 길이 변경) 변경으로 처리
         if (prevLine || currLine) return true;
-        // 둘 다 null이면 변경 없음 (배열 바깥)
-        return false; 
+        return false;
       }
-      
-      // 3. JSON.stringify를 이용한 깊은 비교
-      // 이 라인 모델의 align, chunks 배열 및 내부 청크 상태/스타일을 모두 비교합니다.
+
       return JSON.stringify(prevLine) !== JSON.stringify(currLine);
     },
 
@@ -76,16 +88,19 @@ export function createHistoryStore(initialState = { editorState: [] }) {
       const maxLen = Math.max(prev.length, curr.length);
 
       for (let i = 0; i < maxLen; i++) {
-        // JSON.stringify를 이용한 깊은 비교
-        const prevLine = JSON.stringify(prev[i] || null);
-        const currLine = JSON.stringify(curr[i] || null);
-        if (prevLine !== currLine) {
+        if (
+          JSON.stringify(prev[i] || null) !==
+          JSON.stringify(curr[i] || null)
+        ) {
           changed[i] = curr[i] || [];
         }
       }
       return changed;
     },
 
+    // ----------------------------
+    // [4] 조회 헬퍼
+    // ----------------------------
     getHistory: () => history,
 
     getLines: (lineIndexes) => {
@@ -96,6 +111,16 @@ export function createHistoryStore(initialState = { editorState: [] }) {
     getLineRange: (start, end) => {
       const curr = history[currentIndex].editorState;
       return curr.slice(start, end + 1);
-    },    
+    },
+
+    // ----------------------------
+    // [5] reset (완전 초기화)
+    // ----------------------------
+    reset: () => {
+      history = [deepClone(baseState)];
+      currentIndex = 0;
+
+      console.log("🧹 HistoryStore reset");
+    }
   };
 }
