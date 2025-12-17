@@ -48,9 +48,9 @@ export function createEditorFactory() {
      * 3️⃣ UI Application
      * ───────────────────────────── */
     const ui = createUiApplication({
-      rootId: `${rootId}-content`,
+      rootId          : `${rootId}-content`,
       rendererRegistry: {
-        text: textRenderer,
+        text : textRenderer,
         video: videoRenderer
       }
     });
@@ -58,32 +58,32 @@ export function createEditorFactory() {
     /* ─────────────────────────────
      * 4️⃣ Input System
      * ───────────────────────────── */
-    const editorEl = document.getElementById(`${rootId}-content`);
-    const inputApp = createInputApplication({ editorEl });
+    const editorEl       = document.getElementById(`${rootId}-content`);
+    const inputApp       = createInputApplication({ editorEl });
     const inputProcessor = createEditorInputService(state, ui);
 
     /* ─────────────────────────────
      * 5️⃣ API 정의
      * ───────────────────────────── */
     const stateAPI = {
-      get: () => state.getState().present.editorState,
-      save: (newState) => state.saveEditorState(newState),
-      saveCursor: (cursor) => state.saveCursorState(cursor),
-      undo: () => state.undo(),
-      redo: () => state.redo(),
-      isLineChanged: (i) => state.isLineChanged(i),
-      getLines: (idxs) => state.getLines(idxs),
-      getLineRange: (s, e) => state.getLineRange(s, e)
+      get          : ()         => state.getState().present.editorState,
+      save         : (newState) => state.saveEditorState(newState),
+      saveCursor   : (cursor)   => state.saveCursorState(cursor),
+      undo         : ()         => state.undo(),
+      redo         : ()         => state.redo(),
+      isLineChanged: (i)        => state.isLineChanged(i),
+      getLines     : (idxs)     => state.getLines(idxs),
+      getLineRange : (s, e)     => state.getLineRange(s, e)
     };
 
     const uiAPI = {
-      render: (state) => ui.render(state),
-      renderLine: (i, d) => ui.renderLine(i, d),
-      restoreCursor: (pos) => ui.restoreSelectionPosition(pos),
-      insertLine: (i, a) => ui.insertNewLineElement(i, a),
-      removeLine: (i) => ui.removeLineElement(i),
-      getDomSelection: () => ui.getSelectionRangesInDOM(),
-      getSelectionPosition: () => ui.getSelectionPosition()
+      render              : (state) => ui.render(state),
+      renderLine          : (i, d)  => ui.renderLine(i, d),
+      restoreCursor       : (pos)   => ui.restoreSelectionPosition(pos),
+      insertLine          : (i, a)  => ui.insertNewLineElement(i, a),
+      removeLine          : (i)     => ui.removeLineElement(i),
+      getDomSelection     : ()      => ui.getSelectionRangesInDOM(),
+      getSelectionPosition: ()      => ui.getSelectionPosition()
     };
 
     const editorAPI = {
@@ -109,29 +109,29 @@ export function createEditorFactory() {
       // keyboard
       const keyProcessor = createEditorKeyService({
         state: stateAPI,
-        ui: uiAPI
+        ui   : uiAPI
       });
 
       inputApp.bindKeydown({
-        handleEnter: keyProcessor.processEnter,
-        handleBackspace: keyProcessor.processBackspace,
-        undo: keyProcessor.undo,
-        redo: keyProcessor.redo
+        handleEnter     : keyProcessor.processEnter,
+        handleBackspace : keyProcessor.processBackspace,
+        undo            : keyProcessor.undo,
+        redo            : keyProcessor.redo
       });
 
       // features
       const styleToolbar = {
-        boldBtn: document.getElementById(`${rootId}-boldBtn`),
-        italicBtn: document.getElementById(`${rootId}-italicBtn`),
-        underLineBtn: document.getElementById(`${rootId}-underLineBtn`),
+        boldBtn       : document.getElementById(`${rootId}-boldBtn`),
+        italicBtn     : document.getElementById(`${rootId}-italicBtn`),
+        underLineBtn  : document.getElementById(`${rootId}-underLineBtn`),
         fontSizeSelect: document.getElementById(`${rootId}-fontSizeSelect`),
-        textColorBtn: document.getElementById(`${rootId}-textColorBtn`)
+        textColorBtn  : document.getElementById(`${rootId}-textColorBtn`)
       };
 
       const alignToolbar = {
-        leftBtn: document.getElementById(`${rootId}-alignLeftBtn`),
-        centerBtn: document.getElementById(`${rootId}-alignCenterBtn`),
-        rightBtn: document.getElementById(`${rootId}-alignRightBtn`)
+        leftBtn   : document.getElementById(`${rootId}-alignLeftBtn`),
+        centerBtn : document.getElementById(`${rootId}-alignCenterBtn`),
+        rightBtn  : document.getElementById(`${rootId}-alignRightBtn`)
       };
 
       bindSelectionFeature(
@@ -169,8 +169,8 @@ export function createEditorFactory() {
       
       ui.destroy();
       state.destroy();
-      input.destroy();
-      root.innerHTML = ""; // 🔥 여기서 toolbar 포함 제거
+      inputApp.destroy();
+      document.getElementById(rootId).innerHTML = ""; // 🔥 여기서 toolbar 포함 제거
     }
 
     /* ─────────────────────────────
