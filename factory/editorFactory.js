@@ -145,8 +145,13 @@ export function createEditorFactory() {
         { ...styleToolbar, ...alignToolbar }
       );
 
-      bindStyleButtons(stateAPI, uiAPI, styleToolbar);
-      bindAlignButtons(stateAPI, uiAPI, alignToolbar);
+      // style
+      const styleDisposer = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
+      styleDisposer && disposers.push(styleDisposer);      
+
+      // align ✅
+      const alignDisposer = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
+      alignDisposer && disposers.push(alignDisposer);
 
       // extensions
       extensions.forEach(ext => {
@@ -163,14 +168,19 @@ export function createEditorFactory() {
     /* ─────────────────────────────
      * destroy
      * ───────────────────────────── */
-    function destroy() {
-      if (!mounted) return;
+    function unmount() {
+      if (!mounted) {
+        return;
+      }
       mounted = false;
 
       while (disposers.length) {
         disposers.pop()();
       }
-      
+    }
+
+    function destroy() {
+      unmount();
       ui.destroy();
       state.destroy();
       inputApp.destroy();
