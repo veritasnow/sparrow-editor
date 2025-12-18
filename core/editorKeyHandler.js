@@ -11,17 +11,23 @@ export function createEditorKeyHandler({ state, ui }) {
 
     // ... processEnter 함수 (기존과 동일) ...
     function processEnter() { 
+
+        console.log("개행 입력 테스트...........!!");
+
         const currentState = state.get();
         const domRanges = ui.getDomSelection();
+        console.log("domRanges:", domRanges);
         if (!domRanges || domRanges.length === 0) return;
+        console.log("개행 입력 테스트2...........!!");
 
         const { lineIndex, endIndex: domOffset } = domRanges[0];
         const lineState = currentState[lineIndex];
         const lineLen = getLineLengthFromState(lineState);
         const offset = Math.max(0, Math.min(domOffset, lineLen));
 
-        const { newState, newPos, newLineData } =
-            calculateEnterState(currentState, lineIndex, offset);
+        const { newState, newPos, newLineData } = calculateEnterState(currentState, lineIndex, offset);
+
+        console.log('Enter Key Processed:', newState, newPos, newLineData);
 
         state.save(newState);
         state.saveCursor({

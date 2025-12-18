@@ -21,11 +21,19 @@ export function cloneChunk(chunk) {
 // 🚀 공통 로직: 정규화된 새 Chunk 배열을 반환하는 헬퍼
 // -----------------------------------------------------------------
 function normalizeLineChunks(chunks) {
-    if (!chunks || chunks.length === 0) {
-        return [TextChunkModel("text", "", {})];
+    // 1. 우선 병합 처리를 수행합니다.
+    // chunks가 null/undefined인 경우를 대비해 빈 배열을 기본값으로 사용합니다.
+    const cloned = (chunks || []).map(cloneChunk);
+    const merged = mergeChunks(cloned);
+
+    // 2. ✨ [가장 중요한 단계] 
+    // 병합이 끝난 '최종' 결과가 비어있다면, 브라우저 커서가 안착할 수 있도록 
+    // 최소한 하나의 빈 텍스트 청크를 강제로 넣어줍니다.
+    if (merged.length === 0) {
+        return [TextChunkModel("text", "", { fontSize: "14px" })];
     }
-    // mergeChunks를 사용하여 연속된 텍스트 청크를 병합합니다.
-    return mergeChunks(chunks.map(cloneChunk));
+
+    return merged;
 }
 
 // -----------------------------------------------------------------
@@ -234,11 +242,11 @@ export function calculateBackspaceState(currentState, lineIndex, offset, ranges 
 // -----------------------------------------------------------------
 export function calculateEnterState(currentState, lineIndex, offset) {
     // ... (기존 calculateEnterState 로직) ...
-    const nextState = [...currentState];
+    const nextState   = [...currentState];
     const currentLine = currentState[lineIndex];
 
     const beforeChunks = [];
-    const afterChunks = [];
+    const afterChunks  = [];
 
     let acc = 0;
 

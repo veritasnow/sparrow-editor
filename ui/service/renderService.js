@@ -132,20 +132,16 @@ export function createRenderService({ rootId, rendererRegistry }) {
             p.style.textAlign = lineData.align || "left";
             p.innerHTML = "";
 
-            if (
-              !lineData.chunks ||
-              lineData.chunks.length === 0 ||
-              (lineData.chunks.length === 1 && lineData.chunks[0].text === "")
-            ) {
-              // 내용이 완전히 비었을 때 <br>을 추가하여 커서 포지션을 잡을 수 있도록 함
-              const br = document.createElement("br");
-              br.dataset.marker = "empty";
-              p.appendChild(br);
+            // 💡 수정: chunks가 하나라도 있으면 (빈 문자열 청크 포함) 
+            // <br> 대신 renderLineChunks를 호출합니다.
+            if (!lineData.chunks || lineData.chunks.length === 0) {
+                const br = document.createElement("br");
+                br.dataset.marker = "empty";
+                p.appendChild(br);
             } else {
-              renderLineChunks(lineData, p);
+                renderLineChunks(lineData, p);
             }
         },
-
         /**
          * 특정 라인의 특정 청크(span 등)만 부분적으로 업데이트합니다. (editorId 인자 제거)
          * @param {number} lineIndex - 청크가 속한 라인의 인덱스
