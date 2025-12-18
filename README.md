@@ -2,9 +2,9 @@ sparrow-editor
 ├─ constants
 │  └─ styleConstants.js
 ├─ core
-│  ├─ editorInputService.js
-│  ├─ editorKeyService.js
-│  └─ editorSelectionService.js
+│  ├─ editorInputProcessor.js
+│  ├─ editorKeyHandler.js
+│  └─ editorSelectionAnalyzer.js
 ├─ editor.js
 ├─ extensions
 │  ├─ image
