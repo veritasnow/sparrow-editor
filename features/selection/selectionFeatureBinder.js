@@ -1,8 +1,8 @@
-import { createEditorSelectionService } from '../../core/editorSelectionService.js';
+import { editorSelectionAnalyzer } from '../../core/editorSelectionAnalyzer.js';
 import { createSelectionUIService } from './selectionUiService.js';
 
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
-  const selectionService = createEditorSelectionService(stateAPI, uiAPI);
+  const selectionService = editorSelectionAnalyzer(stateAPI, uiAPI);
   const uiService = createSelectionUIService(toolbarElements);
 
   document.addEventListener('selectionchange', () => {

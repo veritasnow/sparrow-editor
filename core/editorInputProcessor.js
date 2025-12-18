@@ -4,7 +4,7 @@ import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
  * UI 렌더링을 요청하는 핵심 도메인 로직을 처리하는 서비스 팩토리입니다.
  */
-export function createEditorInputService(app, ui) {
+export function createEditorInputProcessor(app, ui) {
 
     function processInput() {
         const selection = ui.getSelectionContext();

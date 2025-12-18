@@ -1,4 +1,4 @@
-// service/keyInput/editorKeyService.js
+// service/keyInput/editorKeyHandler.js
 
 import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js';
 import { getLineLengthFromState } from '../utils/editorStateUtils.js';
@@ -7,7 +7,7 @@ import { getRanges } from "../../utils/rangeUtils.js";
 /**
  * 💚 EditorKeyService
  */
-export function createEditorKeyService({ state, ui }) {
+export function createEditorKeyHandler({ state, ui }) {
 
     // ... processEnter 함수 (기존과 동일) ...
     function processEnter() { 

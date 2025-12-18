@@ -3,8 +3,8 @@ import {
   DEFAULT_LINE_STYLE
 } from '../constants/styleConstants.js';
 
-// core/editorSelectionService.js
-export function createEditorSelectionService(stateAPI, uiAPI) {
+// core/editorSelectionAnalyzer.js
+export function editorSelectionAnalyzer(stateAPI, uiAPI) {
 
   function analyzeSelection() {
     const ranges = uiAPI.getDomSelection();

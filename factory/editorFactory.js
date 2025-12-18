@@ -7,8 +7,8 @@ import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
 import { textRenderer } from '../renderers/textRenderer.js';
 import { videoRenderer } from '../renderers/videoRenderer.js';
 
-import { createEditorInputService } from '../core/editorInputService.js';
-import { createEditorKeyService } from '../core/editorKeyService.js';
+import { createEditorInputProcessor } from '../core/editorInputProcessor.js';
+import { createEditorKeyHandler } from '../core/editorKeyHandler.js';
 
 import { bindSelectionFeature } from '../features/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from '../features/style/styleFeatureBinder.js';
@@ -17,28 +17,26 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 import { createDOMCreateService } from '../features/domCreateService.js';
 import { DEFAULT_LINE_STYLE, DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
 
+/**
+ * 에디터 인스턴스를 생성하는 최상위 팩토리
+ */
 export function createEditorFactory() {
 
   function create({ rootId, extensions = [] }) {
+    /* ─────────────────────────────
+     * 0️⃣ 내부 상태 및 생명주기 관리
+     * ───────────────────────────── */
+    let mounted   = false;
+    let disposers = [];
 
     /* ─────────────────────────────
-     * 내부 상태
+     * 1️⃣ 코어 서비스 초기화 (인스턴스 생성)
      * ───────────────────────────── */
-    let mounted      = false;
-    const disposers  = [];
-
-    /* ─────────────────────────────
-     * 1️⃣ DOM 생성 (단발성)
-     * ───────────────────────────── */
-    /* ─────────────────────────────
-     * 1️⃣ DOM Service
-     * ───────────────────────────── */
+    // DOM 구조 생성
     const domService = createDOMCreateService(rootId);
     domService.create();
 
-    /* ─────────────────────────────
-     * 2️⃣ Editor State
-     * ───────────────────────────── */
+    // 상태 관리 엔진
     const state = createEditorApp({
       editorState: [
         EditorLineModel(
@@ -48,158 +46,191 @@ export function createEditorFactory() {
       ]
     });
 
-    /* ─────────────────────────────
-     * 3️⃣ UI Application
-     * ───────────────────────────── */
+    // UI 및 렌더링 엔진
     const ui = createUiApplication({
-      rootId          : `${rootId}-content`,
+      rootId: `${rootId}-content`,
       rendererRegistry: {
-        text : textRenderer,
+        text: textRenderer,
         video: videoRenderer
       }
     });
 
-    /* ─────────────────────────────
-     * 4️⃣ Input System
-     * ───────────────────────────── */
+    // 입력 시스템
     const editorEl       = document.getElementById(`${rootId}-content`);
     const inputApp       = createInputApplication({ editorEl });
-    const inputProcessor = createEditorInputService(state, ui);
+    const inputProcessor = createEditorInputProcessor(state, ui);
 
     /* ─────────────────────────────
-     * 5️⃣ API 정의
+     * 2️⃣ 내부 API 정의 (외부/확장 기능용)
      * ───────────────────────────── */
     const stateAPI = {
-      get          : ()         => state.getState().present.editorState,
+      get          : () => state.getState().present.editorState,
       save         : (newState) => state.saveEditorState(newState),
-      saveCursor   : (cursor)   => state.saveCursorState(cursor),
-      undo         : ()         => state.undo(),
-      redo         : ()         => state.redo(),
-      isLineChanged: (i)        => state.isLineChanged(i),
-      getLines     : (idxs)     => state.getLines(idxs),
-      getLineRange : (s, e)     => state.getLineRange(s, e)
+      saveCursor   : (cursor) => state.saveCursorState(cursor),
+      undo         : () => state.undo(),
+      redo         : () => state.redo(),
+      isLineChanged: (i) => state.isLineChanged(i),
+      getLines     : (idxs) => state.getLines(idxs),
+      getLineRange : (s, e) => state.getLineRange(s, e)
     };
 
     const uiAPI = {
-      render              : (state) => ui.render(state),
-      renderLine          : (i, d)  => ui.renderLine(i, d),
-      restoreCursor       : (pos)   => ui.restoreSelectionPosition(pos),
-      insertLine          : (i, a)  => ui.insertNewLineElement(i, a),
-      removeLine          : (i)     => ui.removeLineElement(i),
-      getDomSelection     : ()      => ui.getSelectionRangesInDOM(),
-      getSelectionPosition: ()      => ui.getSelectionPosition()
+      render              : (data) => ui.render(data),
+      renderLine          : (i, d) => ui.renderLine(i, d),
+      restoreCursor       : (pos) => ui.restoreSelectionPosition(pos),
+      insertLine          : (i, a) => ui.insertNewLineElement(i, a),
+      removeLine          : (i) => ui.removeLineElement(i),
+      getDomSelection     : () => ui.getSelectionRangesInDOM(),
+      getSelectionPosition: () => ui.getSelectionPosition()
     };
 
     const editorAPI = {
       getToolbarButton(name) {
-        if (name === 'video') {
-          return document.getElementById(`${rootId}-addVideoBtn`);
-        }
-        return null;
+        const buttonIds = {
+          video: `${rootId}-addVideoBtn`,
+          bold : `${rootId}-boldBtn`,
+          // 필요한 버튼 ID 매핑 추가
+        };
+        return document.getElementById(buttonIds[name] || name);
       }
     };
 
     /* ─────────────────────────────
-     * mount
+     * 3️⃣ 라이프사이클 메서드
      * ───────────────────────────── */
+
+    /**
+     * mount: 이벤트 바인딩 및 초기 렌더링
+     */
     function mount() {
       if (mounted) return;
-      mounted = true;
 
-      // input
-      inputApp.bindInput(inputProcessor.processInput);
-      disposers.push(() => inputApp.destroy?.());
+      try {
+        // A. 초기 렌더링 (이벤트보다 먼저 수행하여 DOM 안정화)
+        const currentContent = stateAPI.get();
+        uiAPI.render(currentContent);
+        uiAPI.restoreCursor({ lineIndex: 0, offset: 0 });
 
-      // keyboard
-      const keyProcessor = createEditorKeyService({
-        state: stateAPI,
-        ui   : uiAPI
-      });
+        // B. 기본 입력 바인딩
+        inputApp.bindInput(inputProcessor.processInput);
+        // inputApp 자체의 해제 로직이 있다면 추적
+        disposers.push(() => {
+            console.log("Unbinding input processor...");
+            // 필요한 경우 inputApp.unbindInput() 호출
+        });
 
-      inputApp.bindKeydown({
-        handleEnter     : keyProcessor.processEnter,
-        handleBackspace : keyProcessor.processBackspace,
-        undo            : keyProcessor.undo,
-        redo            : keyProcessor.redo
-      });
+        // C. 키보드 서비스 바인딩
+        const keyProcessor = createEditorKeyHandler({
+          state: stateAPI,
+          ui   : uiAPI
+        });
 
-      // features
-      const styleToolbar = {
-        boldBtn       : document.getElementById(`${rootId}-boldBtn`),
-        italicBtn     : document.getElementById(`${rootId}-italicBtn`),
-        underLineBtn  : document.getElementById(`${rootId}-underLineBtn`),
-        fontSizeSelect: document.getElementById(`${rootId}-fontSizeSelect`),
-        textColorBtn  : document.getElementById(`${rootId}-textColorBtn`)
-      };
+        inputApp.bindKeydown({
+          handleEnter: keyProcessor.processEnter,
+          handleBackspace: keyProcessor.processBackspace,
+          undo: keyProcessor.undo,
+          redo: keyProcessor.redo
+        });
 
-      const alignToolbar = {
-        leftBtn   : document.getElementById(`${rootId}-alignLeftBtn`),
-        centerBtn : document.getElementById(`${rootId}-alignCenterBtn`),
-        rightBtn  : document.getElementById(`${rootId}-alignRightBtn`)
-      };
+        // D. 툴바 및 피처 바인딩
+        const styleToolbar = {
+          boldBtn       : document.getElementById(`${rootId}-boldBtn`),
+          italicBtn     : document.getElementById(`${rootId}-italicBtn`),
+          underLineBtn  : document.getElementById(`${rootId}-underLineBtn`),
+          fontSizeSelect: document.getElementById(`${rootId}-fontSizeSelect`),
+          textColorBtn  : document.getElementById(`${rootId}-textColorBtn`)
+        };
 
-      bindSelectionFeature(
-        stateAPI,
-        uiAPI,
-        editorEl,
-        { ...styleToolbar, ...alignToolbar }
-      );
+        const alignToolbar = {
+          leftBtn  : document.getElementById(`${rootId}-alignLeftBtn`),
+          centerBtn: document.getElementById(`${rootId}-alignCenterBtn`),
+          rightBtn : document.getElementById(`${rootId}-alignRightBtn`)
+        };
 
-      // style
-      const styleDisposer = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
-      styleDisposer && disposers.push(styleDisposer);      
+        // Selection 피처 (필요 시 disposer 반환하도록 구성 권장)
+        bindSelectionFeature(stateAPI, uiAPI, editorEl, { ...styleToolbar, ...alignToolbar });
 
-      // align ✅
-      const alignDisposer = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
-      alignDisposer && disposers.push(alignDisposer);
+        // 스타일 및 정렬 버튼 (반환된 해제 함수 저장)
+        const styleDisposer = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
+        if (styleDisposer) disposers.push(styleDisposer);
 
-      // extensions
-      extensions.forEach(ext => {
-        ext?.setup?.({ stateAPI, uiAPI, editorAPI });
-        ext?.destroy && disposers.push(() => ext.destroy());
-      });
+        const alignDisposer = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
+        if (alignDisposer) disposers.push(alignDisposer);
 
-      // initial render
-      const mountState = state.getState().present.editorState;
-      ui.render(mountState);
-      ui.restoreSelectionPosition({ lineIndex: 0, offset: 0 });
+        // E. 익스텐션 실행
+        extensions.forEach(ext => {
+          if (!ext) return;
+          const extDisposer = ext.setup?.({ stateAPI, uiAPI, editorAPI });
+          
+          // setup에서 직접 함수를 반환하거나, 객체에 destroy 메서드가 있는 경우 모두 대응
+          if (typeof extDisposer === 'function') {
+            disposers.push(extDisposer);
+          } else if (ext.destroy) {
+            disposers.push(() => ext.destroy());
+          }
+        });
+
+        mounted = true;
+        console.log(`[SparrowEditor] Instance ${rootId} mounted.`);
+      } catch (error) {
+        console.error(`[SparrowEditor] Mount failed:`, error);
+        unmount(); // 실패 시 부분적으로 바인딩된 리스너 정리
+      }
     }
 
-    /* ─────────────────────────────
-     * destroy
-     * ───────────────────────────── */
+    /**
+     * unmount: 이벤트 리스너 제거 (역순 실행)
+     */
     function unmount() {
-      if (!mounted) {
-        return;
-      }
-      mounted = false;
+      if (!mounted) return;
 
-      while (disposers.length) {
-        disposers.pop()();
+      console.log(`[SparrowEditor] Unmounting ${rootId}...`);
+      
+      // 등록된 순서의 반대(LIFO)로 해제하여 의존성 문제 방지
+      while (disposers.length > 0) {
+        const dispose = disposers.pop();
+        try {
+          if (typeof dispose === 'function') dispose();
+        } catch (e) {
+          console.error(`[SparrowEditor] Error during disposal:`, e);
+        }
       }
+
+      mounted = false;
     }
 
+    /**
+     * destroy: 언마운트 및 인스턴스 메모리 해제
+     */
     function destroy() {
       unmount();
-      ui.destroy();
-      state.destroy();
-      inputApp.destroy();
-      domService.destroy();
+      
+      // 각 시스템의 내부 파괴 로직 실행
+      ui.destroy?.();
+      state.destroy?.();
+      inputApp.destroy?.();
+      domService.destroy?.();
+
+      console.log(`[SparrowEditor] Instance ${rootId} destroyed.`);
     }
 
     /* ─────────────────────────────
-     * Context 반환
+     * 4️⃣ 외부 노출 인터페이스
      * ───────────────────────────── */
     return {
+      // 제어용 메서드
+      mount,
+      unmount,
+      destroy,
+      
+      // 상태 확인용 (필요 시)
+      isMounted: () => mounted,
+      
+      // 원본 참조 (디버깅/고급 제어용)
       state,
       ui,
-      inputApp,
       stateAPI,
-      uiAPI,
-      editorAPI,
-      extensions,
-      mount,
-      destroy
+      uiAPI
     };
   }
 
