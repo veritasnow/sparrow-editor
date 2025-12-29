@@ -2,7 +2,7 @@
 
 import { bindVideoButton } from './videoFeatureBinder.js';
 
-export function createVideoExtension() {
+export function createVideoExtension(rootId) {
   return {
     name: 'video',
 
@@ -17,7 +17,7 @@ export function createVideoExtension() {
       const videoBtn = editorAPI.getToolbarButton('video');
       if (!videoBtn) return;
 
-      bindVideoButton(videoBtn, stateAPI, uiAPI);
+      bindVideoButton(videoBtn, stateAPI, uiAPI, rootId);
     }
   };
 }

@@ -48,6 +48,10 @@ export function createDOMCreateService(rootId) {
         <button id="${rootId}-addVideoBtn" title="동영상 추가">
           <div class="video-icon"></div>
         </button>
+
+        <button id="${rootId}-addImageBtn" title="이미지 추가">
+          <div class="image-icon"></div>
+        </button>
       </div>
 
       <div id="${rootId}-content" contenteditable="true" class="sparrow-contents"></div>

@@ -5,21 +5,20 @@
  *
  * @returns {{ popup: HTMLElement, inputEl: HTMLElement, confirmBtn: HTMLElement, open: Function, close: Function }}
  */
-export function createVideoPopupView(toolbar, videoBtn) {
-    let popup = document.querySelector('.video-input-popup');
+export function createVideoPopupView(rootEl, toolbar, videoBtn) {
+    let popup = rootEl.querySelector('.video-input-popup');
     if (!popup) {
-        // DOM 생성 (View responsibility)
         popup = document.createElement('div');
         popup.className = 'video-input-popup';
         popup.innerHTML = `
-            <input type="text" placeholder="YouTube URL 입력..." id="videoUrlInput" />
-            <button id="videoAddConfirmBtn">추가</button>
+        <input type="text" placeholder="YouTube URL 입력..." class="video-url-input" />
+        <button class="video-confirm-btn">추가</button>
         `;
         toolbar.appendChild(popup);
     }
 
-    const inputEl = popup.querySelector('#videoUrlInput');
-    const confirmBtn = popup.querySelector('#videoAddConfirmBtn');
+    const inputEl    = popup.querySelector('.video-url-input');
+    const confirmBtn = popup.querySelector('.video-confirm-btn');
 
     // 팝업 열기/위치 조정 (View responsibility)
     const open = () => {

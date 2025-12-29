@@ -206,6 +206,56 @@
       background: #0056b3;
     }
 
+    /* ───────── 이미지 추가 버튼 아이콘 (사진 느낌 강화) ───────── */
+    .image-icon {
+      position: relative;
+      width: 18px;
+      height: 14px;
+      border: 2px solid currentColor;
+      border-radius: 2px;
+      box-sizing: border-box;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    /* 🏔️ 산 (1번) */
+    .image-icon::before {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 2px;
+      width: 8px;
+      height: 6px;
+      background: currentColor;
+      transform: skewX(-15deg) rotate(-4deg);
+      border-radius: 2px;
+    }
+
+    /* 🏔️ 산 (2번, 뒤에 있는 느낌) */
+    .image-icon::after {
+      content: "";
+      position: absolute;
+      bottom: 1px;
+      left: 8px;
+      width: 6px;
+      height: 4px;
+      background: currentColor;
+      transform: skewX(-15deg) rotate(-4deg);
+      border-radius: 2px;
+      opacity: 0.8;
+    }
+
+    /* ☀️ 해 (프레임 오른쪽 위) */
+    .image-icon span {
+      content: "";
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+      border-radius: 50%;
+    }
 
     /* ───────── 컬러 버튼 (툴바) ───────── */
     .color-btn {
@@ -234,6 +284,74 @@
       border-color: #555;
     }
     
+    /* ───────── 이미지 URL + 파일 업로드 팝업 ───────── */
+    .image-input-popup {
+      display: none;
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      padding: 10px;
+      z-index: 10;
+      width: 260px;
+      animation: popup-fade-in 0.12s ease-out;
+    }
+
+    /* URL 입력 영역 */
+    .image-input-popup .image-url-input {
+      width: calc(100% - 60px);
+      padding: 5px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    /* "파일 선택" 버튼 */
+    .image-input-popup .image-upload-btn {
+      background: #f8f8f8;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 6px;
+      width: 95px;
+      transition: 0.15s;
+    }
+
+    .image-input-popup .image-upload-btn:hover {
+      background: #ececec;
+    }
+
+    /* "추가" 버튼 */
+    .image-input-popup .image-confirm-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 13px;
+      margin-top: 6px;
+      cursor: pointer;
+      width: 95px;
+      transition: 0.15s;
+    }
+
+    .image-input-popup .image-confirm-btn:hover {
+      background: #0056b3;
+    }
+
+    /* 팝업 표시 애니메이션 */
+    @keyframes popup-fade-in {
+      from { opacity: 0; transform: translateY(-3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+
 
   </style>
 </head>
@@ -247,7 +365,6 @@
     const editor = createEditor('myEditor');
 
     document.getElementById('destroyBtn').onclick = () => {
-
       // 파괴가 인스턴스 및 관련 리소스 정리에 도움을 주지 못함. 정리하는 로직 개선이 필요함
       editor.destroy();
     };  

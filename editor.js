@@ -1,6 +1,7 @@
 // editor.js
 import { createEditorFactory } from './factory/editorFactory.js';
 import { createVideoExtension } from './extensions/video/videoExtension.js';
+import { createImageExtension } from './extensions/image/imageExtension.js';
 
 export function createEditor(rootId) {
   const factory = createEditorFactory();
@@ -8,7 +9,8 @@ export function createEditor(rootId) {
   const editor = factory.create({
     rootId,
     extensions: [
-      createVideoExtension()
+      createVideoExtension(rootId),
+      createImageExtension(rootId)      
     ]
   });
 

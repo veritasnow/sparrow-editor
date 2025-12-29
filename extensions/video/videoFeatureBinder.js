@@ -3,11 +3,12 @@ import { createVideoInsertService } from './service/videoInsertService.js';
 
 // features/video/videoFeatureBinder.js
 
-export function bindVideoButton(videoBtn, stateAPI, uiAPI) {
-    const toolbar = document.querySelector('.toolbar');
+export function bindVideoButton(videoBtn, stateAPI, uiAPI, rootId) {
+    const rootEl = document.getElementById(rootId);
+    const toolbar = rootEl.querySelector('.toolbar');
 
     // 1. View & Service 초기화
-    const { popup, inputEl, confirmBtn, open, close } = createVideoPopupView(toolbar, videoBtn);
+    const { popup, inputEl, confirmBtn, open, close } = createVideoPopupView(rootEl, toolbar, videoBtn);
     const { insertVideo } = createVideoInsertService(stateAPI, uiAPI);
 
     let lastCursorPos = null;

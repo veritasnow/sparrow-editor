@@ -1,7 +1,7 @@
 // factory/editorFactory.js
-import { createEditorApp } from '../state/application/editorApplication.js';
-import { createUiApplication } from '../ui/application/uiApplication.js';
-import { createInputApplication } from '../input/application/inputApplication.js';
+import { createEditorApp } from '../modules/state/application/editorApplication.js';
+import { createUiApplication } from '../modules/ui/application/uiApplication.js';
+import { createInputApplication } from '../modules/input/application/inputApplication.js';
 
 import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
 import { textRenderer } from '../renderers/textRenderer.js';
@@ -88,7 +88,7 @@ export function createEditorFactory() {
       getToolbarButton(name) {
         const buttonIds = {
           video: `${rootId}-addVideoBtn`,
-          bold : `${rootId}-boldBtn`,
+          image: `${rootId}-addImageBtn`,
           // 필요한 버튼 ID 매핑 추가
         };
         return document.getElementById(buttonIds[name] || name);
@@ -126,9 +126,9 @@ export function createEditorFactory() {
         });
 
         inputApp.bindKeydown({
-          handleEnter: keyProcessor.processEnter,
+          handleEnter    : keyProcessor.processEnter,
           handleBackspace: keyProcessor.processBackspace,
-          undo: keyProcessor.undo,
+          undo           : keyProcessor.undo,
           redo: keyProcessor.redo
         });
 
@@ -159,6 +159,8 @@ export function createEditorFactory() {
 
         // E. 익스텐션 실행
         extensions.forEach(ext => {
+          console.log("Setting up extension:", ext);
+
           if (!ext) return;
           const extDisposer = ext.setup?.({ stateAPI, uiAPI, editorAPI });
           
