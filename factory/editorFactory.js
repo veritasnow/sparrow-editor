@@ -4,8 +4,9 @@ import { createUiApplication } from '../modules/ui/application/uiApplication.js'
 import { createInputApplication } from '../modules/input/application/inputApplication.js';
 
 import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
-import { textRenderer } from '../renderers/textRenderer.js';
-import { videoRenderer } from '../renderers/videoRenderer.js';
+import { textRenderer } from '../features/componets/textRenderer.js';
+import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
+import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
 
 import { createEditorInputProcessor } from '../core/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/editorKeyHandler.js';
@@ -50,8 +51,9 @@ export function createEditorFactory() {
     const ui = createUiApplication({
       rootId: `${rootId}-content`,
       rendererRegistry: {
-        text: textRenderer,
-        video: videoRenderer
+        text : textRenderer,
+        video: videoRenderer,
+        image: imageRenderer
       }
     });
 

@@ -1,4 +1,4 @@
-import { createVideoPopupView } from './compoents/videoPopupView.js';
+import { createVideoPopupView } from './componets/videoPopupView.js';
 import { createVideoInsertService } from './service/videoInsertService.js';
 
 // features/video/videoFeatureBinder.js

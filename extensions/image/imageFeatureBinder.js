@@ -1,4 +1,4 @@
-import { createImagePopupView } from './compoents/imagePopupView.js';
+import { createImagePopupView } from './componets/imagePopupView.js';
 import { createImageInsertService } from './service/imageInsertService.js';
 
 // features/image/imageFeatureBinder.js
