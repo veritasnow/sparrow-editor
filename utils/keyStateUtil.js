@@ -1,57 +1,38 @@
 // utils/keyStateUtil.js
-
-import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../model/editorModel.js';
-// chunkUtils에서 실제 구현된 유틸리티를 가져옵니다.
+import { EditorLineModel } from '../model/editorLineModel.js';
 import { mergeChunks, splitChunkByOffset } from '../utils/mergeUtils.js';
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 
 // -----------------------------------------------------------------
-// 🚀 공통 로직: chunk를 안전하게 복제 (확장 대비)
+// 🚀 공통 로직: Registry를 이용해 추상화된 복제
 // -----------------------------------------------------------------
 export function cloneChunk(chunk) {
-    if (chunk.type === "text") {
-        return TextChunkModel("text", chunk.text, chunk.style);
-    }
-    if (chunk.type === "video") {
-        return VideoChunkModel(chunk.videoId, chunk.src);
-    }
-    return { ...chunk };
+    // Registry의 각 핸들러가 가진 clone 기능을 사용합니다.
+    return chunkRegistry.get(chunk.type).clone(chunk);
 }
 
 // -----------------------------------------------------------------
-// 🚀 공통 로직: 정규화된 새 Chunk 배열을 반환하는 헬퍼
+// 🚀 공통 로직: 정규화
 // -----------------------------------------------------------------
 function normalizeLineChunks(chunks) {
-    // 1. 우선 병합 처리를 수행합니다.
-    // chunks가 null/undefined인 경우를 대비해 빈 배열을 기본값으로 사용합니다.
     const cloned = (chunks || []).map(cloneChunk);
     const merged = mergeChunks(cloned);
 
-    // 2. ✨ [가장 중요한 단계] 
-    // 병합이 끝난 '최종' 결과가 비어있다면, 브라우저 커서가 안착할 수 있도록 
-    // 최소한 하나의 빈 텍스트 청크를 강제로 넣어줍니다.
     if (merged.length === 0) {
-        return [TextChunkModel("text", "", { fontSize: "14px" })];
+        // 빈 줄일 때 기본 텍스트 청크 생성도 Registry를 통합니다.
+        return [chunkRegistry.get('text').create("", { fontSize: "14px" })];
     }
-
     return merged;
 }
 
-// -----------------------------------------------------------------
-// ❌ Selection Deletion (선택 영역 삭제 로직)
-// -----------------------------------------------------------------
-/**
- * 다중/단일 라인 선택 영역을 삭제하고 시작 라인의 앞부분과 끝 라인의 뒷부분을 병합합니다.
- */
+// Selection Deletion (선택 영역 삭제 로직)
 function calculateDeleteSelectionState(editorState, ranges) {
     const startRange = ranges[0];
-    const endRange = ranges[ranges.length - 1];
+    const endRange   = ranges[ranges.length - 1];
 
-    const startLineIndex = startRange.lineIndex;
-    const startOffset = startRange.startIndex;
-    const endLineIndex = endRange.lineIndex;
-    const endOffset = endRange.endIndex;
+    const { lineIndex: startLineIndex, startIndex: startOffset } = startRange;
+    const { lineIndex: endLineIndex, endIndex: endOffset } = endRange;
 
-    // 만약 시작점과 끝점이 같거나, 유효하지 않은 ranges라면 상태 변화 없음 반환
     if (startLineIndex === endLineIndex && startOffset === endOffset) {
         return { newState: editorState, newPos: null, deletedLineIndex: null, updatedLineIndex: null };
     }
@@ -59,231 +40,155 @@ function calculateDeleteSelectionState(editorState, ranges) {
     const newState = [...editorState];
     const startLine = editorState[startLineIndex];
     const endLine = editorState[endLineIndex];
-    const newPos = { lineIndex: startLineIndex, offset: startOffset };
 
-    let beforeChunks = []; // 시작 라인의 삭제 이전 부분
-    let afterChunks = [];  // 끝 라인의 삭제 이후 부분
+    let beforeChunks = [];
+    let afterChunks = [];
 
-    // 1. 시작 라인 처리: startOffset 이전의 청크들을 가져옵니다.
+    // 1. 시작 라인 처리
     let acc = 0;
     for (const chunk of startLine.chunks) {
-        const chunkLen = chunk.type === 'text' ? (chunk.text.length || 0) : 0;
+        const handler    = chunkRegistry.get(chunk.type);
+        const chunkLen   = handler.getLength(chunk); // chunk.text.length 대신 사용
         const chunkStart = acc;
-        const chunkEnd = acc + chunkLen;
+        const chunkEnd   = acc + chunkLen;
 
-        if (chunk.type !== 'text' || chunkEnd <= startOffset) {
+        if (!handler.canSplit || chunkEnd <= startOffset) {
             beforeChunks.push(cloneChunk(chunk));
         } else if (chunkStart < startOffset && chunkEnd > startOffset) {
-            // 삭제 시작 지점이 청크 중간에 있는 경우: 앞부분만 취함
             const { before } = splitChunkByOffset(chunk, startOffset - chunkStart, chunkLen);
             beforeChunks.push(...before);
             break; 
-        } else if (chunkStart >= startOffset) {
-            // 삭제 시작 지점 (텍스트의 시작)에 도달
-            break;
-        }
+        } else if (chunkStart >= startOffset) break;
+        
         acc = chunkEnd;
     }
 
-    // 2. 끝 라인 처리: endOffset 이후의 청크들을 가져옵니다.
+    // 2. 끝 라인 처리
     acc = 0;
     for (const chunk of endLine.chunks) {
-        const chunkLen = chunk.type === 'text' ? (chunk.text.length || 0) : 0;
+        const handler    = chunkRegistry.get(chunk.type);
+        const chunkLen   = handler.getLength(chunk);
         const chunkStart = acc;
-        const chunkEnd = acc + chunkLen;
+        const chunkEnd   = acc + chunkLen;
         
         if (chunkStart >= endOffset) {
             afterChunks.push(cloneChunk(chunk));
         } else if (chunkStart < endOffset && chunkEnd > endOffset) {
-            // 삭제 끝 지점이 청크 중간에 있는 경우: 뒷부분만 취함
             const { after } = splitChunkByOffset(chunk, 0, endOffset - chunkStart);
             afterChunks.push(...after);
         }
-        // chunkStart < endOffset && chunkEnd <= endOffset 인 경우는 선택 영역이므로 건너뜁니다.
         acc = chunkEnd;
     }
 
-    // 3. 시작 라인 업데이트 (앞 청크 + 뒤 청크 병합)
-    const mergedChunks = [...beforeChunks, ...afterChunks];
-    
-    newState[startLineIndex] = EditorLineModel(startLine.align, normalizeLineChunks(mergedChunks));
+    newState[startLineIndex] = EditorLineModel(startLine.align, normalizeLineChunks([...beforeChunks, ...afterChunks]));
 
-    // 4. 중간 라인 및 끝 라인 제거
     const deleteCount = endLineIndex - startLineIndex;
-    
-    let deletedLineIndex = null;
     if (deleteCount > 0) {
-        // startLineIndex 바로 다음(startLineIndex + 1)부터 deleteCount 만큼 삭제
         newState.splice(startLineIndex + 1, deleteCount);
-        deletedLineIndex = { start: startLineIndex + 1, count: deleteCount };
     }
 
-    return {
-        newState: newState,
-        newPos: newPos,
-        deletedLineIndex: deletedLineIndex,
-        updatedLineIndex: startLineIndex // 시작 라인은 항상 업데이트됨
-    };
+    return { newState, newPos: { lineIndex: startLineIndex, offset: startOffset }, updatedLineIndex: startLineIndex };
 }
 
-// -----------------------------------------------------------------
-// ⌫ Backspace Key (ranges 인수 추가 및 로직 분기)
-// -----------------------------------------------------------------
+// ⌫ Backspace Key
 export function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
-    
-    // ⭐ 0️⃣ 선택 영역이 있는 경우 (Selection Deletion)
-    if (ranges && ranges.length > 0 && 
-        (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
-        
-        // 선택 영역 삭제 로직으로 위임
+    if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
         return calculateDeleteSelectionState(currentState, ranges); 
     }
 
-    // ----------------------------------------------------
-    // 👇 선택 영역이 없을 때만 기존의 단일 커서/줄 병합 로직 실행
-    // ----------------------------------------------------
-    const nextState = [...currentState];
+    const nextState   = [...currentState];
     const currentLine = currentState[lineIndex];
-
-    let newPos = null;
 
     // 1️⃣ 줄 병합
     if (offset === 0 && lineIndex > 0) {
         const prevLine = nextState[lineIndex - 1];
+        const merged   = [...prevLine.chunks.map(cloneChunk), ...currentLine.chunks.map(cloneChunk)];
+        // Registry를 사용하여 이전 라인의 길이를 안전하게 계산
+        const prevOffset = prevLine.chunks.reduce((s, c) => s + chunkRegistry.get(c.type).getLength(c), 0);
 
-        const merged = [
-            ...prevLine.chunks.map(cloneChunk),
-            ...currentLine.chunks.map(cloneChunk),
-        ];
-
-        const prevOffset = prevLine.chunks.reduce((s, c) => s + (c.text?.length || 0), 0);
-
-        // normalizeLineChunks를 통해 병합 시 스타일 병합 처리
         nextState[lineIndex - 1] = EditorLineModel(prevLine.align, normalizeLineChunks(merged));
         nextState.splice(lineIndex, 1);
 
-        return {
-            newState: nextState,
-            newPos: { lineIndex: lineIndex - 1, offset: prevOffset },
-            deletedLineIndex: lineIndex,
-            updatedLineIndex: lineIndex - 1
-        };
+        return { newState: nextState, newPos: { lineIndex: lineIndex - 1, offset: prevOffset }, deletedLineIndex: lineIndex, updatedLineIndex: lineIndex - 1 };
     }
 
     // 2️⃣ 한 글자 삭제
     const newChunks = [];
     let deleted = false;
-    let acc = 0;
+    let acc     = 0;
 
     for (const chunk of currentLine.chunks) {
-        if (chunk.type !== 'text') {
-            newChunks.push(cloneChunk(chunk));
-            continue;
-        }
+        const handler  = chunkRegistry.get(chunk.type);
+        const chunkLen = handler.getLength(chunk);
 
-        const start = acc;
-        const end = acc + chunk.text.length;
-
-        if (offset <= start || offset > end) {
+        if (!handler.canSplit || offset <= acc || offset > acc + chunkLen) {
             newChunks.push(cloneChunk(chunk));
         } else {
-            const cut = offset - start;
+            const cut = offset - acc;
             const newText = chunk.text.slice(0, cut - 1) + chunk.text.slice(cut);
             
             if (newText.length > 0) {
-                newChunks.push(TextChunkModel("text", newText, chunk.style));
+                // handler.create를 사용하여 모델명 명시 없이 생성
+                newChunks.push(handler.create(newText, chunk.style));
             }
-
-            newPos = { lineIndex, offset: offset - 1 };
             deleted = true;
         }
-
-        acc = end;
+        acc += chunkLen;
     }
 
-    // 상태 변화가 없으면 종료 시, 모든 필드를 명시적으로 null로 반환
-    if (!deleted) return { newState: currentState, newPos: null, deletedLineIndex: null, updatedLineIndex: null };
+    if (!deleted) return { newState: currentState, newPos: null };
 
-    // 3️⃣ 빈 줄 처리 (삭제 후 라인이 비었을 때)
-    if (newChunks.length === 0) {
-        if (lineIndex === 0) {
-            // 첫 줄이 비면 빈 텍스트 청크로 남김
-            nextState[0] = EditorLineModel("left", normalizeLineChunks([]));
-            return { newState: nextState, newPos: { lineIndex: 0, offset: 0 }, updatedLineIndex: 0, deletedLineIndex: null };
-        }
-
-        // 현재 라인을 삭제하고 이전 라인으로 커서를 옮김
+    // 3️⃣ 빈 줄 처리 및 상태 업데이트
+    if (newChunks.length === 0 && lineIndex > 0) {
         nextState.splice(lineIndex, 1);
         const prevLine = nextState[lineIndex - 1];
-        const prevOffset = prevLine.chunks.reduce((s, c) => s + (c.text?.length || 0), 0); // 이전 라인의 끝 오프셋
-
-        return {
-            newState: nextState,
-            newPos: { lineIndex: lineIndex - 1, offset: prevOffset },
-            deletedLineIndex: lineIndex, // 이 라인은 삭제됨
-            updatedLineIndex: null // 이전 라인은 업데이트되지 않음 (이미 normalizeLineChunks에서 처리됨)
-        };
+        const prevOffset = prevLine.chunks.reduce((s, c) => s + chunkRegistry.get(c.type).getLength(c), 0);
+        return { newState: nextState, newPos: { lineIndex: lineIndex - 1, offset: prevOffset }, deletedLineIndex: lineIndex };
     }
 
-    // 4️⃣ 단일 라인 업데이트
     nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(newChunks));
-
-    return {
-        newState: nextState,
-        newPos,
-        updatedLineIndex: lineIndex,
-        deletedLineIndex: null
-    };
+    return { newState: nextState, newPos: { lineIndex, offset: offset - 1 }, updatedLineIndex: lineIndex };
 }
 
-
-// -----------------------------------------------------------------
-// ⏎ Enter Key (기존과 동일)
-// -----------------------------------------------------------------
+// ⏎ Enter Key
 export function calculateEnterState(currentState, lineIndex, offset) {
-    // ... (기존 calculateEnterState 로직) ...
-    const nextState   = [...currentState];
-    const currentLine = currentState[lineIndex];
-
+    const nextState    = [...currentState];
+    const currentLine  = currentState[lineIndex];
     const beforeChunks = [];
     const afterChunks  = [];
-
     let acc = 0;
 
     currentLine.chunks.forEach(chunk => {
+        const handler = chunkRegistry.get(chunk.type);
+        const chunkLen = handler.getLength(chunk);
         const start = acc;
-        const end = acc + (chunk.text?.length || 0);
+        const end = acc + chunkLen;
 
-        if (chunk.type !== 'text') {
+        console.log('handler.canSplit : ', handler.canSplit);
+        console.log('offset : ', offset);
+        console.log('start : ', start);
+        console.log('end : ', end);
+
+
+        if (!handler.canSplit) {
             beforeChunks.push(cloneChunk(chunk));
-        }
-        else if (offset <= start) {
-            afterChunks.push(TextChunkModel("text", chunk.text, chunk.style));
-        }
-        else if (offset >= end) {
-            beforeChunks.push(TextChunkModel("text", chunk.text, chunk.style));
-        }
-        else {
-            const cut = offset - start;
+        } else if (offset <= start) {
+            afterChunks.push(cloneChunk(chunk));
+        } else if (offset >= end) {
+            beforeChunks.push(cloneChunk(chunk));
+        } else {
+            const cut    = offset - start;
             const before = chunk.text.slice(0, cut);
-            const after = chunk.text.slice(cut);
-            if (before) beforeChunks.push(TextChunkModel("text", before, chunk.style));
-            if (after) afterChunks.push(TextChunkModel("text", after, chunk.style));
+            const after  = chunk.text.slice(cut);
+            if (before) beforeChunks.push(handler.create(before, chunk.style));
+            if (after) afterChunks.push(handler.create(after, chunk.style));
         }
-
-        acc = end;
+        acc += chunkLen;
     });
 
     nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(beforeChunks));
-
-    const newLineData = EditorLineModel(currentLine.align, normalizeLineChunks(afterChunks));
-
+    const newLineData    = EditorLineModel(currentLine.align, normalizeLineChunks(afterChunks));
     nextState.splice(lineIndex + 1, 0, newLineData);
 
-    return {
-        newState: nextState,
-        newPos: { lineIndex: lineIndex + 1, offset: 0 },
-        updatedLineIndex: lineIndex,
-        newLineData
-    };
+    return { newState: nextState, newPos: { lineIndex: lineIndex + 1, offset: 0 }, updatedLineIndex: lineIndex, newLineData };
 }

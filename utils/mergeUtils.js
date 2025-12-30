@@ -1,5 +1,5 @@
 // ───────── chunkUtils.js ─────────
-import { TextChunkModel } from '../../model/editorModel.js';
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 
 /**
  * 전체 offset 기준으로 텍스트 청크를 before/target/after로 나눕니다.
@@ -12,10 +12,11 @@ export function splitChunkByOffset(chunk, start, end) {
     const targetText = text.slice(start, end);
     const afterText  = text.slice(end);
 
+    const handler  = chunkRegistry.get('text');            
     const result = {
-        before: beforeText ? [TextChunkModel('text', beforeText, chunk.style)] : [],
-        target: targetText ? [TextChunkModel('text', targetText, chunk.style)] : [],
-        after:  afterText  ? [TextChunkModel('text', afterText, chunk.style)]  : []
+        before: beforeText ? [handler.create(beforeText, chunk.style)] : [],
+        target: targetText ? [handler.create(targetText, chunk.style)] : [],
+        after:  afterText  ? [handler.create(afterText, chunk.style)]  : []
     };
 
     return result;
@@ -29,10 +30,11 @@ export function mergeChunks(chunks) {
     let buffer = '';
     let currentStyle = null;
     let currentType = undefined;
+    const handler  = chunkRegistry.get('text');            
 
     function flush() {
         if (buffer) {
-            merged.push(TextChunkModel(currentType, buffer, currentStyle));
+            merged.push(handler.create(buffer, currentStyle));
             buffer = '';
             currentStyle = null;
             currentType = undefined;

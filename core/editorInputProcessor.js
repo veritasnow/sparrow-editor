@@ -1,4 +1,5 @@
-import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
+import { EditorLineModel } from '../model/editorLineModel.js';
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
@@ -72,7 +73,8 @@ export function createEditorInputProcessor(app, ui) {
 
         if (oldChunk.text === newText) return null;
 
-        const newChunk = TextChunkModel(oldChunk.type, newText, oldChunk.style);
+        const handler  = chunkRegistry.get(oldChunk.type);
+        const newChunk = handler.create(newText, oldChunk.style);
         const newChunks = [...updatedLine.chunks];
         newChunks[dataIndex] = newChunk;
 

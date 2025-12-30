@@ -1,5 +1,5 @@
 // sparrow-editor\service\align\editorAlignService.js
-import { EditorLineModel } from '../../model/editorModel.js'; 
+import { EditorLineModel } from '../../model/editorLineModel.js'; 
 
 /**
  * 📐 정렬 서비스

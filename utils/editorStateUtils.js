@@ -1,14 +1,19 @@
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
+
 /**
- * 에디터 State 모델에서 특정 라인의 순수 텍스트 길이를 계산합니다.
+ * 에디터 State 모델에서 특정 라인의 논리적 길이를 계산합니다.
  * @param {Object} lineData - EditorLineModel 객체
- * @returns {number} 라인의 총 텍스트 길이
+ * @returns {number} 라인의 총 논리적 길이 (Registry 기준)
  */
 export function getLineLengthFromState(lineData) {
     if (!lineData || !lineData.chunks) return 0;
     
-    // 청크 배열을 순회하며 텍스트 타입 청크의 길이만 합산
     return lineData.chunks.reduce((sum, chunk) => {
-        // 텍스트 청크만 길이를 가짐
-        return sum + (chunk.type === 'text' ? (chunk.text?.length || 0) : 0);
+        // [수정] Registry에서 해당 타입의 핸들러를 가져옵니다.
+        const handler = chunkRegistry.get(chunk.type);
+        
+        // [수정] 핸들러가 정의한 길이를 합산합니다.
+        // 비디오라면 1을 반환할 것이고, 텍스트라면 text.length를 반환합니다.
+        return sum + (handler ? handler.getLength(chunk) : 0);
     }, 0);
 }

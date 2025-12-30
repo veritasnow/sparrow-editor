@@ -3,7 +3,10 @@ import { createEditorApp } from '../modules/state/application/editorApplication.
 import { createUiApplication } from '../modules/ui/application/uiApplication.js';
 import { createInputApplication } from '../modules/input/application/inputApplication.js';
 
-import { EditorLineModel, TextChunkModel } from '../model/editorModel.js';
+import { TextChunkModel } from '../model/editorModel.js';
+import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
+
+import { EditorLineModel} from '../model/editorLineModel.js';
 import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
@@ -17,6 +20,10 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 
 import { createDOMCreateService } from '../features/domCreateService.js';
 import { DEFAULT_LINE_STYLE, DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
+
+
+import {chunkRegistry} from '../core/chunk/chunkRegistry.js';
+
 
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
@@ -33,6 +40,28 @@ export function createEditorFactory() {
     /* ─────────────────────────────
      * 1️⃣ 코어 서비스 초기화 (인스턴스 생성)
      * ───────────────────────────── */
+
+    // 1. Text Chunk 핸들러
+    chunkRegistry.register('text', {
+        isText    : true,
+        canSplit  : true,
+        create    : (text = '', style = {}) => TextChunkModel('text', text, style),
+        getLength : (chunk) => chunk.text.length,
+        clone     : (chunk) => TextChunkModel('text', chunk.text, chunk.style),
+        applyStyle: (chunk, patch) => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
+    });
+
+    // 2. Video Chunk 핸들러
+    chunkRegistry.register('video', {
+        isText    : false,
+        canSplit  : false,
+        create    : (videoId, src) => VideoChunkModel(videoId, src),
+        getLength : ()      => 1, // 비디오를 한 글자 공간으로 취급
+        clone     : (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
+        applyStyle: (chunk) => chunk // 비디오는 스타일 무시
+    });
+
+
     // DOM 구조 생성
     const domService = createDOMCreateService(rootId);
     domService.create();
@@ -79,11 +108,11 @@ export function createEditorFactory() {
     const uiAPI = {
       render              : (data) => ui.render(data),
       renderLine          : (i, d) => ui.renderLine(i, d),
-      restoreCursor       : (pos) => ui.restoreSelectionPosition(pos),
+      restoreCursor       : (pos)  => ui.restoreSelectionPosition(pos),
       insertLine          : (i, a) => ui.insertNewLineElement(i, a),
-      removeLine          : (i) => ui.removeLineElement(i),
-      getDomSelection     : () => ui.getSelectionRangesInDOM(),
-      getSelectionPosition: () => ui.getSelectionPosition()
+      removeLine          : (i)    => ui.removeLineElement(i),
+      getDomSelection     : ()     => ui.getSelectionRangesInDOM(),
+      getSelectionPosition: ()     => ui.getSelectionPosition()
     };
 
     const editorAPI = {
@@ -210,10 +239,10 @@ export function createEditorFactory() {
       unmount();
       
       // 각 시스템의 내부 파괴 로직 실행
-      ui.destroy?.();
-      state.destroy?.();
-      inputApp.destroy?.();
-      domService.destroy?.();
+      ui.destroy();
+      state.destroy();
+      inputApp.destroy();
+      domService.destroy();
 
       console.log(`[SparrowEditor] Instance ${rootId} destroyed.`);
     }

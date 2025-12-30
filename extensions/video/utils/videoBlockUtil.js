@@ -1,5 +1,6 @@
-import { EditorLineModel, TextChunkModel, VideoChunkModel } from '../../../model/editorModel.js';
+import { EditorLineModel} from '../../../model/editorLineModel.js';
 import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
+import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 
 // ======================================================================
 // 1. 청크 배열을 오프셋 기준으로 두 부분으로 나누는 함수
@@ -34,10 +35,12 @@ function splitLineChunks(chunks, offset) {
             const textAfter = chunk.text.substring(splitPoint);
 
             if (textBefore.length > 0) {
-                beforeChunks.push(TextChunkModel('text', textBefore, chunk.style));
+                const handler  = chunkRegistry.get('text');
+                beforeChunks.push(handler.create(textBefore, chunk.style));
             }
             if (textAfter.length > 0) {
-                afterChunks.push(TextChunkModel('text', textAfter, chunk.style));
+                const handler  = chunkRegistry.get('text');            
+                afterChunks.push(handler.create(textAfter, chunk.style));
             }
             splitDone = true;
 
@@ -52,7 +55,8 @@ function splitLineChunks(chunks, offset) {
 
     // afterChunks가 비어있으면 공백 청크 추가 (커서 이동 가능하게)
     if (afterChunks.length === 0) {
-        afterChunks.push(TextChunkModel('text', '', {}));
+        const handler  = chunkRegistry.get('text');     
+        afterChunks.push(handler.create('', {})   );
     }
 
     return { beforeChunks, afterChunks };
@@ -76,8 +80,8 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
     const newState = [...editorState];
     const currentLine = editorState[currentLineIndex];
 
-    const videoChunk = VideoChunkModel(videoId, `https://www.youtube.com/embed/${videoId}`);
-
+    const vidoeHandler  = chunkRegistry.get('video');     
+    const videoChunk = vidoeHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`)
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
 
     // -----------------------------------------------------------
@@ -95,8 +99,9 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
         newState[currentLineIndex] = newVideoLine;
 
         // 다음 줄에 빈 라인 생성
+        const handler  = chunkRegistry.get('text');     
         const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
-            TextChunkModel('text', '', {})
+            handler.create('', {})
         ]);
         newState.splice(currentLineIndex + 1, 0, nextLine);
 

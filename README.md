@@ -8,9 +8,18 @@ sparrow-editor
 ├─ editor.js
 ├─ extensions
 │  ├─ image
+│  │  ├─ componets
+│  │  │  ├─ imagePopupView.js
+│  │  │  └─ imageRenderer.js
+│  │  ├─ imageExtension.js
+│  │  ├─ imageFeatureBinder.js
+│  │  └─ service
+│  │     └─ imageInsertService.js
 │  └─ video
-│     ├─ compoents
-│     │  └─ videoPopupView.js
+│     ├─ componets
+│     │  ├─ videoPopupView.js
+│     │  └─ videoRenderer.js
+│     ├─ model
 │     ├─ service
 │     │  └─ videoInsertService.js
 │     ├─ utils
@@ -24,44 +33,49 @@ sparrow-editor
 │  ├─ align
 │  │  ├─ alignFeatureBinder.js
 │  │  └─ editorAlignService.js
+│  ├─ componets
+│  │  └─ textRenderer.js
 │  ├─ domCreateService.js
 │  ├─ inline
 │  │  └─ inlineServiceBase.js
 │  ├─ selection
 │  │  ├─ selectionFeatureBinder.js
 │  │  └─ selectionUiService.js
+│  ├─ service
+│  │  ├─ align
+│  │  ├─ inline
+│  │  ├─ selection
+│  │  └─ style
 │  └─ style
 │     ├─ editorStyleService.js
 │     ├─ styleFeatureBinder.js
 │     └─ styleUtils.js
 ├─ index.html
-├─ input
-│  ├─ application
-│  │  └─ inputApplication.js
-│  └─ service
-│     ├─ inputBindingService.js
-│     └─ keyBindingService.js
 ├─ model
 │  └─ editorModel.js
+├─ modules
+│  ├─ input
+│  │  ├─ application
+│  │  │  └─ inputApplication.js
+│  │  └─ service
+│  │     ├─ inputBindingService.js
+│  │     └─ keyBindingService.js
+│  ├─ state
+│  │  ├─ application
+│  │  │  └─ editorApplication.js
+│  │  ├─ service
+│  │  │  └─ editorSnapshotService.js
+│  │  └─ store
+│  │     ├─ cursorHistoryStore.js
+│  │     └─ historyStore.js
+│  └─ ui
+│     ├─ application
+│     │  └─ uiApplication.js
+│     └─ service
+│        ├─ domParserService.js
+│        ├─ renderService.js
+│        └─ selectionService.js
 ├─ README.md
-├─ renderers
-│  ├─ textRenderer.js
-│  └─ videoRenderer.js
-├─ state
-│  ├─ application
-│  │  └─ editorApplication.js
-│  ├─ service
-│  │  └─ editorSnapshotService.js
-│  └─ store
-│     ├─ cursorHistoryStore.js
-│     └─ historyStore.js
-├─ ui
-│  ├─ application
-│  │  └─ uiApplication.js
-│  └─ service
-│     ├─ domParserService.js
-│     ├─ renderService.js
-│     └─ selectionService.js
 └─ utils
    ├─ editorStateUtils.js
    ├─ keyStateUtil.js

@@ -1,5 +1,6 @@
 // ───────── styleUtils.js ─────────
-import { EditorLineModel, TextChunkModel } from '../../model/editorModel.js';
+import { EditorLineModel } from '../../model/editorLineModel.js';
+import { chunkRegistry } from '../../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 import { splitChunkByOffset, mergeChunks } from "../../utils/mergeUtils.js";
 /**
  * 선택 영역에 스타일 patch 적용
@@ -37,7 +38,8 @@ export function applyStylePatch(editorState, ranges, patch) {
                         Object.keys(newStyle).forEach(k => newStyle[k] === undefined && delete newStyle[k]);
 
                         if (t.type === 'text') {
-                            newChunks.push(TextChunkModel(t.type, t.text, newStyle));
+                            const handler  = chunkRegistry.get('text');
+                            newChunks.push(handler.create(t.text, newStyle));
                         } else {
                             // 비텍스트(chunk.type !== 'text')는 기존 속성을 유지, style만 업데이트
                             newChunks.push({ ...t, style: newStyle });
