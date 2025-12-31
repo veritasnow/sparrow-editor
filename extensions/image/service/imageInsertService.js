@@ -1,5 +1,7 @@
 // extensions/image/service/imageInsertService.js
 
+import { applyImageBlock } from '../utils/imageBlockUtil.js';
+
 export function createImageInsertService(stateAPI, uiAPI) {
     function insertImage(src, cursorPos) {
         if (!src) {
@@ -10,26 +12,29 @@ export function createImageInsertService(stateAPI, uiAPI) {
         const editorState = stateAPI.get();
         const pos = cursorPos ?? uiAPI.getSelectionPosition();
 
-        const lineIndex = pos.lineIndex;
-        const offset    = pos.offset;
+        let lineIndex = pos?.lineIndex ?? editorState.length;
+        let offset    = pos?.offset    ?? 0;
 
-        const chunk = {
-            type: 'image',
-            src: src,
-        };
+        if (lineIndex >= editorState.length) {
+            lineIndex = Math.max(0, editorState.length - 1);
+            offset = editorState[lineIndex]?.chunks.reduce((sum, c) =>
+                sum + (c.text?.length || 0)
+            , 0);
+        }
 
-        // 기존 라인에 인라인 삽입 (applyVideoBlock과 동일 패턴)
-        const currentLine = editorState[lineIndex];
-        const chunks = currentLine.chunks;
+        const { newState, restoreLineIndex, restoreOffset } =
+            applyImageBlock(editorState, src, lineIndex, offset);
 
-        const beforeChunks = chunks.slice(0, offset);
-        const afterChunks  = chunks.slice(offset);
+        // 상태/커서
+        stateAPI.save(newState);
+        stateAPI.saveCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
 
-        const newChunks = [...beforeChunks, chunk, ...afterChunks];
-        editorState[lineIndex] = { ...currentLine, chunks: newChunks };
+        // UI
+        if (stateAPI.isLineChanged(lineIndex)) {
+            uiAPI.renderLine(lineIndex, newState[lineIndex]);
+        }
 
-        stateAPI.save(editorState);
-        uiAPI.renderLine(lineIndex, editorState[lineIndex]);
+        uiAPI.restoreCursor({ lineIndex: restoreLineIndex, offset: restoreOffset });
 
         return true;
     }

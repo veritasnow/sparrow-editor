@@ -5,6 +5,7 @@ import { createInputApplication } from '../modules/input/application/inputApplic
 
 import { TextChunkModel } from '../model/editorModel.js';
 import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
+import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';
 
 import { EditorLineModel} from '../model/editorLineModel.js';
 import { textRenderer } from '../features/componets/textRenderer.js';
@@ -60,6 +61,17 @@ export function createEditorFactory() {
         clone     : (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
         applyStyle: (chunk) => chunk // 비디오는 스타일 무시
     });
+
+    // 3. Image Chunk 핸들러
+    chunkRegistry.register('image', {
+        isText    : false,
+        canSplit  : false,
+        create    : (src) => ImageChunkModel(src),
+        getLength : ()      => 1, // 이미지를 한 글자 공간으로 취급
+        clone     : (chunk) => ImageChunkModel(chunk.src),
+        applyStyle: (chunk) => chunk // 이미지는 스타일 무시
+    });
+
 
 
     // DOM 구조 생성

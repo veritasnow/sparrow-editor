@@ -164,12 +164,6 @@ export function calculateEnterState(currentState, lineIndex, offset) {
         const start = acc;
         const end = acc + chunkLen;
 
-        console.log('handler.canSplit : ', handler.canSplit);
-        console.log('offset : ', offset);
-        console.log('start : ', start);
-        console.log('end : ', end);
-
-
         if (!handler.canSplit) {
             beforeChunks.push(cloneChunk(chunk));
         } else if (offset <= start) {
