@@ -2,7 +2,7 @@
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
-import { splitLineChunks } from '../../utils/splitLineChunksUtils.js';
+import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
 export function applyImageBlock(editorState, src, currentLineIndex, cursorOffset) {
     const newState = [...editorState];

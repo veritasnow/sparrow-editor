@@ -1,7 +1,7 @@
 import { EditorLineModel} from '../../../model/editorLineModel.js';
 import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js'; // 레지스트리 도입
-import { splitLineChunks } from '../../utils/splitLineChunksUtils.js';
+import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
 // ======================================================================
 // 2. applyVideoBlock (최종 리팩토링)
