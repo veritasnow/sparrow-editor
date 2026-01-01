@@ -15,7 +15,9 @@ export function createEditorInputProcessor(app, ui) {
         if (selection.lineIndex < 0) return;
 
         const currentState = app.getState().present.editorState;
-        const currentLine = currentState[selection.lineIndex] || EditorLineModel();
+        console.log('Current Editor State:', currentState);
+
+        const currentLine  = currentState[selection.lineIndex] || EditorLineModel();
 
         const { updatedLine, flags, restoreData } = updateLineModel(currentLine, selection);
         if (!flags.hasChange) return;
@@ -41,6 +43,12 @@ export function createEditorInputProcessor(app, ui) {
 
         if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'text') {
             const result = updateExistingChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex);
+            if (result) {
+                ({ updatedLine, restoreData } = result);
+                isChunkRendering = true;
+            }
+        } else if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'table') {
+            const result = updateExistingTableChunk(updatedLine, dataIndex, activeNode, lineIndex);
             if (result) {
                 ({ updatedLine, restoreData } = result);
                 isChunkRendering = true;
@@ -81,6 +89,32 @@ export function createEditorInputProcessor(app, ui) {
         return {
             updatedLine: EditorLineModel(updatedLine.align, newChunks),
             restoreData: { lineIndex, chunkIndex: dataIndex, offset: cursorOffset }
+        };
+    }
+
+    function updateExistingTableChunk(updatedLine, dataIndex, activeNode, lineIndex) {
+        const oldChunk = updatedLine.chunks[dataIndex];
+
+        // DOM에서 셀 데이터 다시 수집
+        const newData = ui.extractTableDataFromDOM(activeNode);
+
+        // 변화 없으면 skip
+        if (JSON.stringify(oldChunk.data) === JSON.stringify(newData)) return null;
+
+        // handler 에게 새 청크 생성 위임 (text와 동일 패턴 유지)
+        const handler = chunkRegistry.get(oldChunk.type);
+        const newChunk = handler.create(newData, oldChunk.style);
+
+        const newChunks = [...updatedLine.chunks];
+        newChunks[dataIndex] = newChunk;
+
+        return {
+            updatedLine: EditorLineModel(updatedLine.align, newChunks),
+            restoreData: {
+                lineIndex,
+                chunkIndex: dataIndex,
+                offset: 0 // 셀 기준 offset 은 추후 개선
+            }
         };
     }
 

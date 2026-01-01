@@ -135,6 +135,15 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       );
     },
 
+    /**
+     * 📌 Table DOM → table chunk data 변환
+     *    table chunk 업데이트 시 사용
+     */
+    extractTableDataFromDOM(tableElement) {
+      assertAlive();
+      return domParserService.extractTableDataFromDOM(tableElement);
+    },
+
     // ───────── Lifecycle ─────────
     destroy,
   };

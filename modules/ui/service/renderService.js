@@ -78,7 +78,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
       line.chunks.forEach((chunk, chunkIndex) => {
         const renderer = rendererRegistry[chunk.type];
         if (!renderer || typeof renderer.render !== "function") return;
-        
+
         const el = renderer.render(chunk);
         el.dataset.index = chunkIndex;
         el.classList.add(`chunk-${chunk.type}`);
@@ -124,8 +124,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
          */
         renderLine(lineIndex, lineData) {
 
-            console.log('renderLine called for lineIndex:', lineIndex, 'with data:', lineData);
-
             if (!editorEl) return;
             const existingP = editorEl.children[lineIndex];
             const p = existingP || document.createElement("p");
@@ -145,6 +143,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 renderLineChunks(lineData, p);
             }
         },
+        
         /**
          * 특정 라인의 특정 청크(span 등)만 부분적으로 업데이트합니다. (editorId 인자 제거)
          * @param {number} lineIndex - 청크가 속한 라인의 인덱스

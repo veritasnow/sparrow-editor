@@ -73,7 +73,48 @@ export function createDOMParseService() {
         return { newChunks, restoreData };
     }
 
+    /**
+     * 테이블 DOM 구조를 분석하여 데이터 모델로 변환합니다.
+     * @param {HTMLElement} tableEl - <table> DOM 요소
+     * @returns {{ rows: number, cols: number, data: Array<Array<string>> }}
+     */
+    function extractTableDataFromDOM(tableEl) {
+        if (!tableEl || tableEl.tagName !== 'TABLE') {
+            console.warn('extractTableDataFromDOM: 유효하지 않은 table DOM', tableEl);
+            return { rows: 0, cols: 0, data: [] };
+        }
+
+        const rows = Array.from(tableEl.querySelectorAll('tr'));
+        const data = [];
+
+        rows.forEach((tr, rowIndex) => {
+            const cells = Array.from(tr.querySelectorAll('td, th'));
+            const rowData = [];
+
+            cells.forEach((cell, colIndex) => {
+                // 셀 안의 텍스트만 추출
+                // 1) 텍스트 노드 직접 감싸지 않은 경우 대비
+                // 2) span, br 등 무관
+                const text = cell.innerText || cell.textContent || '';
+                rowData[colIndex] = text;
+            });
+
+            data[rowIndex] = rowData;
+        });
+
+        const rowCount = data.length;
+        const colCount = rowCount > 0 ? Math.max(...data.map(r => r.length)) : 0;
+
+        return {
+            rows: rowCount,
+            cols: colCount,
+            data
+        };
+    }
+
+
     return { 
-        parseLineDOM
+        parseLineDOM,
+        extractTableDataFromDOM
     };
 }

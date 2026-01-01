@@ -56,13 +56,13 @@ export function createInputBindingService(editorEl) {
                 // 개행 중복 방지 (Enter는 keydown에서 처리하는 것이 일반적)
                 if (e.inputType === 'insertParagraph') return;
 
+                console.log('Input event data:', e.data, 'inputType:', e.inputType);
+
                 const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
                 const inputData = e.data || '';
                 
                 const PUNCTUATION_MARKS = ['.', ' ', '?', '!', ',', ':', ';', '"', "'"];
-                const isPunctuationOrSpace =
-                    e.inputType === 'insertText' &&
-                    PUNCTUATION_MARKS.includes(inputData);
+                const isPunctuationOrSpace = e.inputType === 'insertText' && PUNCTUATION_MARKS.includes(inputData);
 
                 // 문장 부호가 아니면서, 한글 입력 직후 짧은 시간 내에 입력된 것은 무시 (중복 방지 필터링)
                 if (!isPunctuationOrSpace && timeSinceCompositionEnd < 50) {
