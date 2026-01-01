@@ -78,7 +78,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
       line.chunks.forEach((chunk, chunkIndex) => {
         const renderer = rendererRegistry[chunk.type];
         if (!renderer || typeof renderer.render !== "function") return;
-
+        
         const el = renderer.render(chunk);
         el.dataset.index = chunkIndex;
         el.classList.add(`chunk-${chunk.type}`);
@@ -121,8 +121,11 @@ export function createRenderService({ rootId, rendererRegistry }) {
          * 특정 라인(P 엘리먼트)만 업데이트하여 재렌더링합니다. (editorId 인자 제거)
          * @param {number} lineIndex - 업데이트할 라인의 인덱스
          * @param {Object} lineData - 업데이트할 라인의 데이터 (align, chunks 포함)
-         */    
+         */
         renderLine(lineIndex, lineData) {
+
+            console.log('renderLine called for lineIndex:', lineIndex, 'with data:', lineData);
+
             if (!editorEl) return;
             const existingP = editorEl.children[lineIndex];
             const p = existingP || document.createElement("p");

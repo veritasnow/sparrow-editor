@@ -109,7 +109,28 @@ export function editorSelectionAnalyzer(stateAPI, uiAPI) {
     };
   }
 
+  function getChunksInRange(line, startIndex, endIndex) {
+    const result = [];
+    let acc = 0;
+
+    line.chunks.forEach((chunk, i) => {
+      const chunkStart = acc;
+      const chunkEnd = acc + chunk.length; // 핵심 변경
+
+      if (chunkEnd > startIndex && chunkStart < endIndex) {
+        result.push({
+          chunkIndex: i,
+          chunk
+        });
+      }
+
+      acc = chunkEnd;
+    });
+
+    return result;
+  }
   
+  /*
   function getChunksInRange(line, startIndex, endIndex) {
     const result = [];
     let acc = 0;
@@ -130,6 +151,7 @@ export function editorSelectionAnalyzer(stateAPI, uiAPI) {
 
     return result;
   }
+  */
 
   return { analyzeSelection };
 }

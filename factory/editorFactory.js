@@ -6,11 +6,13 @@ import { createInputApplication } from '../modules/input/application/inputApplic
 import { TextChunkModel } from '../model/editorModel.js';
 import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
 import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';
+import { TableChunkModel } from '../extensions/table/model/tableModel.js';
 
 import { EditorLineModel} from '../model/editorLineModel.js';
 import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
+import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 
 import { createEditorInputProcessor } from '../core/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/editorKeyHandler.js';
@@ -72,7 +74,15 @@ export function createEditorFactory() {
         applyStyle: (chunk) => chunk // 이미지는 스타일 무시
     });
 
-
+    // 4. Table Chunk 핸들러
+    chunkRegistry.register('table', {
+        isText    : false,
+        canSplit  : false,
+        create    : (rows, cols) => TableChunkModel(rows, cols),
+        getLength : () => 1,
+        clone     : (chunk) => TableChunkModel(chunk.rows, chunk.cols, chunk.data),
+        applyStyle: (chunk) => chunk
+    });
 
     // DOM 구조 생성
     const domService = createDOMCreateService(rootId);
@@ -94,7 +104,8 @@ export function createEditorFactory() {
       rendererRegistry: {
         text : textRenderer,
         video: videoRenderer,
-        image: imageRenderer
+        image: imageRenderer,
+        table: tableRenderer
       }
     });
 
@@ -130,8 +141,9 @@ export function createEditorFactory() {
     const editorAPI = {
       getToolbarButton(name) {
         const buttonIds = {
-          video: `${rootId}-addVideoBtn`,
-          image: `${rootId}-addImageBtn`,
+          video : `${rootId}-addVideoBtn`,
+          image : `${rootId}-addImageBtn`,
+          table : `${rootId}-addTableBtn`,
           // 필요한 버튼 ID 매핑 추가
         };
         return document.getElementById(buttonIds[name] || name);

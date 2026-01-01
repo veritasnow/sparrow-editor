@@ -357,6 +357,47 @@
       transform: translateY(0);  /* 보정 제거 */
     }
 
+    /* popup 컨테이너 */
+    .table-input-popup {
+      position: absolute;
+      display: none;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 6px;
+      z-index: 200;
+    }
+
+    /* grid */
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 18px);
+      grid-template-rows: repeat(10, 18px);
+      gap: 2px;
+      margin-bottom: 6px;
+    }
+
+    .table-cell {
+      width: 18px;
+      height: 18px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    /* 선택됐을 때 표시 */
+    .table-cell.selected {
+      background: #007bff33;
+      border-color: #007bff;
+    }
+
+    .table-size-text {
+      font-size: 12px;
+      color: #333;
+    }
+
+
     /* ───────── 표 스타일 ───────── */
     .sparrow-contents table.sparrow-table {
       width: 100%;
