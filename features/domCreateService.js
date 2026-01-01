@@ -33,6 +33,11 @@ export function createDOMCreateService(rootId) {
 
         <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
 
+        <!-- 표 삽입 버튼 -->
+        <button id="${rootId}-addTableBtn" class="table-btn" title="표 삽입">
+          <span>▦</span>
+        </button>
+
         <button id="${rootId}-alignLeftBtn" title="왼쪽 정렬">
           <div class="align-icon align-left"><div></div><div></div><div></div><div></div></div>
         </button>
@@ -59,7 +64,7 @@ export function createDOMCreateService(rootId) {
   }
 
   function destroy() {
-    root.innerHTML = ""; // ✅ DOM을 만든 놈이 제거
+    root.innerHTML = ""; // DOM을 만든 놈이 제거
   }
 
   return {
