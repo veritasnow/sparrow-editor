@@ -98,8 +98,6 @@ export function editorSelectionAnalyzer(stateAPI, uiAPI) {
       };
     }
 
-    console.log('Line Result:', lineResult);
-
     // -----------------------------
     // 4️⃣ 최종 결과
     // -----------------------------
@@ -129,29 +127,6 @@ export function editorSelectionAnalyzer(stateAPI, uiAPI) {
 
     return result;
   }
-  
-  /*
-  function getChunksInRange(line, startIndex, endIndex) {
-    const result = [];
-    let acc = 0;
-
-    line.chunks.forEach((chunk, i) => {
-      const chunkStart = acc;
-      const chunkEnd = acc + chunk.text.length;
-
-      if (chunkEnd > startIndex && chunkStart < endIndex) {
-        result.push({
-          chunkIndex: i,
-          chunk
-        });
-      }
-
-      acc = chunkEnd;
-    });
-
-    return result;
-  }
-  */
 
   return { analyzeSelection };
 }

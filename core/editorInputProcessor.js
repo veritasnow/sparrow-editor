@@ -184,15 +184,43 @@ export function createEditorInputProcessor(app, ui) {
     // ----------------------------
     // [7] 렌더링 및 커서 복원
     // ----------------------------
-    function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
+   function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
         const { isNewChunk, isChunkRendering } = flags;
 
         if (isNewChunk) {
             ui.renderLine(lineIndex, updatedLine);
             if (restoreData) ui.restoreSelectionPositionByChunk(restoreData);
-        } else if (isChunkRendering) {
+            return;
+        }
+
+        if (isChunkRendering) {
             const { chunkIndex } = restoreData;
-            ui.renderChunk(lineIndex, chunkIndex, updatedLine.chunks[chunkIndex]);
+            const chunk          = updatedLine.chunks[chunkIndex];
+
+            console.log('[renderAndRestoreCursor] chunk to render:', chunk);
+            console.log('[renderAndRestoreCursor] lineIndex:', lineIndex);
+            console.log('[renderAndRestoreCursor] chunkIndex:', chunkIndex);
+
+            // 🔥 table / non-text chunk는 전체 라인 렌더
+            if (!chunk || chunk.type === 'table') {
+                console.log('[render] table detected → renderLine');
+                ui.renderLine(lineIndex, updatedLine);
+                console.log('[render] restoreData:', restoreData);
+                if (restoreData) {
+                    ui.restoreTableSelection(restoreData);
+                }
+                return;
+            }
+
+            // text 전용 chunk만 부분 렌더
+            console.log(
+                '[render] renderChunk:',
+                lineIndex,
+                chunkIndex,
+                chunk.type
+            );
+
+            ui.renderChunk(lineIndex, chunkIndex, chunk);
             ui.restoreSelectionPositionByChunk(restoreData);
         }
     }

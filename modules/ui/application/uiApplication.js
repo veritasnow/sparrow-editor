@@ -117,6 +117,12 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       selectionService.restoreSelectionPositionByChunk(pos);
     },
 
+    restoreTableSelection(pos) {
+      assertAlive();
+      selectionService.restoreTableSelection(pos);
+    },
+
+
     // ───────── DOM → Model 파싱 ─────────
     parseLineDOM(
       parentP,

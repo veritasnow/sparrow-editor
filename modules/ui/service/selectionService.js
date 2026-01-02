@@ -47,32 +47,75 @@ export function createSelectionService({ root }) {
   function restoreSelectionPositionByChunk({ lineIndex, chunkIndex, offset }) { 
     // 💡 개선: 하드코딩된 ID 대신 root 객체 사용
     const editorEl = root; 
-    const lineEl = editorEl.children[lineIndex];
-    if (!lineEl) return;
+    const lineEl   = editorEl.children[lineIndex];
+    if (!lineEl) {
+      return;
+    }
 
     // chunk 찾기
     const chunkEl = Array.from(lineEl.children).find(
       (el) => parseInt(el.dataset.index, 10) === chunkIndex
     );
-    if (!chunkEl) return;
+
+    if (!chunkEl) {
+      return;
+    }
 
     const textLength = chunkEl.textContent.length;
     const safeOffset = Math.min(offset, textLength); // offset clamp
 
     const range = document.createRange();
-    const sel = window.getSelection();
+    const sel   = window.getSelection();
 
     // chunk 안의 텍스트 노드 찾기
     let textNode = null;
     chunkEl.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) textNode = node;
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNode = node;
+      }
     });
 
-    if (!textNode) return;
+    if (!textNode) {
+      return;
+    }
 
     range.setStart(textNode, safeOffset);
     range.collapse(true);
 
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function restoreTableSelection({
+    lineIndex,
+    chunkIndex,
+    cell // { rowIndex, colIndex, offset }
+  }) {
+    const editorEl = root;
+    const lineEl   = editorEl.children[lineIndex];
+    if (!lineEl) return;
+
+    const tableEl = Array.from(lineEl.children).find(
+      el => +el.dataset.index === chunkIndex
+    );
+    if (!tableEl) return;
+
+    const { rowIndex, colIndex, offset } = cell;
+
+    const tr = tableEl.querySelectorAll('tr')[rowIndex];
+    const td = tr?.querySelectorAll('td')[colIndex];
+    if (!td) return;
+
+    let textNode = td.firstChild;
+    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+      textNode = td.appendChild(document.createTextNode('\u00A0'));
+    }
+
+    const range = document.createRange();
+    range.setStart(textNode, Math.min(offset, textNode.length));
+    range.collapse(true);
+
+    const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
   }
@@ -200,5 +243,5 @@ function getSelectionRangesInDOM() {
     };
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInDOM, restoreSelectionPositionByChunk };
+  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInDOM, restoreSelectionPositionByChunk, restoreTableSelection };
 }

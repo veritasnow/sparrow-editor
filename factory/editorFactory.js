@@ -89,18 +89,6 @@ export function createEditorFactory() {
         },
         applyStyle: (chunk) => chunk
     });
-    // 4. Table Chunk 핸들러
-    /*
-    chunkRegistry.register('table', {
-        isText    : false,
-        canSplit  : false,
-        create    : (rows, cols) => TableChunkModel(rows, cols),
-        getLength : () => 1,
-        clone     : (chunk) => TableChunkModel(chunk.rows, chunk.cols, chunk.data),
-        applyStyle: (chunk) => chunk
-    });
-    */
-
 
     // DOM 구조 생성
     const domService = createDOMCreateService(rootId);

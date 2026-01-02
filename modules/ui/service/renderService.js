@@ -75,14 +75,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
 
     function renderLineChunks(line, parentEl) {
-
-      console.log( 'Rendering line chunks:', line );
-
       line.chunks.forEach((chunk, chunkIndex) => {
         const renderer = rendererRegistry[chunk.type];
-
-        console.log(  'Using renderer for chunk type:', chunk);
-        console.log(  'Using renderer for renderer:', renderer);
 
         if (!renderer || typeof renderer.render !== "function") return;
 
@@ -169,7 +163,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
             const renderer = rendererRegistry[chunkData.type];
             if (!renderer || typeof renderer.render !== "function") return;
-            console.log('!!!!!!!!!!!Rendering chunk:', chunkData, 'at line:', lineIndex, 'chunk index:', chunkIndex);
             if (chunkEl) {
               // 텍스트 내용만 업데이트 (성능 최적화)
               if (chunkEl.textContent !== chunkData.text) {

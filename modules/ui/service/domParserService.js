@@ -111,7 +111,6 @@ export function createDOMParseService() {
                 if (text === '') {
                     text = '\u00A0';
                 }
-                console.log( `[extractTableDataFromDOM] cell [${rowIndex}, ${colIndex}]:`, JSON.stringify(text) );
                 row[colIndex] = text;
             });
             data[rowIndex] = row;
