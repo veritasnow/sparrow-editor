@@ -1,10 +1,12 @@
 // extensions/table/components/tableRenderer.js
 export const tableRenderer = {
   render(chunk, lineIndex, chunkIndex) {
-    const { rows = 2, cols = 2, data = [] } = chunk;
+    const data = chunk.data ?? [];
+    const rows = data.length;
+    const cols = data[0]?.length ?? 0;
 
     const table              = document.createElement("table");
-    table.className          = "se-table";
+    table.className          = "se-table chunk-table";
     table.dataset.lineIndex  = lineIndex;
     table.dataset.chunkIndex = chunkIndex;
 
@@ -24,11 +26,10 @@ export const tableRenderer = {
         td.style.minWidth = "40px";
         td.style.height   = "24px";
 
-        if (data[r] && data[r][c]) {
-          td.textContent = data[r][c];
-        } else {
-          td.innerHTML   = "&nbsp;";
-        }
+        const cellValue = data[r]?.[c];
+        td.innerHTML = cellValue && cellValue !== ""
+          ? cellValue
+          : "&nbsp;";
 
         tr.appendChild(td);
       }

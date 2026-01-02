@@ -49,9 +49,9 @@ export function createEditorFactory() {
         isText    : true,
         canSplit  : true,
         create    : (text = '', style = {}) => TextChunkModel('text', text, style),
-        getLength : (chunk) => chunk.text.length,
-        clone     : (chunk) => TextChunkModel('text', chunk.text, chunk.style),
-        applyStyle: (chunk, patch) => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
+        getLength : (chunk)                 => chunk.text.length,
+        clone     : (chunk)                 => TextChunkModel('text', chunk.text, chunk.style),
+        applyStyle: (chunk, patch)          => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
     });
 
     // 2. Video Chunk 핸들러
@@ -68,7 +68,7 @@ export function createEditorFactory() {
     chunkRegistry.register('image', {
         isText    : false,
         canSplit  : false,
-        create    : (src) => ImageChunkModel(src),
+        create    : (src)   => ImageChunkModel(src),
         getLength : ()      => 1, // 이미지를 한 글자 공간으로 취급
         clone     : (chunk) => ImageChunkModel(chunk.src),
         applyStyle: (chunk) => chunk // 이미지는 스타일 무시
@@ -79,10 +79,28 @@ export function createEditorFactory() {
         isText    : false,
         canSplit  : false,
         create    : (rows, cols) => TableChunkModel(rows, cols),
+        getLength : ()           => 1,
+        clone     : (chunk)      =>  {
+            const rows   = chunk.data.length;
+            const cols   = chunk.data[0]?.length ?? 0;
+            const cloned = TableChunkModel(rows, cols);
+            cloned.data  = chunk.data.map(row => [...row]);
+            return cloned;
+        },
+        applyStyle: (chunk) => chunk
+    });
+    // 4. Table Chunk 핸들러
+    /*
+    chunkRegistry.register('table', {
+        isText    : false,
+        canSplit  : false,
+        create    : (rows, cols) => TableChunkModel(rows, cols),
         getLength : () => 1,
         clone     : (chunk) => TableChunkModel(chunk.rows, chunk.cols, chunk.data),
         applyStyle: (chunk) => chunk
     });
+    */
+
 
     // DOM 구조 생성
     const domService = createDOMCreateService(rootId);

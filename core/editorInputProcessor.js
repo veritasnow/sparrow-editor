@@ -95,15 +95,23 @@ export function createEditorInputProcessor(app, ui) {
     function updateExistingTableChunk(updatedLine, dataIndex, activeNode, lineIndex) {
         const oldChunk = updatedLine.chunks[dataIndex];
 
-        // DOM에서 셀 데이터 다시 수집
-        const newData = ui.extractTableDataFromDOM(activeNode);
+        const tableEl =
+            activeNode.tagName === 'TABLE'
+                ? activeNode
+                : activeNode.closest?.('table');
+
+        if (!tableEl) return null;
+
+        const { data } = ui.extractTableDataFromDOM(tableEl);
 
         // 변화 없으면 skip
-        if (JSON.stringify(oldChunk.data) === JSON.stringify(newData)) return null;
+        if (JSON.stringify(oldChunk.data) === JSON.stringify(data)) {
+            return null;
+        }
 
-        // handler 에게 새 청크 생성 위임 (text와 동일 패턴 유지)
-        const handler = chunkRegistry.get(oldChunk.type);
-        const newChunk = handler.create(newData, oldChunk.style);
+        // 🔑 clone 패턴 활용 (rows/cols 자동 계산됨)
+        const handler  = chunkRegistry.get('table');
+        const newChunk = handler.clone({ data });
 
         const newChunks = [...updatedLine.chunks];
         newChunks[dataIndex] = newChunk;
@@ -113,7 +121,7 @@ export function createEditorInputProcessor(app, ui) {
             restoreData: {
                 lineIndex,
                 chunkIndex: dataIndex,
-                offset: 0 // 셀 기준 offset 은 추후 개선
+                offset: 0
             }
         };
     }
