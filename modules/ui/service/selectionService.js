@@ -2,214 +2,132 @@
 
 export function createSelectionService({ root }) {
   
-  // 현재 커서가 위치한 줄의 index를 반환
-  function getCurrentLineIndex() {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return 0;
+  let lastValidPos = null;
 
-    let el = sel.anchorNode.nodeType === Node.TEXT_NODE
-      ? sel.anchorNode.parentElement
-      : sel.anchorNode;
-
-    while (el && el !== root) {
-      if (el.tagName === 'P') return Array.from(root.childNodes).indexOf(el);
-      el = el.parentElement;
-    }
-
-    return 0;
+  // 에디터 본문(root)에 mousedown이나 keyup 이벤트가 발생할 때마다 호출
+  function updateLastValidPosition() {
+      const pos = getInsertionAbsolutePosition(); // 본문에 있을 때만 위치를 가져옴
+      if (pos) {
+          lastValidPos = pos;
+      }
   }
 
-  // 현재 커서 위치를 lineIndex + offset 형태로 반환
+  // 외부에서 가져갈 수 있게 노출
+  function getLastValidPosition() {
+      return lastValidPos;
+  }
+
+
+  /**
+   * 1. 현재 DOM 선택 영역의 상세 정보를 통합 모델로 추출
+   * (텍스트 오프셋뿐만 아니라 테이블의 행/열 인덱스까지 포함)
+   */
   function getSelectionPosition() {
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
 
-    const range = sel.getRangeAt(0);
-    const idx = getCurrentLineIndex();
-    const p = root.childNodes[idx];
-    if (!p) return null;
+    const context = getSelectionContext(); 
+    if (!context) return null;
 
-    let offset = 0;
-    const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (node === range.startContainer) {
-        offset += range.startOffset;
-        break;
+    const { lineIndex, dataIndex, activeNode, container, cursorOffset } = context;
+
+    // [Case A] 테이블 내부인 경우 상세 좌표 추출
+    // activeNode 자체가 TABLE이거나 TABLE의 자식인 경우
+    const tableEl = activeNode?.closest('table');
+    if (tableEl) {
+      const td = container.nodeType === Node.TEXT_NODE ? container.parentElement.closest('td') : container.closest('td');
+      if (td) {
+        const tr = td.parentElement;
+        const tbody = tr.parentElement; // 보통 tbody가 존재함
+        
+        return {
+          lineIndex,
+          anchor: {
+            chunkIndex: dataIndex,
+            type: 'table',
+            detail: {
+              rowIndex: Array.from(tbody.children).indexOf(tr),
+              colIndex: Array.from(tr.children).indexOf(td),
+              offset: cursorOffset
+            }
+          }
+        };
       }
-      offset += node.textContent.length;
     }
 
-    return { lineIndex: idx, offset };
+    // [Case B] 일반 텍스트 또는 기타 청크인 경우
+    return {
+      lineIndex,
+      anchor: {
+        chunkIndex: dataIndex ?? 0,
+        type: 'text',
+        offset: cursorOffset
+      }
+    };
   }
 
-  // 💡 인자를 객체 하나로 받도록 통일 ({ lineIndex, chunkIndex, offset })
-  function restoreSelectionPositionByChunk({ lineIndex, chunkIndex, offset }) { 
-    // 💡 개선: 하드코딩된 ID 대신 root 객체 사용
-    const editorEl = root; 
-    const lineEl   = editorEl.children[lineIndex];
-    if (!lineEl) {
-      return;
-    }
+  /**
+   * 2. 통합 커서 복원 함수
+   * getSelectionPosition에서 반환한 객체를 그대로 넣어주면 타입에 맞춰 복원합니다.
+   */
+  function restoreCursor(cursorData) {
+    if (!cursorData || cursorData.lineIndex === undefined) return;
 
-    // chunk 찾기
-    const chunkEl = Array.from(lineEl.children).find(
-      (el) => parseInt(el.dataset.index, 10) === chunkIndex
-    );
-
-    if (!chunkEl) {
-      return;
-    }
-
-    const textLength = chunkEl.textContent.length;
-    const safeOffset = Math.min(offset, textLength); // offset clamp
-
-    const range = document.createRange();
-    const sel   = window.getSelection();
-
-    // chunk 안의 텍스트 노드 찾기
-    let textNode = null;
-    chunkEl.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        textNode = node;
-      }
-    });
-
-    if (!textNode) {
-      return;
-    }
-
-    range.setStart(textNode, safeOffset);
-    range.collapse(true);
-
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-
-  function restoreTableSelection({
-    lineIndex,
-    chunkIndex,
-    cell // { rowIndex, colIndex, offset }
-  }) {
-    const editorEl = root;
-    const lineEl   = editorEl.children[lineIndex];
+    const { lineIndex, anchor } = cursorData;
+    const lineEl = root.children[lineIndex];
     if (!lineEl) return;
 
-    const tableEl = Array.from(lineEl.children).find(
-      el => +el.dataset.index === chunkIndex
+    // chunkIndex를 통해 DOM 엘리먼트 탐색
+    const chunkEl = Array.from(lineEl.children).find(
+      el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
     );
-    if (!tableEl) return;
+    if (!chunkEl) return;
 
-    const { rowIndex, colIndex, offset } = cell;
+    let targetNode = null;
+    let finalOffset = 0;
 
-    const tr = tableEl.querySelectorAll('tr')[rowIndex];
-    const td = tr?.querySelectorAll('td')[colIndex];
-    if (!td) return;
+    if (anchor.type === 'table' && anchor.detail) {
+      // 테이블 복원 로직
+      const { rowIndex, colIndex, offset } = anchor.detail;
+      const tr = chunkEl.querySelectorAll('tr')[rowIndex];
+      const td = tr?.querySelectorAll('td')[colIndex];
+      if (!td) return;
 
-    let textNode = td.firstChild;
-    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
-      textNode = td.appendChild(document.createTextNode('\u00A0'));
-    }
-
-    const range = document.createRange();
-    range.setStart(textNode, Math.min(offset, textNode.length));
-    range.collapse(true);
-
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-
-  // lineIndex + offset 기준으로 커서 복원
-  function restoreSelectionPosition(pos) {
-    // ... (로직 동일)
-    if (!pos) return;
-    const p = root.childNodes[pos.lineIndex];
-    if (!p) return;
-
-    const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
-    let acc = 0;
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      const len = node.textContent.length;
-      if (acc + len >= pos.offset) {
-        const range = document.createRange();
-        range.setStart(node, pos.offset - acc);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        return;
+      // 셀 내부의 텍스트 노드 탐색 (없으면 생성)
+      targetNode = td.firstChild;
+      if (!targetNode || targetNode.nodeType !== Node.TEXT_NODE) {
+        targetNode = td.appendChild(document.createTextNode('\u00A0'));
       }
-      acc += len;
+      finalOffset = Math.min(offset, targetNode.length);
+    } else {
+      // 일반 텍스트 청크 복원 로직
+      // 청크 내의 첫 번째 텍스트 노드 찾기
+      chunkEl.childNodes.forEach((node) => {
+        if (node.nodeType === Node.TEXT_NODE) targetNode = node;
+      });
+
+      if (!targetNode) {
+        targetNode = chunkEl.appendChild(document.createTextNode('\u00A0'));
+      }
+      finalOffset = Math.min(anchor.offset || 0, targetNode.length);
     }
 
-    // 텍스트 노드 없으면 span이나 p 자체에 커서 지정
-    const firstChild = p.querySelector('span');
-    const targetNode = firstChild || p;
-    const range = document.createRange();
-    range.setStart(targetNode, 0);
-    range.collapse(true);
-
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    // DOM Range 설정
+    try {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.setStart(targetNode, finalOffset);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {
+      console.warn('Failed to restore cursor:', e);
+    }
   }
 
-// 💡 변경: getSelectionRangesInState -> getSelectionRangesInDOM 으로 변경
-// 💡 상태(state) 인자를 받지 않습니다.
-/**
- * DOM의 선택 영역을 읽어, State 길이를 고려하지 않은 순수 DOM 기반 오프셋을 반환합니다.
- * @returns {Array<{lineIndex: number, startIndex: number, endIndex: number}> | null}
- */
-function getSelectionRangesInDOM() {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return null;
-
-    const domRange = sel.getRangeAt(0);
-    const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
-    const ranges = [];
-
-    paragraphs.forEach((p, idx) => {
-        const pRange = document.createRange();
-        pRange.selectNodeContents(p);
-
-        // 해당 문단이 선택 영역에 포함되는지 확인
-        if (
-            domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
-            domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0
-        ) {
-            const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
-            let started = false, total = 0;
-            let startOffset = 0, endOffset = 0;
-
-            while (walker.nextNode()) {
-                const node = walker.currentNode;
-                const len = node.textContent.length;
-
-                if (!started && domRange.startContainer === node) {
-                    startOffset = total + domRange.startOffset;
-                    started = true;
-                }
-                if (domRange.endContainer === node) {
-                    endOffset = total + domRange.endOffset;
-                    break;
-                }
-                total += len;
-            }
-
-            if (!started) startOffset = 0;
-            if (endOffset === 0) endOffset = total;
-
-            // 🔴 기존의 상태 기반 클램프 로직 제거! 순수 DOM 오프셋만 반환.
-            ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
-        }
-    });
-
-    return ranges.length ? ranges : null;
-}
-
+  /**
+   * 3. 현재 포커스된 줄과 노드의 기초 컨텍스트 추출 (내부용)
+   */
   function getSelectionContext() {
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
@@ -218,19 +136,15 @@ function getSelectionRangesInDOM() {
     const container = range.startContainer;
     const cursorOffset = range.startOffset;
     
-    // 1. P 엘리먼트 탐색
-    const parentP = container.nodeType === Node.TEXT_NODE
-      ? container.parentElement.closest('p')
-      : container.closest('p');
+    // 1. P 엘리먼트(라인) 탐색
+    let el = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+    const parentP = el.closest('p');
     
     if (!parentP || parentP.parentElement !== root) return null;
-
     const lineIndex = Array.from(root.childNodes).indexOf(parentP);
 
-    // 2. 💡 [data-index]를 가진 Active Node 탐색 (추가 로직)
-    const activeNode = container.nodeType === Node.TEXT_NODE
-      ? container.parentElement.closest('[data-index]')
-      : container.closest('[data-index]');
+    // 2. [data-index]를 가진 청크 노드 탐색
+    const activeNode = el.closest('[data-index]');
     const dataIndex = activeNode ? parseInt(activeNode.dataset.index, 10) : null;
     
     return { 
@@ -243,5 +157,118 @@ function getSelectionRangesInDOM() {
     };
   }
 
-  return { getCurrentLineIndex, getSelectionPosition, getSelectionContext, restoreSelectionPosition, getSelectionRangesInDOM, restoreSelectionPositionByChunk, restoreTableSelection };
+  // 기존 레거시 함수들 (필요시 유지하되 내부적으로 restoreCursor를 쓰도록 리팩토링 가능)
+  function getCurrentLineIndex() {
+    const context = getSelectionContext();
+    return context ? context.lineIndex : 0;
+  }
+
+  /**
+   * DOM 전체 텍스트 기반 선택 영역 (멀티 라인 선택 시 사용)
+   */
+  function getDomSelection() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+
+    const domRange = sel.getRangeAt(0);
+    const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
+    const ranges = [];
+
+    paragraphs.forEach((p, idx) => {
+      const pRange = document.createRange();
+      pRange.selectNodeContents(p);
+
+      if (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
+          domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0) {
+        
+        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
+        let started = false, total = 0;
+        let startOffset = 0, endOffset = 0;
+
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const len = node.textContent.length;
+
+          if (!started && domRange.startContainer === node) {
+            startOffset = total + domRange.startOffset;
+            started = true;
+          }
+          if (domRange.endContainer === node) {
+            endOffset = total + domRange.endOffset;
+            break;
+          }
+          total += len;
+        }
+
+        if (!started) startOffset = 0;
+        if (endOffset === 0) endOffset = total;
+        ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
+      }
+    });
+
+    return ranges.length ? ranges : null;
+  }
+
+  /**
+   * 블록/이미지 삽입을 위한 절대 오프셋 추출 전용 함수
+   */
+  function getInsertionAbsolutePosition() {
+      const sel = window.getSelection();
+
+      console.log("getInsertionAbsolutePosition sel:", sel);
+
+      if (!sel.rangeCount) return null;
+
+      const range     = sel.getRangeAt(0);
+      const container = range.startContainer;
+      const offsetInNode = range.startOffset;
+
+      console.log("range sel:", range);
+      console.log("container sel:", container);
+      console.log("offsetInNode sel:", offsetInNode);
+
+
+      // 1. 현재 라인(P 태그) 찾기
+      const parentP = container.nodeType === Node.TEXT_NODE 
+          ? container.parentElement.closest('p') 
+          : container.closest('p');
+
+      console.log(  "parentP sel:", parentP);          
+
+      if (!parentP || parentP.parentElement !== root) {
+        console.log("parentP is null or not a child of root");
+        return null;        
+      }
+      const lineIndex = Array.from(root.childNodes).indexOf(parentP);
+
+      // 2. 라인 시작부터 현재 커서 위치까지의 모든 텍스트 길이 합산 (절대 위치 계산)
+      let absoluteOffset = 0;
+      const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
+      console.log("walker sel:", walker);
+
+      while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (node === container) {
+              absoluteOffset += offsetInNode;
+              break;
+          }
+          absoluteOffset += node.textContent.length;
+      }
+
+      return { lineIndex, absoluteOffset };
+  }
+
+  return { 
+    getCurrentLineIndex, 
+    getSelectionPosition, 
+    getInsertionAbsolutePosition,
+    updateLastValidPosition,
+    getLastValidPosition,
+    getSelectionContext, 
+    restoreCursor, // 통합된 복원 함수
+    getDomSelection,
+    // 아래 구형 함수들은 호환성을 위해 유지하거나 restoreCursor로 브릿지
+    restoreSelectionPositionByChunk: (data) => restoreCursor({ lineIndex: data.lineIndex, anchor: data }),
+    restoreTableSelection: (data) => restoreCursor({ lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
+  };
 }

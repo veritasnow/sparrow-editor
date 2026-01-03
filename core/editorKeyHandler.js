@@ -2,14 +2,148 @@
 
 import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js';
 import { getLineLengthFromState } from '../utils/editorStateUtils.js';
-import { getRanges } from "../../utils/rangeUtils.js";
+import { getRanges } from "../utils/rangeUtils.js";
 
 /**
  * 💚 EditorKeyService
  */
 export function createEditorKeyHandler({ state, ui }) {
 
-    // ... processEnter 함수 (기존과 동일) ...
+    function processEnter() { 
+
+        console.log("개행 입력 테스트...........!!");
+
+        const currentState = state.get();
+        const domRanges = ui.getDomSelection();
+        console.log("domRanges:", domRanges);
+        if (!domRanges || domRanges.length === 0) return;
+
+        const { lineIndex, endIndex: domOffset } = domRanges[0];
+        const lineState = currentState[lineIndex];
+        const lineLen = getLineLengthFromState(lineState);
+        const offset = Math.max(0, Math.min(domOffset, lineLen));
+
+        const { newState, newPos, newLineData } = calculateEnterState(currentState, lineIndex, offset);
+
+        console.log('Enter Key Processed:', newState, newPos, newLineData);
+
+        state.save(newState);
+        state.saveCursor(newPos);
+
+        ui.insertLine(lineIndex + 1, newLineData.align);
+        if (state.isLineChanged(lineIndex)) {
+            ui.renderLine(lineIndex, newState[lineIndex]);
+        }
+        if (state.isLineChanged(lineIndex + 1)) {
+            ui.renderLine(lineIndex + 1, newLineData); 
+        }    
+        ui.restoreCursor(newPos);
+    }
+
+    
+
+    /**
+     * BACKSPACE 처리
+     * -------------------------------------------------------
+     */
+    function processBackspace(e) {
+        const pos = ui.getSelectionPosition();
+        if (!pos) return;
+
+        // [추가] 테이블 셀의 첫 번째 위치에서 백스페이스 시 테이블 파괴 방지
+        if (pos.anchor.type === 'table') {
+            const { offset, detail } = pos.anchor;
+            if (detail.rowIndex === 0 && detail.colIndex === 0 && offset === 0) {
+                e.preventDefault(); // 첫 셀 첫 글자면 병합 방지
+                return;
+            }
+        }
+
+        const currentState = state.get();
+        // 다중 선택 영역이 있는지는 기존처럼 getSelectionRangesInDOM 활용
+        const domRanges = ui.getDomSelection(); 
+        
+        const { newState, newPos, deletedLineIndex, updatedLineIndex } =
+            calculateBackspaceState(currentState, pos.lineIndex, pos.anchor.offset, domRanges);
+        
+        if (newState === currentState) return;
+
+        state.save(newState);
+        if (newPos) state.saveCursor(newPos);
+
+        // UI 반영 (Line 삭제/렌더링 로직은 기존과 동일)
+        if (deletedLineIndex !== null) {
+            if (typeof deletedLineIndex === 'object') {
+                for (let i = 0; i < deletedLineIndex.count; i++) ui.removeLine(deletedLineIndex.start);
+            } else {
+                ui.removeLine(deletedLineIndex);
+            }
+        }
+        
+        if (updatedLineIndex !== null) {
+            ui.renderLine(updatedLineIndex, newState[updatedLineIndex]);
+        }
+
+        if (newPos) ui.restoreCursor(newPos);
+    }
+
+    function callUndo() {
+        const { state: newState, cursor } = state.undo();
+
+        if (!cursor) {
+            ui.render(newState.editorState);
+            return;
+        }
+
+        if (state.isLineChanged(cursor.lineIndex)) {
+            ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        }
+
+        ui.restoreCursor({
+            lineIndex: cursor.lineIndex,
+            offset: cursor.endOffset
+        });
+    }
+
+    function callRedo() {
+        const { state: newState, cursor } = state.redo();
+        
+        if (!cursor) {
+            ui.render(newState.editorState);
+            return;
+        }
+
+        if (state.isLineChanged(cursor.lineIndex)) {
+            ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
+        }
+
+        ui.restoreCursor({
+            lineIndex: cursor.lineIndex,
+            offset: cursor.endOffset
+        });
+    }
+
+    // 외부 API
+    return {
+        processEnter,
+        processBackspace,
+        undo : callUndo,
+        redo : callRedo
+    };
+}
+
+
+/*
+
+// service/keyInput/editorKeyHandler.js
+
+import { calculateEnterState, calculateBackspaceState } from '../utils/keyStateUtil.js';
+import { getLineLengthFromState } from '../utils/editorStateUtils.js';
+import { getRanges } from "../utils/rangeUtils.js";
+
+
+export function createEditorKeyHandler({ state, ui }) {
+
     function processEnter() { 
 
         console.log("개행 입력 테스트...........!!");
@@ -25,6 +159,7 @@ export function createEditorKeyHandler({ state, ui }) {
         const lineLen = getLineLengthFromState(lineState);
         const offset = Math.max(0, Math.min(domOffset, lineLen));
 
+        const pos = ui.getSelectionPosition(); // 이제 {lineIndex, chunkIndex, type, detail}을 반환함
         const { newState, newPos, newLineData } = calculateEnterState(currentState, lineIndex, offset);
 
         console.log('Enter Key Processed:', newState, newPos, newLineData);
@@ -46,10 +181,6 @@ export function createEditorKeyHandler({ state, ui }) {
         ui.restoreCursor(newPos);
     }
 
-    /**
-     * BACKSPACE 처리
-     * -------------------------------------------------------
-     */
     function processBackspace() {
         const currentState = state.get();
         const domRanges = ui.getDomSelection();
@@ -173,3 +304,4 @@ export function createEditorKeyHandler({ state, ui }) {
         redo : callRedo
     };
 }
+*/

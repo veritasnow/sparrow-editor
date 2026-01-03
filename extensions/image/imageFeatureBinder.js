@@ -10,17 +10,21 @@ export function bindImageButton(imageBtn, stateAPI, uiAPI, rootId) {
         = createImagePopupView(rootEl, toolbar, imageBtn);
     const { insertImage } = createImageInsertService(stateAPI, uiAPI);
 
-    let lastCursorPos = null;
-
     const onImageBtnClick = (e) => {
         e.stopPropagation();
-        lastCursorPos = uiAPI.getSelectionPosition();
-        popup.style.display === 'block' ? close() : open();
+        
+        if (popup.style.display === 'block') {
+            close();
+        } else {
+            // [핵심] 버튼을 누르는 순간, 에디터 본문의 마지막 위치를 강제로 저장!
+            uiAPI.updateLastValidPosition(); 
+            open();
+        }
     };
 
     const onConfirmClick = () => {
         const url = inputEl.value.trim();
-        if (insertImage(url, lastCursorPos)) close();
+        if (insertImage(url)) close();
     };
 
     const onFileBtnClick = () => fileInput.click();
@@ -29,7 +33,7 @@ export function bindImageButton(imageBtn, stateAPI, uiAPI, rootId) {
         const file = fileInput.files[0];
         if (!file) return;
         const url = URL.createObjectURL(file);
-        if (insertImage(url, lastCursorPos)) close();
+        if (insertImage(url)) close();
     };
 
     document.addEventListener('click', (e) => {

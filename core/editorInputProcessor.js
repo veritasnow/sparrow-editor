@@ -1,5 +1,5 @@
 import { EditorLineModel } from '../model/editorLineModel.js';
-import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 
 /**
  * 에디터의 입력(Input) 이벤트 발생 시, State를 업데이트하고
@@ -8,25 +8,28 @@ import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트�
 export function createEditorInputProcessor(app, ui) {
 
     function processInput() {
-        const selection = ui.getSelectionContext();
+        // [수정] ui.getSelectionPosition()을 호출하여 통합 커서 정보를 가져옴
+        // (선택 사항: 기존 getSelectionContext를 사용하되 정보를 보강해서 사용 가능)
+        const selection = ui.getSelectionContext(); 
         if (!selection) return;
 
         ui.ensureFirstLine();
         if (selection.lineIndex < 0) return;
 
         const currentState = app.getState().present.editorState;
-        console.log('Current Editor State:', currentState);
-
         const currentLine  = currentState[selection.lineIndex] || EditorLineModel();
 
+        // 1. 모델 업데이트 시도
         const { updatedLine, flags, restoreData } = updateLineModel(currentLine, selection);
         if (!flags.hasChange) return;
 
-        // 1. 상태저장
+        // 2. 상태 저장
         saveEditorState(currentState, selection.lineIndex, updatedLine);
-        // 2. 커서저장
+        
+        // 3. 커서 상태 저장 (통합 객체 전달)
         saveCursorState(restoreData);
-        // 3. 렌더링 및 복원
+        
+        // 4. 렌더링 및 통합 복원 함수 호출
         renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, restoreData);
     }
 
@@ -41,19 +44,24 @@ export function createEditorInputProcessor(app, ui) {
 
         const { dataIndex, cursorOffset, activeNode, lineIndex } = selection;
 
+        // [청크 분기] 텍스트 청크 업데이트
         if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'text') {
             const result = updateExistingChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex);
             if (result) {
                 ({ updatedLine, restoreData } = result);
                 isChunkRendering = true;
             }
-        } else if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'table') {
+        } 
+        // [청크 분기] 테이블 청크 업데이트
+        else if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'table') {
             const result = updateExistingTableChunk(updatedLine, dataIndex, activeNode, lineIndex);
             if (result) {
                 ({ updatedLine, restoreData } = result);
                 isChunkRendering = true;
             }
-        } else {
+        } 
+        // [청크 분기] 구조적 변화(태그 삭제, 병합 등)가 감지된 경우
+        else {
             const result = createOrRebuildChunks(updatedLine, currentLine, selection);
             if (result) {
                 ({ updatedLine, restoreData } = result);
@@ -61,6 +69,7 @@ export function createEditorInputProcessor(app, ui) {
             }
         }
 
+        // 기본 복원 데이터 보정
         if (isNewChunk && !restoreData) {
             restoreData = createDefaultRestoreData(updatedLine, selection.lineIndex);
         }
@@ -73,7 +82,7 @@ export function createEditorInputProcessor(app, ui) {
     }
 
     // ----------------------------
-    // [2] 기존 청크 업데이트
+    // [2] 기존 청크 업데이트 (Text)
     // ----------------------------
     function updateExistingChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex) {
         const oldChunk = updatedLine.chunks[dataIndex];
@@ -88,31 +97,36 @@ export function createEditorInputProcessor(app, ui) {
 
         return {
             updatedLine: EditorLineModel(updatedLine.align, newChunks),
-            restoreData: { lineIndex, chunkIndex: dataIndex, offset: cursorOffset }
+            // 통합 모델 규격에 맞춤
+            restoreData: { 
+                lineIndex, 
+                anchor: { chunkIndex: dataIndex, type: 'text', offset: cursorOffset } 
+            }
         };
     }
 
+    // ----------------------------
+    // [2-1] 기존 테이블 청크 업데이트
+    // ----------------------------
     function updateExistingTableChunk(updatedLine, dataIndex, activeNode, lineIndex) {
         const oldChunk = updatedLine.chunks[dataIndex];
-
-        const tableEl =
-            activeNode.tagName === 'TABLE'
-                ? activeNode
-                : activeNode.closest?.('table');
-
+        const tableEl = activeNode.tagName === 'TABLE' ? activeNode : activeNode.closest?.('table');
         if (!tableEl) return null;
 
         const { data } = ui.extractTableDataFromDOM(tableEl);
+        if (JSON.stringify(oldChunk.data) === JSON.stringify(data)) return null;
 
-        // 변화 없으면 skip
-        if (JSON.stringify(oldChunk.data) === JSON.stringify(data)) {
-            return null;
-        }
+        // 현재 포커스된 셀의 좌표를 SelectionService 기능을 빌려 추출
+        // (UI 서비스에 해당 기능이 있다고 가정하거나 직접 추출)
+        const sel = window.getSelection();
+        const range = sel.getRangeAt(0);
+        const td = range.startContainer.nodeType === 3 ? range.startContainer.parentElement.closest('td') : range.startContainer.closest('td');
+        
+        const rowIndex = td ? Array.from(td.parentElement.parentElement.children).indexOf(td.parentElement) : 0;
+        const colIndex = td ? Array.from(td.parentElement.children).indexOf(td) : 0;
 
-        // 🔑 clone 패턴 활용 (rows/cols 자동 계산됨)
         const handler  = chunkRegistry.get('table');
         const newChunk = handler.clone({ data });
-
         const newChunks = [...updatedLine.chunks];
         newChunks[dataIndex] = newChunk;
 
@@ -120,24 +134,25 @@ export function createEditorInputProcessor(app, ui) {
             updatedLine: EditorLineModel(updatedLine.align, newChunks),
             restoreData: {
                 lineIndex,
-                chunkIndex: dataIndex,
-                offset: 0
+                anchor: {
+                    chunkIndex: dataIndex,
+                    type: 'table',
+                    detail: { rowIndex, colIndex, offset: range.startOffset }
+                }
             }
         };
     }
 
     // ----------------------------
-    // [3] 새로운 청크 구성
+    // [3] 새로운 청크 구성 (DOM 파싱)
     // ----------------------------
     function createOrRebuildChunks(updatedLine, currentLine, selection) {
         const { parentP, container, cursorOffset, lineIndex } = selection;
 
+        // ui.parseLineDOM이 이미 lineIndex, anchor 등을 포함한 통합 restoreData를 반환하도록 설계됨
         const { newChunks, restoreData } = ui.parseLineDOM(
             parentP, currentLine.chunks, container, cursorOffset, lineIndex
         );
-
-
-        //fontSize: '14px'
 
         if (JSON.stringify(newChunks) === JSON.stringify(currentLine.chunks)) return null;
 
@@ -151,12 +166,18 @@ export function createEditorInputProcessor(app, ui) {
     // [4] 기본 커서 복원 데이터 생성
     // ----------------------------
     function createDefaultRestoreData(updatedLine, lineIndex) {
-        const lastChunk = updatedLine.chunks[updatedLine.chunks.length - 1];
-        if (!lastChunk || lastChunk.type !== 'text') return null;
+        const lastIdx = updatedLine.chunks.length - 1;
+        const lastChunk = updatedLine.chunks[lastIdx];
+        if (!lastChunk) return null;
+
         return {
             lineIndex,
-            chunkIndex: updatedLine.chunks.length - 1,
-            offset: lastChunk.text.length
+            anchor: {
+                chunkIndex: lastIdx,
+                type: lastChunk.type,
+                offset: lastChunk.text ? lastChunk.text.length : 0,
+                detail: lastChunk.type === 'table' ? { rowIndex: 0, colIndex: 0, offset: 0 } : null
+            }
         };
     }
 
@@ -170,58 +191,42 @@ export function createEditorInputProcessor(app, ui) {
     }
 
     // ----------------------------
-    // [6] 커서 위치 저장
+    // [6] 커서 위치 저장 (통합 구조로 통일)
     // ----------------------------
     function saveCursorState(restoreData) {
        if (!restoreData) return;
-        app.saveCursorState({
-            lineIndex  : restoreData.lineIndex,
-            startOffset: restoreData.chunkIndex,
-            endOffset  : restoreData.offset
-        });
+       // store/cursorHistoryStore.js에 객체 그대로 저장
+       app.saveCursorState(restoreData);
     }
 
     // ----------------------------
     // [7] 렌더링 및 커서 복원
     // ----------------------------
-   function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
+    function renderAndRestoreCursor(updatedLine, lineIndex, flags, restoreData) {
         const { isNewChunk, isChunkRendering } = flags;
 
+        // Case 1: 라인 전체가 다시 그려지는 경우
         if (isNewChunk) {
             ui.renderLine(lineIndex, updatedLine);
-            if (restoreData) ui.restoreSelectionPositionByChunk(restoreData);
+            if (restoreData) ui.restoreCursor(restoreData);
             return;
         }
 
+        // Case 2: 특정 청크만 부분 렌더링하는 경우
         if (isChunkRendering) {
-            const { chunkIndex } = restoreData;
-            const chunk          = updatedLine.chunks[chunkIndex];
+            const chunkIndex = restoreData.anchor.chunkIndex;
+            const chunk      = updatedLine.chunks[chunkIndex];
 
-            console.log('[renderAndRestoreCursor] chunk to render:', chunk);
-            console.log('[renderAndRestoreCursor] lineIndex:', lineIndex);
-            console.log('[renderAndRestoreCursor] chunkIndex:', chunkIndex);
-
-            // 🔥 table / non-text chunk는 전체 라인 렌더
+            // 테이블이거나 특수 청크는 해당 줄 전체를 렌더링하여 구조 안정성 확보
             if (!chunk || chunk.type === 'table') {
-                console.log('[render] table detected → renderLine');
                 ui.renderLine(lineIndex, updatedLine);
-                console.log('[render] restoreData:', restoreData);
-                if (restoreData) {
-                    ui.restoreTableSelection(restoreData);
-                }
+                if (restoreData) ui.restoreCursor(restoreData);
                 return;
             }
 
-            // text 전용 chunk만 부분 렌더
-            console.log(
-                '[render] renderChunk:',
-                lineIndex,
-                chunkIndex,
-                chunk.type
-            );
-
+            // 일반 텍스트 청크만 DOM 부분 교체 후 커서 복원
             ui.renderChunk(lineIndex, chunkIndex, chunk);
-            ui.restoreSelectionPositionByChunk(restoreData);
+            ui.restoreCursor(restoreData);
         }
     }
 

@@ -135,13 +135,16 @@ export function createEditorFactory() {
     };
 
     const uiAPI = {
-      render              : (data) => ui.render(data),
-      renderLine          : (i, d) => ui.renderLine(i, d),
-      restoreCursor       : (pos)  => ui.restoreSelectionPosition(pos),
-      insertLine          : (i, a) => ui.insertNewLineElement(i, a),
-      removeLine          : (i)    => ui.removeLineElement(i),
-      getDomSelection     : ()     => ui.getSelectionRangesInDOM(),
-      getSelectionPosition: ()     => ui.getSelectionPosition()
+      render                      : (data) => ui.render(data),
+      renderLine                  : (i, d) => ui.renderLine(i, d),
+      restoreCursor               : (pos)  => ui.restoreCursor(pos), //ui.restoreSelectionPosition(pos),
+      insertLine                  : (i, a) => ui.insertNewLineElement(i, a),
+      removeLine                  : (i)    => ui.removeLineElement(i),
+      getDomSelection             : ()     => ui.getDomSelection(),
+      getSelectionPosition        : ()     => ui.getSelectionPosition(),
+      getInsertionAbsolutePosition: ()     => ui.getInsertionAbsolutePosition(),
+      updateLastValidPosition     : ()     => ui.updateLastValidPosition(),
+      getLastValidPosition        : ()     => ui.getLastValidPosition(),
     };
 
     const editorAPI = {
@@ -170,7 +173,14 @@ export function createEditorFactory() {
         // A. 초기 렌더링 (이벤트보다 먼저 수행하여 DOM 안정화)
         const currentContent = stateAPI.get();
         uiAPI.render(currentContent);
-        uiAPI.restoreCursor({ lineIndex: 0, offset: 0 });
+        uiAPI.restoreCursor({
+            lineIndex: 0,
+            anchor: {
+                chunkIndex: 0,
+                type: 'text',
+                offset: 0
+            }
+        });
 
         // B. 기본 입력 바인딩
         inputApp.bindInput(inputProcessor.processInput);

@@ -92,9 +92,9 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     },
 
     // ───────── Selection (View 정보) ─────────
-    getSelectionRangesInDOM() {
+    getDomSelection() {
       assertAlive();
-      return selectionService.getSelectionRangesInDOM();
+      return selectionService.getDomSelection();
     },
 
     getSelectionPosition() {
@@ -102,14 +102,21 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       return selectionService.getSelectionPosition();
     },
 
+    getInsertionAbsolutePosition(){
+      assertAlive();
+      return selectionService.getInsertionAbsolutePosition();
+    },
+
     getSelectionContext() {
       assertAlive();
       return selectionService.getSelectionContext();
     },
 
-    restoreSelectionPosition(pos) {
+    //restoreSelectionPosition(pos) {
+    restoreCursor(pos) {
       assertAlive();
-      selectionService.restoreSelectionPosition(pos);
+      //selectionService.restoreSelectionPosition(pos);
+      selectionService.restoreCursor(pos);
     },
 
     restoreSelectionPositionByChunk(pos) {
@@ -122,6 +129,20 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       selectionService.restoreTableSelection(pos);
     },
 
+    getInsertionAbsolutePosition(){
+      assertAlive();
+      return selectionService.getInsertionAbsolutePosition();
+    },
+
+    updateLastValidPosition(){
+      assertAlive();
+      return selectionService.updateLastValidPosition();
+    },
+
+    getLastValidPosition(){
+      assertAlive();
+      return selectionService.getLastValidPosition();
+    },
 
     // ───────── DOM → Model 파싱 ─────────
     parseLineDOM(

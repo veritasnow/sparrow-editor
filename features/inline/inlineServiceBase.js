@@ -4,49 +4,42 @@ import { getRanges } from "../../utils/rangeUtils.js";
 export function createInlineServiceBase(stateAPI, uiAPI) {
     /**
      * updateFn: (currentState, ranges) => newState
-     * options: { saveCursorFromUI: boolean } (기본 true)
+     * options: { saveCursor: boolean }
      */
-    function applyInline(updateFn, options = { saveCursorFromUI: true }) {
+    function applyInline(updateFn, options = { saveCursor: true }) {
         const currentState = stateAPI.get();
+        
+        // 1. 통합 커서 포지션 정보를 가져옴 (테이블 여부 등 포함)
+        const currentPos = uiAPI.getSelectionPosition();
+        if (!currentPos) return;
+
+        // 2. 다중 선택 영역 분석 (기존 텍스트 오프셋 기반 유지하되 보정용으로 사용)
         const domRanges = uiAPI.getDomSelection();
         if (!domRanges || domRanges.length === 0) return;
-
         const ranges = getRanges(currentState, domRanges);
 
-        // 1) 상태 변경 (전략 함수 위임)
+        // 3. 상태 변경 (굵게/기울임 등 처리)
         const newState = updateFn(currentState, ranges);
 
-        // 2) 상태 저장
+        // 4. 상태 저장
         stateAPI.save(newState);
 
-        // 3) (선택적) 커서 상태 저장 — 원래 style 서비스와 동일하게
-        if (options.saveCursorFromUI) {
-            const pos = uiAPI.getDomSelectionPosition
-                ? uiAPI.getDomSelectionPosition()
-                : uiAPI.getSelectionPosition();
-
-            if (pos) {
-                stateAPI.saveCursor({
-                    lineIndex: pos.lineIndex,
-                    startOffset: 0,
-                    endOffset: pos.offset
-                });
-            }
+        // 5. 커서 상태 저장 (통합 모델 규격으로 저장)
+        if (options.saveCursor) {
+            stateAPI.saveCursor(currentPos);
         }
 
-        // 4) 변경 라인만 렌더링
+        // 6. 변경된 라인 렌더링
         ranges.forEach(({ lineIndex }) => {
             if (stateAPI.isLineChanged(lineIndex)) {
                 uiAPI.renderLine(lineIndex, newState[lineIndex]);
             }
         });
 
-        // 5) 커서 복원 (마지막 라인 기준)
-        const last = ranges[ranges.length - 1];
-        uiAPI.restoreCursor({
-            lineIndex: last.lineIndex,
-            offset: last.endIndex
-        });
+        // 7. 커서 복원 (통합 복원 함수 활용)
+        // [개선] 단순히 숫자 offset이 아니라, 작업 전 유지했던 청크 정보(currentPos)를 기반으로 복원
+        // 만약 스타일 적용 후 청크가 쪼개졌다면, restoreCursor 내부에서 유연하게 대응함
+        uiAPI.restoreCursor(currentPos);
     }
 
     return { applyInline };
