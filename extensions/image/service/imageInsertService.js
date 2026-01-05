@@ -34,8 +34,8 @@ export function createImageInsertService(stateAPI, uiAPI) {
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
-                type: 'text',
-                offset: restoreOffset
+                type      : 'text',
+                offset    : restoreOffset
             }
         };
 

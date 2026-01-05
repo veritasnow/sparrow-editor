@@ -10,10 +10,7 @@ import { getRanges } from "../utils/rangeUtils.js";
 export function createEditorKeyHandler({ state, ui }) {
 
     function processEnter() { 
-
-        console.log("개행 입력 테스트...........!!");
-
-        const currentState = state.get();
+       const currentState = state.get();
         const domRanges = ui.getDomSelection();
         console.log("domRanges:", domRanges);
         if (!domRanges || domRanges.length === 0) return;

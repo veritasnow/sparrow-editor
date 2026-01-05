@@ -19,6 +19,63 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
     const newState = [...editorState];
     const currentLine = editorState[currentLineIndex];
 
+    const videoHandler = chunkRegistry.get('video');
+    const videoChunk = videoHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`);
+    
+    // 절대 오프셋 기준으로 분리
+    const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
+
+    // 1) 빈 줄 삽입 (블록 형태)
+    const isEmptyLine =
+        beforeChunks.length === 0 &&
+        (afterChunks.length === 0 || (afterChunks.length === 1 && afterChunks[0].type === 'text' && afterChunks[0].text === ''));
+
+    if (isEmptyLine) {
+        const newVideoLine = EditorLineModel('center', [videoChunk]);
+        newState[currentLineIndex] = newVideoLine;
+
+        const textHandler = chunkRegistry.get('text');
+        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
+            textHandler.create('', {})
+        ]);
+        newState.splice(currentLineIndex + 1, 0, nextLine);
+
+        return {
+            newState,
+            restoreLineIndex: currentLineIndex + 1,
+            restoreChunkIndex: 0, // 새 줄의 첫 번째 텍스트 청크
+            restoreOffset: 0
+        };
+    }
+
+    // 2) 텍스트 사이 삽입 (인라인 형태)
+    const mergedChunks = [...beforeChunks, videoChunk, ...afterChunks];
+    const newLine = EditorLineModel(currentLine.align, mergedChunks);
+    newState[currentLineIndex] = newLine;
+
+    // 비디오 바로 다음 위치 계산
+    let targetChunkIndex = beforeChunks.length + 1;
+
+    // 만약 라인 끝이라면 빈 텍스트 청크 추가하여 커서 자리 확보
+    if (targetChunkIndex >= mergedChunks.length) {
+        const textHandler = chunkRegistry.get('text');
+        mergedChunks.push(textHandler.create('', {}));
+        targetChunkIndex = mergedChunks.length - 1;
+    }
+
+    return {
+        newState,
+        restoreLineIndex: currentLineIndex,
+        restoreChunkIndex: targetChunkIndex,
+        restoreOffset: 0
+    };
+}
+
+/*
+export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOffset) {
+    const newState = [...editorState];
+    const currentLine = editorState[currentLineIndex];
+
     const vidoeHandler  = chunkRegistry.get('video');     
     const videoChunk = vidoeHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`)
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
@@ -76,7 +133,7 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
         restoreOffset: beforeTextLength + 1 // 비디오 다음 위치
     };
 }
-
+*/
 
 
 // ======================================================================

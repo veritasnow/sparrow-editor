@@ -16,8 +16,15 @@ export function bindVideoButton(videoBtn, stateAPI, uiAPI, rootId) {
     // 2. Event Handlers
     const onVideoBtnClick = (e) => {
         e.stopPropagation();
-        lastCursorPos = uiAPI.getSelectionPosition();
-        popup.style.display === 'block' ? close() : (open(), inputEl.focus());
+        
+        if (popup.style.display === 'block') {
+            close();
+        } else {
+            // ✨ 핵심: 팝업이 열리기 전(포커스가 본문에 있을 때) 절대 좌표 강제 갱신
+            uiAPI.updateLastValidPosition(); 
+            open();
+            inputEl.focus();
+        }
     };
 
     const onConfirmClick = () => {

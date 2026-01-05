@@ -26,11 +26,14 @@ export function createEditorInputProcessor(app, ui) {
         // 2. 상태 저장
         saveEditorState(currentState, selection.lineIndex, updatedLine);
         
-        // 3. 커서 상태 저장 (통합 객체 전달)
-        saveCursorState(restoreData);
+        // 3. 커서 데이터 정규화 (추출한 함수 사용)
+        const finalRestoreData = normalizeRestoreData(restoreData);
+
+        // 4. 커서 상태 저장
+        saveCursorState(finalRestoreData);
         
-        // 4. 렌더링 및 통합 복원 함수 호출
-        renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, restoreData);
+        // 5. 렌더링 및 통합 복원 함수 호출
+        renderAndRestoreCursor(updatedLine, selection.lineIndex, flags, finalRestoreData);
     }
 
     // ----------------------------
@@ -195,7 +198,6 @@ export function createEditorInputProcessor(app, ui) {
     // ----------------------------
     function saveCursorState(restoreData) {
        if (!restoreData) return;
-       // store/cursorHistoryStore.js에 객체 그대로 저장
        app.saveCursorState(restoreData);
     }
 
@@ -229,6 +231,27 @@ export function createEditorInputProcessor(app, ui) {
             ui.restoreCursor(restoreData);
         }
     }
+
+    // ----------------------------
+    // [8] TODO 구형 restoreData 구조를 최신 anchor 기반 통합 모델로 정규화 -> 추후 구형 restoreData 개선 후 이거 없애야함
+    // ----------------------------    
+    function normalizeRestoreData(restoreData) {
+        if (!restoreData) return null;
+
+        // 이미 최신 구조(anchor 존재)라면 그대로 반환
+        if (restoreData.anchor) return restoreData;
+
+        // 구형 구조({lineIndex, chunkIndex, offset})를 최신 구조로 변환
+        return {
+            lineIndex: restoreData.lineIndex,
+            anchor: {
+                chunkIndex: restoreData.chunkIndex ?? 0,
+                type: 'text', // 기본값으로 text 지정
+                offset: restoreData.offset ?? 0,
+                detail: null
+            }
+        };
+    }    
 
     return { processInput };
 }
