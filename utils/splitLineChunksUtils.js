@@ -51,10 +51,12 @@ export function splitLineChunks(chunks, offset) {
     }
 
     // afterChunks가 비어있으면 공백 청크 추가 (커서 이동 가능하게)
+    /*
     if (afterChunks.length === 0) {
         const handler  = chunkRegistry.get('text');     
         afterChunks.push(handler.create('', {})   );
     }
+    */
 
     return { beforeChunks, afterChunks };
 }

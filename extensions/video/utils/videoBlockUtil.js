@@ -18,50 +18,46 @@ import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOffset) {
     const newState = [...editorState];
     const currentLine = editorState[currentLineIndex];
-
     const videoHandler = chunkRegistry.get('video');
+    const textHandler = chunkRegistry.get('text');
     const videoChunk = videoHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`);
     
-    // 절대 오프셋 기준으로 분리
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
 
-    // 1) 빈 줄 삽입 (블록 형태)
-    const isEmptyLine =
-        beforeChunks.length === 0 &&
-        (afterChunks.length === 0 || (afterChunks.length === 1 && afterChunks[0].type === 'text' && afterChunks[0].text === ''));
+    // 1) 빈 줄에 삽입하는 경우 (정리: 깔끔하게 비디오만 남기거나 다음 줄로 넘김)
+    const isEmpty = (chunks) => chunks.length === 0 || (chunks.length === 1 && chunks[0].text === '');
+    
+    if (isEmpty(beforeChunks) && isEmpty(afterChunks)) {
+        // 현재 라인은 비디오만 딱 하나! (앞뒤 "" 제거)
+        newState[currentLineIndex] = EditorLineModel('center', [videoChunk]);
 
-    if (isEmptyLine) {
-        const newVideoLine = EditorLineModel('center', [videoChunk]);
-        newState[currentLineIndex] = newVideoLine;
-
-        const textHandler = chunkRegistry.get('text');
-        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
-            textHandler.create('', {})
-        ]);
+        // 다음 줄에 빈 입력창 제공
+        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [textHandler.create('', {})]);
         newState.splice(currentLineIndex + 1, 0, nextLine);
 
         return {
             newState,
             restoreLineIndex: currentLineIndex + 1,
-            restoreChunkIndex: 0, // 새 줄의 첫 번째 텍스트 청크
+            restoreChunkIndex: 0,
             restoreOffset: 0
         };
     }
 
-    // 2) 텍스트 사이 삽입 (인라인 형태)
-    const mergedChunks = [...beforeChunks, videoChunk, ...afterChunks];
-    const newLine = EditorLineModel(currentLine.align, mergedChunks);
-    newState[currentLineIndex] = newLine;
+    // 2) 텍스트 사이에 삽입하는 경우
+    // 앞뒤에 내용이 있는 청크들만 필터링해서 합침
+    const cleanBefore = beforeChunks.filter(c => c.type !== 'text' || c.text !== '');
+    const cleanAfter = afterChunks.filter(c => c.type !== 'text' || c.text !== '');
 
-    // 비디오 바로 다음 위치 계산
-    let targetChunkIndex = beforeChunks.length + 1;
-
-    // 만약 라인 끝이라면 빈 텍스트 청크 추가하여 커서 자리 확보
-    if (targetChunkIndex >= mergedChunks.length) {
-        const textHandler = chunkRegistry.get('text');
-        mergedChunks.push(textHandler.create('', {}));
-        targetChunkIndex = mergedChunks.length - 1;
+    // 만약 뒤가 비어있다면 입력을 위해 빈 청크 하나 추가
+    if (cleanAfter.length === 0) {
+        cleanAfter.push(textHandler.create('', {}));
     }
+
+    const mergedChunks = [...cleanBefore, videoChunk, ...cleanAfter];
+    newState[currentLineIndex] = EditorLineModel(currentLine.align, mergedChunks);
+
+    // 커서 위치: 비디오 바로 다음 청크
+    const targetChunkIndex = cleanBefore.length + 1;
 
     return {
         newState,
@@ -70,71 +66,6 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
         restoreOffset: 0
     };
 }
-
-/*
-export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOffset) {
-    const newState = [...editorState];
-    const currentLine = editorState[currentLineIndex];
-
-    const vidoeHandler  = chunkRegistry.get('video');     
-    const videoChunk = vidoeHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`)
-    const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
-
-    // -----------------------------------------------------------
-    // 1) 완전히 비어 있는 라인은 "block" 형태로 동영상 삽입
-    // -----------------------------------------------------------
-    const isEmptyLine =
-        beforeChunks.length === 0 &&
-        afterChunks.length === 1 &&
-        afterChunks[0].type === 'text' &&
-        afterChunks[0].text === '';
-
-    if (isEmptyLine) {
-        // 현재 라인을 동영상 라인으로 대체
-        const newVideoLine = EditorLineModel('center', [videoChunk]);
-        newState[currentLineIndex] = newVideoLine;
-
-        // 다음 줄에 빈 라인 생성
-        const handler  = chunkRegistry.get('text');     
-        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
-            handler.create('', {})
-        ]);
-        newState.splice(currentLineIndex + 1, 0, nextLine);
-
-        // 커서는 새 빈 라인
-        return {
-            newState,
-            restoreLineIndex: currentLineIndex + 1,
-            restoreOffset: 0
-        };
-    }
-
-    // -----------------------------------------------------------
-    // 2) 텍스트가 있는 라인은 "inline" 삽입
-    //    같은 라인 안에 videoChunk를 넣고 라인을 나누지 않음
-    // -----------------------------------------------------------
-    const mergedChunks = [
-        ...beforeChunks,
-        videoChunk,
-        ...afterChunks
-    ];
-
-    const newLine = EditorLineModel(currentLine.align, mergedChunks);
-    newState[currentLineIndex] = newLine;
-
-    // video 뒤의 커서 offset = beforeChunks 텍스트 길이 + 1(비디오)
-    const beforeTextLength = beforeChunks.reduce((sum, chunk) => {
-        return chunk.type === 'text' ? sum + chunk.text.length : sum;
-    }, 0);
-
-    return {
-        newState,
-        restoreLineIndex: currentLineIndex,
-        restoreOffset: beforeTextLength + 1 // 비디오 다음 위치
-    };
-}
-*/
-
 
 // ======================================================================
 // 3. extractYouTubeId

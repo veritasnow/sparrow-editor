@@ -167,46 +167,70 @@ export function createSelectionService({ root }) {
    * DOM 전체 텍스트 기반 선택 영역 (멀티 라인 선택 시 사용)
    */
   function getDomSelection() {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return null;
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return null;
 
-    const domRange = sel.getRangeAt(0);
-    const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
-    const ranges = [];
+      const domRange = sel.getRangeAt(0);
+      const paragraphs = Array.from(root.childNodes).filter(p => p.tagName === 'P');
+      const ranges = [];
 
-    paragraphs.forEach((p, idx) => {
-      const pRange = document.createRange();
-      pRange.selectNodeContents(p);
+      paragraphs.forEach((p, idx) => {
+          const pRange = document.createRange();
+          pRange.selectNodeContents(p);
 
-      if (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
-          domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0) {
-        
-        const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT, null, false);
-        let started = false, total = 0;
-        let startOffset = 0, endOffset = 0;
+          // 해당 P태그가 선택 영역에 걸쳐있는지 확인
+          if (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) < 0 &&
+              domRange.compareBoundaryPoints(Range.START_TO_END, pRange) > 0) {
+              
+              let total = 0;
+              let startOffset = -1;
+              let endOffset = -1;
 
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          const len = node.textContent.length;
+              // TreeWalker 대신 자식 노드(Chunk)들을 직접 순회
+              const chunks = Array.from(p.childNodes);
+              
+              for (const node of chunks) {
+                  // 1. 시작점(Start) 계산
+                  if (startOffset === -1) {
+                      if (domRange.startContainer === node) {
+                          // 노드 자체가 선택된 경우 (보통 Atomic Node 앞/뒤)
+                          startOffset = total + domRange.startOffset;
+                      } else if (node.contains(domRange.startContainer)) {
+                          // 텍스트 노드 등 내부 요소가 선택된 경우
+                          startOffset = total + domRange.startOffset;
+                      }
+                  }
 
-          if (!started && domRange.startContainer === node) {
-            startOffset = total + domRange.startOffset;
-            started = true;
+                  // 2. 끝점(End) 계산
+                  if (endOffset === -1) {
+                      if (domRange.endContainer === node) {
+                          endOffset = total + domRange.endOffset;
+                      } else if (node.contains(domRange.endContainer)) {
+                          endOffset = total + domRange.endOffset;
+                      }
+                  }
+
+                  // 3. 길이 합산 (모델과 동일한 규칙)
+                  if (node.nodeType === Node.TEXT_NODE) {
+                      total += node.textContent.length;
+                  } else if (node.classList && node.classList.contains('chunk-text')) {
+                      // Span으로 감싸진 텍스트 청크
+                      total += node.textContent.length;
+                  } else {
+                      // 비디오, 이미지 등 (Atomic Block)
+                      total += 1;
+                  }
+              }
+
+              // Fallback: 컨테이너가 P 자체일 경우 처리
+              if (startOffset === -1) startOffset = (domRange.startContainer === p) ? domRange.startOffset : 0;
+              if (endOffset === -1) endOffset = (domRange.endContainer === p) ? domRange.endOffset : total;
+
+              ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
           }
-          if (domRange.endContainer === node) {
-            endOffset = total + domRange.endOffset;
-            break;
-          }
-          total += len;
-        }
+      });
 
-        if (!started) startOffset = 0;
-        if (endOffset === 0) endOffset = total;
-        ranges.push({ lineIndex: idx, startIndex: startOffset, endIndex: endOffset });
-      }
-    });
-
-    return ranges.length ? ranges : null;
+      return ranges.length ? ranges : null;
   }
 
   /**

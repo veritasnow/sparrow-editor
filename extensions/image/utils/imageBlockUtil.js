@@ -3,29 +3,31 @@ import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
+
 export function applyImageBlock(editorState, src, currentLineIndex, cursorOffset) {
     const newState = [...editorState];
     const currentLine = editorState[currentLineIndex];
 
     const handler = chunkRegistry.get('image');
+    const textHandler = chunkRegistry.get('text');
     const imageChunk = handler.create(src);
 
-    // 1. 현재 커서 위치(offset)를 기준으로 청크 배열을 쪼갬
+    // 1. 현재 커서 위치를 기준으로 청크 분리
+    // (앞서 수정한 splitLineChunks를 사용하여 불필요한 빈 청크 생성을 억제함)
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
+
+    // 유틸리티: 청크 배열이 실질적으로 비어있는지 확인 (단순 빈 문자열 청크 포함)
+    const isEffectivelyEmpty = (chunks) => 
+        chunks.length === 0 || (chunks.length === 1 && chunks[0].type === 'text' && chunks[0].text === '');
 
     // ---------------------------------------------------
     // Case 1) 빈 줄 → 블록 이미지로 삽입
     // ---------------------------------------------------
-    const isEmptyLine =
-        beforeChunks.length === 0 &&
-        (afterChunks.length === 0 || (afterChunks.length === 1 && afterChunks[0].type === 'text' && afterChunks[0].text === ''));
+    if (isEffectivelyEmpty(beforeChunks) && isEffectivelyEmpty(afterChunks)) {
+        // 현재 줄은 이미지만 깔끔하게 (앞뒤 공백 제거)
+        newState[currentLineIndex] = EditorLineModel('center', [imageChunk]);
 
-    if (isEmptyLine) {
-        const newLine = EditorLineModel('center', [imageChunk]);
-        newState[currentLineIndex] = newLine;
-
-        // 다음 줄 생성
-        const textHandler = chunkRegistry.get('text');
+        // 다음 줄에 빈 입력 필드 생성
         const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [
             textHandler.create('', {})
         ]);
@@ -34,7 +36,7 @@ export function applyImageBlock(editorState, src, currentLineIndex, cursorOffset
         return {
             newState,
             restoreLineIndex: currentLineIndex + 1,
-            restoreChunkIndex: 0, // 다음 줄은 새 줄이므로 첫 번째 청크(0)가 맞음
+            restoreChunkIndex: 0,
             restoreOffset: 0
         };
     }
@@ -42,33 +44,26 @@ export function applyImageBlock(editorState, src, currentLineIndex, cursorOffset
     // ---------------------------------------------------
     // Case 2) 텍스트 사이 → 인라인 이미지로 삽입
     // ---------------------------------------------------
-    // 새로운 청크 배열 구성: [이전 청크들] + [이미지] + [이후 청크들]
-    const mergedChunks = [...beforeChunks, imageChunk, ...afterChunks];
-    const newLine = EditorLineModel(currentLine.align, mergedChunks);
-    newState[currentLineIndex] = newLine;
+    
+    // 삽입 전 정규화: 앞뒤의 불필요한 빈 텍스트 청크 필터링
+    const cleanBefore = beforeChunks.filter(c => c.type !== 'text' || c.text !== '');
+    const cleanAfter = afterChunks.filter(c => c.type !== 'text' || c.text !== '');
 
-    /**
-     * 핵심 로직: 커서 위치 결정
-     * 이미지가 mergedChunks의 beforeChunks.length 인덱스에 삽입됨.
-     * 커서를 이미지 바로 뒤에 붙이려면 index는 beforeChunks.length + 1이 되어야 함.
-     */
-    let targetChunkIndex = beforeChunks.length + 1;
-    let targetOffset = 0;
-
-    // 만약 이미지 뒤에 청크가 없다면(라인 끝에 삽입), 
-    // 방금 넣은 이미지 청크 자체를 가리키거나 빈 텍스트 청크를 추가해야 함
-    if (targetChunkIndex >= mergedChunks.length) {
-        // 안전을 위해 라인 끝에 빈 텍스트 청크 하나를 밀어넣어 커서 자리를 확보할 수도 있음
-        const textHandler = chunkRegistry.get('text');
-        mergedChunks.push(textHandler.create('', {}));
-        targetChunkIndex = mergedChunks.length - 1; 
-        targetOffset = 0;
+    // 만약 이미지 삽입 후 뒤에 아무것도 없다면 입력을 위해 빈 청크 하나 확보
+    if (cleanAfter.length === 0) {
+        cleanAfter.push(textHandler.create('', {}));
     }
+
+    const mergedChunks = [...cleanBefore, imageChunk, ...cleanAfter];
+    newState[currentLineIndex] = EditorLineModel(currentLine.align, mergedChunks);
+
+    // 커서 위치: 이미지가 삽입된 인덱스(cleanBefore.length) 바로 다음(+1)
+    const targetChunkIndex = cleanBefore.length + 1;
 
     return {
         newState,
         restoreLineIndex: currentLineIndex,
-        restoreChunkIndex: targetChunkIndex, // 동적으로 계산된 인덱스
-        restoreOffset: targetOffset
+        restoreChunkIndex: targetChunkIndex,
+        restoreOffset: 0
     };
 }

@@ -15,14 +15,19 @@ export function cloneChunk(chunk) {
 // 🚀 공통 로직: 정규화
 // -----------------------------------------------------------------
 function normalizeLineChunks(chunks) {
-    const cloned = (chunks || []).map(cloneChunk);
-    const merged = mergeChunks(cloned);
+    // 1. 길이가 0인 텍스트 청크를 필터링 (단, 전체가 비었을 때는 제외)
+    let filtered = chunks.filter(chunk => {
+        if (chunk.type === 'text' && chunk.text === "") return false;
+        return true;
+    });
 
-    if (merged.length === 0) {
-        // 빈 줄일 때 기본 텍스트 청크 생성도 Registry를 통합니다.
+    // 2. 만약 모든 청크가 지워졌다면(완전 빈 줄), 기본 빈 청크 하나 생성
+    if (filtered.length === 0) {
         return [chunkRegistry.get('text').create("", { fontSize: "14px" })];
     }
-    return merged;
+
+    // 3. 연속된 텍스트 청크 병합
+    return mergeChunks(filtered.map(cloneChunk));
 }
 
 /**
@@ -207,26 +212,29 @@ export function calculateBackspaceState(currentState, lineIndex, offset, ranges 
 export function calculateEnterState(currentState, lineIndex, offset) {
     const currentLine = currentState[lineIndex];
     const beforeChunks = [];
-    const afterChunks  = [];
+    const afterChunks = [];
     let acc = 0;
 
     currentLine.chunks.forEach(chunk => {
         const handler = chunkRegistry.get(chunk.type);
         const chunkLen = handler.getLength(chunk);
         
-        // 분할 불가능한 청크(이미지, 테이블 등) 처리
         if (!handler.canSplit) {
-            if (acc < offset) beforeChunks.push(cloneChunk(chunk));
-            else afterChunks.push(cloneChunk(chunk));
-        } 
-        // 텍스트 청크 분할
-        else {
+            // 비디오/이미지: 오프셋이 이 노드 끝보다 작거나 같으면 다음 줄로
+            if (acc + chunkLen <= offset) {
+                beforeChunks.push(cloneChunk(chunk));
+            } else {
+                afterChunks.push(cloneChunk(chunk));
+            }
+        } else {
             const start = acc;
             const end = acc + chunkLen;
 
-            if (offset <= start) afterChunks.push(cloneChunk(chunk));
-            else if (offset >= end) beforeChunks.push(cloneChunk(chunk));
-            else {
+            if (offset <= start) {
+                afterChunks.push(cloneChunk(chunk));
+            } else if (offset >= end) {
+                beforeChunks.push(cloneChunk(chunk));
+            } else {
                 const cut = offset - start;
                 const beforeText = chunk.text.slice(0, cut);
                 const afterText = chunk.text.slice(cut);
@@ -237,12 +245,14 @@ export function calculateEnterState(currentState, lineIndex, offset) {
         acc += chunkLen;
     });
 
+    // 핵심: 엔터 친 후 뒷부분이 비어있다면 반드시 빈 텍스트 노드 생성
+    const finalAfterChunks = normalizeLineChunks(afterChunks);
+
     const nextState = [...currentState];
     nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(beforeChunks));
-    const newLineData = EditorLineModel(currentLine.align, normalizeLineChunks(afterChunks));
+    const newLineData = EditorLineModel(currentLine.align, finalAfterChunks);
     nextState.splice(lineIndex + 1, 0, newLineData);
 
-    // [중요] 반환하는 newPos를 통합 모델로 변경
     return { 
         newState: nextState, 
         newPos: { 

@@ -28,12 +28,9 @@ export function createEditorKeyHandler({ state, ui }) {
         state.saveCursor(newPos);
 
         ui.insertLine(lineIndex + 1, newLineData.align);
-        if (state.isLineChanged(lineIndex)) {
-            ui.renderLine(lineIndex, newState[lineIndex]);
-        }
-        if (state.isLineChanged(lineIndex + 1)) {
-            ui.renderLine(lineIndex + 1, newLineData); 
-        }    
+
+        ui.renderLine(lineIndex, newState[lineIndex]);
+        ui.renderLine(lineIndex + 1, newLineData); 
         ui.restoreCursor(newPos);
     }
 
@@ -84,6 +81,8 @@ export function createEditorKeyHandler({ state, ui }) {
         if (newPos) ui.restoreCursor(newPos);
     }
 
+    
+
     function callUndo() {
         const { state: newState, cursor } = state.undo();
 
@@ -92,9 +91,7 @@ export function createEditorKeyHandler({ state, ui }) {
             return;
         }
 
-        if (state.isLineChanged(cursor.lineIndex)) {
             ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
-        }
 
         ui.restoreCursor({
             lineIndex: cursor.lineIndex,
@@ -110,9 +107,7 @@ export function createEditorKeyHandler({ state, ui }) {
             return;
         }
 
-        if (state.isLineChanged(cursor.lineIndex)) {
-            ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
-        }
+        ui.renderLine(cursor.lineIndex, newState.editorState[cursor.lineIndex]);
 
         ui.restoreCursor({
             lineIndex: cursor.lineIndex,
