@@ -11,10 +11,13 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
         
         // 1. 통합 커서 포지션 정보를 가져옴 (테이블 여부 등 포함)
         const currentPos = uiAPI.getSelectionPosition();
+        console.log('currentPos:',currentPos);
         if (!currentPos) return;
 
         // 2. 다중 선택 영역 분석 (기존 텍스트 오프셋 기반 유지하되 보정용으로 사용)
         const domRanges = uiAPI.getDomSelection();
+        console.log('domRanges:',domRanges);
+
         if (!domRanges || domRanges.length === 0) return;
         const ranges = getRanges(currentState, domRanges);
 
