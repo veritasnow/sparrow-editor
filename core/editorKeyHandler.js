@@ -22,7 +22,7 @@ export function createEditorKeyHandler({ state, ui }) {
 
         const { newState, newPos, newLineData } = calculateEnterState(currentState, lineIndex, offset);
 
-        console.log('Enter Key Processed:', newState, newPos, newLineData);
+        console.log('Enter Key Processed:', newPos);
 
         state.save(newState);
         state.saveCursor(newPos);
