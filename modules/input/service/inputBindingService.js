@@ -13,10 +13,10 @@ export function createInputBindingService(editorEl) {
     }
     
     // 내부 상태: 한글/IME 입력 상태 관리
-    let composing = false;
+    let composing          = false;
     let lastCompositionEnd = 0;
-    let destroyed = false;
-    let bound = false;
+    let destroyed          = false;
+    let bound              = false;
 
     // 🔒 이벤트 핸들러 참조 보관 (unbind를 위해 필요)
     let onCompositionStart;

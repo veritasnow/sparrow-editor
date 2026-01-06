@@ -41,35 +41,65 @@ export function createEditorKeyHandler({ state, ui }) {
      * -------------------------------------------------------
      */
     function processBackspace(e) {
-        const pos = ui.getSelectionPosition();
-        if (!pos) return;
+        const currentState = state.get();
+        const domRanges = ui.getDomSelection();
+        
+        if (!domRanges || domRanges.length === 0) return;
 
-        // [추가] 테이블 셀의 첫 번째 위치에서 백스페이스 시 테이블 파괴 방지
-        if (pos.anchor.type === 'table') {
-            const { offset, detail } = pos.anchor;
-            if (detail.rowIndex === 0 && detail.colIndex === 0 && offset === 0) {
-                e.preventDefault(); // 첫 셀 첫 글자면 병합 방지
-                return;
+        const firstDomRange = domRanges[0];
+        let lineIndex = firstDomRange.lineIndex;
+        let offset = firstDomRange.endIndex; // DOM 기준 offset
+
+        const isSelection = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
+        
+        // 1. 테이블 첫 셀 보호 로직
+        if (!isSelection) {
+            const pos = ui.getSelectionPosition(); // 현재 상세 좌표 획득
+            if (pos && pos.anchor.type === 'table') {
+                const { offset: tableOffset, detail } = pos.anchor;
+                if (detail.rowIndex === 0 && detail.colIndex === 0 && tableOffset === 0) {
+                    e.preventDefault();
+                    return;
+                }
             }
         }
 
-        const currentState = state.get();
-        // 다중 선택 영역이 있는지는 기존처럼 getSelectionRangesInDOM 활용
-        const domRanges = ui.getDomSelection(); 
-        
+        // 2. 선택 영역 데이터 구성 (기존 유틸 활용)
+        let ranges = [];
+        if (isSelection) {
+            ranges = getRanges(currentState, domRanges);
+            const startRange = ranges[0];
+            lineIndex = startRange.lineIndex;
+            offset = startRange.startIndex;
+        } else {
+            const lineState = currentState[lineIndex];
+            const lineLen = getLineLengthFromState(lineState);
+            offset = Math.max(0, Math.min(offset, lineLen));
+        }
+
+        // 3. 🧠 상태 계산 (newPos는 { lineIndex, anchor: { chunkIndex, type, offset } } 구조)
         const { newState, newPos, deletedLineIndex, updatedLineIndex } =
-            calculateBackspaceState(currentState, pos.lineIndex, pos.anchor.offset, domRanges);
+            calculateBackspaceState(currentState, lineIndex, offset, ranges);
         
         if (newState === currentState) return;
 
+        // 4. 💚 상태 저장
         state.save(newState);
-        if (newPos) state.saveCursor(newPos);
+        
+        // 5. 📍 커서 상태 저장 (수정됨: 객체 구조 그대로 전달)
+        if (newPos) {
+            // state.saveCursor 내부에 startOffset/endOffset 구조를 유지해야 한다면 
+            // newPos 구조를 맞추거나, saveCursor가 anchor 모델을 지원하도록 내부 수정 필요
+            state.saveCursor(newPos); 
+        }
 
-        // UI 반영 (Line 삭제/렌더링 로직은 기존과 동일)
+        // 6. 🎨 UI 반영
         if (deletedLineIndex !== null) {
-            if (typeof deletedLineIndex === 'object') {
-                for (let i = 0; i < deletedLineIndex.count; i++) ui.removeLine(deletedLineIndex.start);
-            } else {
+            if (typeof deletedLineIndex === 'object' && deletedLineIndex.count > 0) {
+                for (let i = 0; i < deletedLineIndex.count; i++) {
+                    ui.removeLine(deletedLineIndex.start);
+                }
+            } else if (typeof deletedLineIndex === 'number') {
                 ui.removeLine(deletedLineIndex);
             }
         }
@@ -78,10 +108,11 @@ export function createEditorKeyHandler({ state, ui }) {
             ui.renderLine(updatedLineIndex, newState[updatedLineIndex]);
         }
 
-        if (newPos) ui.restoreCursor(newPos);
+        // 7. 🎨 커서 복원 (수정됨: anchor 모델을 포함한 newPos 전달)
+        if (newPos) {
+            ui.restoreCursor(newPos);
+        }
     }
-
-    
 
     function callUndo() {
         const { state: newState, cursor } = state.undo();

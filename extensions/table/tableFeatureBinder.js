@@ -6,7 +6,8 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
     const rootEl = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.toolbar');
 
-    const { popup, grid, sizeText, open, close }
+    // 1. View & Service 초기화
+    const { popup, grid, sizeText, open, close } 
         = createTablePopupView(rootEl, toolbar, tableBtn);
     const { insertTable } = createTableInsertService(stateAPI, uiAPI);
 
@@ -14,6 +15,7 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
     let hoverRows = 0;
     let hoverCols = 0;
 
+    // 2. Event Handlers
     const updateSelection = (r, c) => {
         hoverRows = r;
         hoverCols = c;
@@ -32,25 +34,51 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
         updateSelection(parseInt(cell.dataset.row, 10), parseInt(cell.dataset.col, 10));
     };
 
-    const onClickCell = () => {
-        if (insertTable(hoverRows, hoverCols, lastCursorPos)) {
-            close();
+    const onClickCell = (e) => {
+        e.stopPropagation();
+        if (hoverRows > 0 && hoverCols > 0) {
+            // lastCursorPos는 이미 onBtnClick 시점에 확보됨
+            if (insertTable(hoverRows, hoverCols, lastCursorPos)) {
+                close();
+            }
         }
     };
 
     const onBtnClick = (e) => {
         e.stopPropagation();
-        lastCursorPos = uiAPI.getSelectionPosition();
-        popup.style.display === 'block' ? close() : open();
+        
+        if (popup.style.display === 'block') {
+            close();
+        } else {
+            // ✨ 핵심: 팝업 열기 전 현재 커서 위치를 확실히 캡처
+            uiAPI.updateLastValidPosition(); 
+            lastCursorPos = uiAPI.getSelectionPosition();
+            open();
+        }
     };
 
-    document.addEventListener('click', (e) => {
+    const onDocumentClick = (e) => {
         if (!popup.contains(e.target) && e.target !== tableBtn) {
             close();
         }
-    });
+    };
 
+    // 3. Event Binding
     tableBtn.addEventListener('click', onBtnClick);
     grid.addEventListener('mouseover', onMouseOverCell);
     grid.addEventListener('click', onClickCell);
+    document.addEventListener('click', onDocumentClick);
+
+    // 4. ✨ 통합 Disposer (청소부)
+    return function destroy() {
+        console.log("[TableFeature] Cleaning up...");
+        tableBtn.removeEventListener('click', onBtnClick);
+        grid.removeEventListener('mouseover', onMouseOverCell);
+        grid.removeEventListener('click', onClickCell);
+        document.removeEventListener('click', onDocumentClick);
+
+        if (popup && popup.parentNode) {
+            popup.parentNode.removeChild(popup);
+        }
+    };
 }
