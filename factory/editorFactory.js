@@ -14,8 +14,11 @@ import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
 import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 
-import { createEditorInputProcessor } from '../core/editorInputProcessor.js';
+import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/editorKeyHandler.js';
+
+import { createSelectionService } from '../core/selection/domSelectionEngine.js';
+
 
 import { bindSelectionFeature } from '../features/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from '../features/style/styleFeatureBinder.js';
@@ -115,10 +118,15 @@ export function createEditorFactory() {
       }
     });
 
-    // 입력 시스템
+
     const editorEl       = document.getElementById(`${rootId}-content`);
+
+    // 선택 시스템
+    const domSelection   = createSelectionService({ root: editorEl });
+
+    // 입력 시스템
     const inputApp       = createInputApplication({ editorEl });
-    const inputProcessor = createEditorInputProcessor(state, ui);
+    const inputProcessor = createEditorInputProcessor(state, ui, domSelection);
 
     /* ─────────────────────────────
      * 2️⃣ 내부 API 정의 (외부/확장 기능용)
@@ -137,14 +145,14 @@ export function createEditorFactory() {
     const uiAPI = {
       render                      : (data) => ui.render(data),
       renderLine                  : (i, d) => ui.renderLine(i, d),
-      restoreCursor               : (pos)  => ui.restoreCursor(pos), //ui.restoreSelectionPosition(pos),
+      restoreCursor               : (pos)  => domSelection.restoreCursor(pos), //ui.restoreSelectionPosition(pos),
       insertLine                  : (i, a) => ui.insertNewLineElement(i, a),
       removeLine                  : (i)    => ui.removeLineElement(i),
-      getDomSelection             : ()     => ui.getDomSelection(),
-      getSelectionPosition        : ()     => ui.getSelectionPosition(),
-      getInsertionAbsolutePosition: ()     => ui.getInsertionAbsolutePosition(),
-      updateLastValidPosition     : ()     => ui.updateLastValidPosition(),
-      getLastValidPosition        : ()     => ui.getLastValidPosition(),
+      getDomSelection             : ()     => domSelection.getDomSelection(),
+      getSelectionPosition        : ()     => domSelection.getSelectionPosition(),
+      getInsertionAbsolutePosition: ()     => domSelection.getInsertionAbsolutePosition(),
+      updateLastValidPosition     : ()     => domSelection.updateLastValidPosition(),
+      getLastValidPosition        : ()     => domSelection.getLastValidPosition(),
     };
 
     const editorAPI = {
@@ -192,8 +200,9 @@ export function createEditorFactory() {
 
         // C. 키보드 서비스 바인딩
         const keyProcessor = createEditorKeyHandler({
-          state: stateAPI,
-          ui   : uiAPI
+          state        : stateAPI,
+          ui           : uiAPI,
+          domSelection : domSelection
         });
 
         inputApp.bindKeydown({

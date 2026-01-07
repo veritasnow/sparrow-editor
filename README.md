@@ -2,6 +2,8 @@ sparrow-editor
 ├─ constants
 │  └─ styleConstants.js
 ├─ core
+│  ├─ chunk
+│  │  └─ chunkRegistry.js
 │  ├─ editorInputProcessor.js
 │  ├─ editorKeyHandler.js
 │  └─ editorSelectionAnalyzer.js
@@ -13,13 +15,30 @@ sparrow-editor
 │  │  │  └─ imageRenderer.js
 │  │  ├─ imageExtension.js
 │  │  ├─ imageFeatureBinder.js
-│  │  └─ service
-│  │     └─ imageInsertService.js
+│  │  ├─ model
+│  │  │  └─ ImageModel.js
+│  │  ├─ service
+│  │  │  └─ imageInsertService.js
+│  │  └─ utils
+│  │     └─ imageBlockUtil.js
+│  ├─ table
+│  │  ├─ componets
+│  │  │  ├─ tablePopupView.js
+│  │  │  └─ tableRenderer.js
+│  │  ├─ model
+│  │  │  └─ TableModel.js
+│  │  ├─ service
+│  │  │  └─ tableInsertService.js
+│  │  ├─ tableExtension.js
+│  │  ├─ tableFeatureBinder.js
+│  │  └─ utils
+│  │     └─ tableBlockUtil.js
 │  └─ video
 │     ├─ componets
 │     │  ├─ videoPopupView.js
 │     │  └─ videoRenderer.js
 │     ├─ model
+│     │  └─ videoModel.js
 │     ├─ service
 │     │  └─ videoInsertService.js
 │     ├─ utils
@@ -41,17 +60,13 @@ sparrow-editor
 │  ├─ selection
 │  │  ├─ selectionFeatureBinder.js
 │  │  └─ selectionUiService.js
-│  ├─ service
-│  │  ├─ align
-│  │  ├─ inline
-│  │  ├─ selection
-│  │  └─ style
 │  └─ style
 │     ├─ editorStyleService.js
 │     ├─ styleFeatureBinder.js
 │     └─ styleUtils.js
 ├─ index.html
 ├─ model
+│  ├─ editorLineModel.js
 │  └─ editorModel.js
 ├─ modules
 │  ├─ input
@@ -80,6 +95,7 @@ sparrow-editor
    ├─ editorStateUtils.js
    ├─ keyStateUtil.js
    ├─ mergeUtils.js
-   └─ rangeUtils.js
+   ├─ rangeUtils.js
+   └─ splitLineChunksUtils.js
 
 ```

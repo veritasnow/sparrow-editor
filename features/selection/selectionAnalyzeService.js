@@ -1,13 +1,13 @@
 import {
   DEFAULT_TEXT_STYLE,
   DEFAULT_LINE_STYLE
-} from '../constants/styleConstants.js';
+} from '../../constants/styleConstants.js';
 
 /**
  * 에디터의 통합 커서 모델을 기반으로 현재 선택 영역의 
  * 텍스트 스타일 및 라인 스타일의 일관성(Uniformity)을 분석합니다.
  */
-export function editorSelectionAnalyzer(stateAPI, uiAPI) {
+export function createSelectionAnalyzeService(stateAPI, uiAPI) {
 
   function analyzeSelection() {
     const ranges = uiAPI.getDomSelection();
@@ -36,61 +36,6 @@ export function editorSelectionAnalyzer(stateAPI, uiAPI) {
 
     return getUniformStyleFromSelection(linesMap, ranges);
   }
-
-  /*
-  function analyzeSelection() {
-    // 1. 통합 커서 정보 가져오기 (이미 개선된 getSelectionPosition 활용)
-    const selection = uiAPI.getSelectionPosition();
-    
-    // ✅ 선택이 없거나 포커스가 없을 때
-    if (!selection) {
-      return {
-        text: { isUniform: true, style: DEFAULT_TEXT_STYLE },
-        line: { isUniform: true, style: DEFAULT_LINE_STYLE }
-      };
-    }
-
-    // 2. 현재 라인 정보 가져오기
-    const line = stateAPI.getLines(selection.lineIndex);
-    if (!line) return null;
-
-    // 3. 청크 찾기
-    const chunk = line.chunks[selection.anchor.chunkIndex];
-    if (!chunk) return null;
-
-    // -------------------------------------------------------
-    // [분기 처리] 테이블 내부인지 일반 텍스트인지에 따라 스타일 추출
-    // -------------------------------------------------------
-    let targetStyle = DEFAULT_TEXT_STYLE;
-
-    if (selection.anchor.type === 'table' && selection.anchor.detail) {
-      // A. 테이블인 경우: 해당 셀(Cell)의 데이터를 확인 (셀마다 스타일이 다를 수 있으므로)
-      const { rowIndex, colIndex } = selection.anchor.detail;
-      const cellData = chunk.data?.rows?.[rowIndex]?.[colIndex];
-      
-      // 테이블 셀 내부에 별도 스타일 시스템이 있다면 그 스타일을 반환
-      // (현재 구조에서는 테이블 전체 스타일 혹은 셀 기본 스타일 적용)
-      targetStyle = cellData?.style || chunk.style || DEFAULT_TEXT_STYLE;
-    } else {
-      // B. 일반 텍스트 청크인 경우
-      targetStyle = chunk.style || DEFAULT_TEXT_STYLE;
-    }
-
-    // -------------------------------------------------------
-    // 결과 반환 (현재는 단일 지점 커서 기준 분석 위주)
-    // -------------------------------------------------------
-    return {
-      text: {
-        isUniform: true, // 단일 커서일 때는 항상 true
-        style: targetStyle
-      },
-      line: {
-        isUniform: true,
-        style: { align: line.align || 'left' }
-      }
-    };
-  }
-  */
 
   /**
    * 참고: 드래그를 통한 다중 선택 영역(Range) 분석이 필요한 경우 활용

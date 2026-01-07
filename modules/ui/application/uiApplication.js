@@ -1,6 +1,5 @@
 // application/uiApplication.js
 import { createRenderService } from "../service/renderService.js";
-import { createSelectionService } from "../service/selectionService.js";
 import { createDOMParseService } from "../service/domParserService.js";
 
 /**
@@ -19,7 +18,6 @@ export function createUiApplication({ rootId, rendererRegistry }) {
   }
 
   const renderService    = createRenderService({ rootId, rendererRegistry });
-  const selectionService = createSelectionService({ root: rootEl });
   const domParserService = createDOMParseService();
 
   let destroyed = false;
@@ -89,59 +87,6 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     removeLineElement(lineIndex) {
       assertAlive();
       renderService.removeLineElement(lineIndex);
-    },
-
-    // ───────── Selection (View 정보) ─────────
-    getDomSelection() {
-      assertAlive();
-      return selectionService.getDomSelection();
-    },
-
-    getSelectionPosition() {
-      assertAlive();
-      return selectionService.getSelectionPosition();
-    },
-
-    getInsertionAbsolutePosition(){
-      assertAlive();
-      return selectionService.getInsertionAbsolutePosition();
-    },
-
-    getSelectionContext() {
-      assertAlive();
-      return selectionService.getSelectionContext();
-    },
-
-    //restoreSelectionPosition(pos) {
-    restoreCursor(pos) {
-      assertAlive();
-      //selectionService.restoreSelectionPosition(pos);
-      selectionService.restoreCursor(pos);
-    },
-
-    restoreSelectionPositionByChunk(pos) {
-      assertAlive();
-      selectionService.restoreSelectionPositionByChunk(pos);
-    },
-
-    restoreTableSelection(pos) {
-      assertAlive();
-      selectionService.restoreTableSelection(pos);
-    },
-
-    getInsertionAbsolutePosition(){
-      assertAlive();
-      return selectionService.getInsertionAbsolutePosition();
-    },
-
-    updateLastValidPosition(){
-      assertAlive();
-      return selectionService.updateLastValidPosition();
-    },
-
-    getLastValidPosition(){
-      assertAlive();
-      return selectionService.getLastValidPosition();
     },
 
     // ───────── DOM → Model 파싱 ─────────
