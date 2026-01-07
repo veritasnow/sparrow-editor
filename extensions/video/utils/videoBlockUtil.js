@@ -1,5 +1,4 @@
 import { EditorLineModel} from '../../../model/editorLineModel.js';
-import { DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
@@ -19,49 +18,28 @@ export function applyVideoBlock(editorState, videoId, currentLineIndex, cursorOf
     const newState = [...editorState];
     const currentLine = editorState[currentLineIndex];
     const videoHandler = chunkRegistry.get('video');
-    const textHandler = chunkRegistry.get('text');
     const videoChunk = videoHandler.create(videoId, `https://www.youtube.com/embed/${videoId}`);
     
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
 
-    // 1) 빈 줄에 삽입하는 경우 (정리: 깔끔하게 비디오만 남기거나 다음 줄로 넘김)
-    const isEmpty = (chunks) => chunks.length === 0 || (chunks.length === 1 && chunks[0].text === '');
-    
-    if (isEmpty(beforeChunks) && isEmpty(afterChunks)) {
-        // 현재 라인은 비디오만 딱 하나! (앞뒤 "" 제거)
-        newState[currentLineIndex] = EditorLineModel('center', [videoChunk]);
-
-        // 다음 줄에 빈 입력창 제공
-        const nextLine = EditorLineModel(DEFAULT_LINE_STYLE.align, [textHandler.create('', {})]);
-        newState.splice(currentLineIndex + 1, 0, nextLine);
-
-        return {
-            newState,
-            restoreLineIndex: currentLineIndex + 1,
-            restoreChunkIndex: 0,
-            restoreOffset: 0
-        };
-    }
-
-    // 2) 텍스트 사이에 삽입하는 경우
-    // 앞뒤에 내용이 있는 청크들만 필터링해서 합침
+    // 1) 빈 줄이든 아니든, 현재 라인에 비디오를 "포함"시키는 방향으로 통일
+    // 이전 내용 + 비디오 + 이후 내용을 한 줄에 배치합니다.
     const cleanBefore = beforeChunks.filter(c => c.type !== 'text' || c.text !== '');
     const cleanAfter = afterChunks.filter(c => c.type !== 'text' || c.text !== '');
 
-    // 만약 뒤가 비어있다면 입력을 위해 빈 청크 하나 추가
-    if (cleanAfter.length === 0) {
-        cleanAfter.push(textHandler.create('', {}));
-    }
+    // 만약 한 줄을 통째로 비디오로 만들고 싶다면 align을 center로, 
+    // 글자와 섞인다면 기존 정렬 유지
+    const newAlign = (cleanBefore.length === 0 && cleanAfter.length === 0) ? 'center' : currentLine.align;
 
     const mergedChunks = [...cleanBefore, videoChunk, ...cleanAfter];
-    newState[currentLineIndex] = EditorLineModel(currentLine.align, mergedChunks);
+    newState[currentLineIndex] = EditorLineModel(newAlign, mergedChunks);
 
-    // 커서 위치: 비디오 바로 다음 청크
+    // 커서 위치: 비디오 바로 뒤
     const targetChunkIndex = cleanBefore.length + 1;
 
     return {
         newState,
-        restoreLineIndex: currentLineIndex,
+        restoreLineIndex: currentLineIndex, // 🚩 인덱스 변화 없음!
         restoreChunkIndex: targetChunkIndex,
         restoreOffset: 0
     };
