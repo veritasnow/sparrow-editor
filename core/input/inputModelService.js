@@ -2,19 +2,14 @@ import { EditorLineModel } from '../../model/editorLineModel.js';
 import { chunkRegistry } from '../chunk/chunkRegistry.js';
 
 export const inputModelService = {
-    /**
-     * 일반 텍스트 청크 업데이트 계산
-     */
-    updateTextChunk(updatedLine, dataIndex, activeNode, cursorOffset, lineIndex) {
+    // [기존] 텍스트 업데이트
+    updateTextChunk(updatedLine, dataIndex, textContent, cursorOffset, lineIndex) {
         const oldChunk = updatedLine.chunks[dataIndex];
-        const newText = activeNode.textContent;
+        if (oldChunk.text === textContent) return null;
 
-        if (oldChunk.text === newText) return null;
-
-        const handler = chunkRegistry.get(oldChunk.type);
-        const newChunk = handler.create(newText, oldChunk.style);
+        const handler = chunkRegistry.get('text');
         const newChunks = [...updatedLine.chunks];
-        newChunks[dataIndex] = newChunk;
+        newChunks[dataIndex] = handler.create(textContent, oldChunk.style);
 
         return {
             updatedLine: EditorLineModel(updatedLine.align, newChunks),
@@ -25,9 +20,29 @@ export const inputModelService = {
         };
     },
 
-    /**
-     * 기본 커서 복원 데이터 생성
-     */
+    // [신규] 테이블 업데이트 계산 (순수 데이터만 인자로 받음)
+    updateTableModel(updatedLine, dataIndex, tableData, tablePos, lineIndex) {
+        const oldChunk = updatedLine.chunks[dataIndex];
+        if (JSON.stringify(oldChunk.data) === JSON.stringify(tableData)) return null;
+
+        const handler = chunkRegistry.get('table');
+        const newChunks = [...updatedLine.chunks];
+        newChunks[dataIndex] = handler.clone({ data: tableData });
+
+        return {
+            updatedLine: EditorLineModel(updatedLine.align, newChunks),
+            restoreData: {
+                lineIndex,
+                anchor: {
+                    chunkIndex: dataIndex,
+                    type: 'table',
+                    detail: { ...tablePos }
+                }
+            }
+        };
+    },
+
+    // [기존] 복원 데이터 생성
     createDefaultRestoreData(updatedLine, lineIndex) {
         const lastIdx = updatedLine.chunks.length - 1;
         const lastChunk = updatedLine.chunks[lastIdx];
@@ -44,13 +59,9 @@ export const inputModelService = {
         };
     },
 
-    /**
-     * 커서 데이터 정규화
-     */
+    // [기존] 정규화
     normalizeRestoreData(restoreData) {
-        if (!restoreData) return null;
-        if (restoreData.anchor) return restoreData;
-
+        if (!restoreData || restoreData.anchor) return restoreData;
         return {
             lineIndex: restoreData.lineIndex,
             anchor: {

@@ -15,7 +15,7 @@ import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
 import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 
 import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
-import { createEditorKeyHandler } from '../core/editorKeyHandler.js';
+import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
 
 import { createSelectionService } from '../core/selection/domSelectionEngine.js';
 
