@@ -1,57 +1,72 @@
-// extensions/table/components/tableRenderer.js
 export const tableRenderer = {
   render(chunk, lineIndex, chunkIndex) {
     const data = chunk.data ?? [];
     const rows = data.length;
     const cols = data[0]?.length ?? 0;
 
-    const table              = document.createElement("table");
-    table.className          = "se-table chunk-table";
-    table.dataset.lineIndex  = lineIndex;
+    const table = document.createElement("table");
+    table.className = "se-table chunk-table";
+    table.dataset.lineIndex = lineIndex;
     table.dataset.chunkIndex = chunkIndex;
 
-    // 테이블 기본 스타일 적용
-    table.style.borderCollapse = "collapse";
-    table.style.border         = "1px solid #ccc";
-    table.style.margin         = "4px 0";
-    table.style.fontSize       = "14px";
-    
-    // 테이블 청크 자체에 저장된 스타일이 있다면 추가 적용 (전체 배경색 등)
-    if (chunk.style) Object.assign(table.style, chunk.style);
+    // 테이블 기본 스타일링
+    Object.assign(table.style, {
+      borderCollapse: "collapse",
+      border: "1px solid #ccc",
+      margin: "4px 0",
+      fontSize: "14px",
+      width: "auto",
+      ...(chunk.style || {})
+    });
 
     for (let r = 0; r < rows; r++) {
       const tr = document.createElement("tr");
-
       for (let c = 0; c < cols; c++) {
         const td = document.createElement("td");
-        td.className      = "se-table-cell";
-        td.style.border   = "1px solid #ddd";
-        td.style.padding  = "4px 6px";
-        td.style.minWidth = "40px";
-        td.style.height   = "24px";
+        td.className = "se-table-cell";
+        
+        // td 기본 스타일
+        Object.assign(td.style, {
+          border: "1px solid #ddd",
+          padding: "4px 6px",
+          minWidth: "40px",
+          height: "24px",
+          verticalAlign: "middle"
+        });
 
         const cell = data[r]?.[c];
 
-        // 💡 [수정 포인트] cell이 객체 구조이므로 분기 처리
         if (cell && typeof cell === 'object') {
-          // 1. 텍스트 노출 (비어있으면 &nbsp;)
-          td.textContent = (cell.text && cell.text.trim() !== "") ? cell.text : "";
-          if (td.textContent === "") td.innerHTML = "&nbsp;";
+          // 1. 셀 배경색 등 스타일 적용
+          if (cell.style) Object.assign(td.style, cell.style);
 
-          // 2. 스타일 적용 (fontWeight: 'bold' 등)
-          if (cell.style) {
-            Object.assign(td.style, cell.style);
+          // 2. 부분 스타일(chunks)이 있는 경우 span 생성
+          if (Array.isArray(cell.chunks) && cell.chunks.length > 0) {
+            cell.chunks.forEach(sub => {
+              const span = document.createElement("span");
+              span.textContent = sub.text;
+              if (sub.style) {
+                // 인라인 스타일 적용 (fontWeight, color 등)
+                Object.assign(span.style, sub.style);
+              }
+              td.appendChild(span);
+            });
+          } 
+          // 3. 부분 스타일이 없으면 일반 텍스트 출력
+          else {
+            td.textContent = (cell.text !== undefined && cell.text !== null) ? cell.text : "";
           }
+          
+          // 빈 셀 높이 유지를 위한 처리
+          if (td.innerHTML === "") td.innerHTML = "&nbsp;";
         } else {
-          // 하위 호환성 유지 (혹시 문자열 데이터가 들어올 경우)
-          td.innerHTML = cell && cell !== "" ? cell : "&nbsp;";
+          // 문자열 형태의 하위 호환 데이터 처리
+          td.innerHTML = cell || "&nbsp;";
         }
-
         tr.appendChild(td);
       }
       table.appendChild(tr);
     }
-
     return table;
   }
 };

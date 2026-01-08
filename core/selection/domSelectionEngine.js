@@ -31,71 +31,74 @@ export function createSelectionService({ root }) {
 
       const { lineIndex, dataIndex, activeNode, container, cursorOffset } = context;
 
-      // 1. 테이블 내부인 경우 (기존 로직 유지 및 보강)
-      const tableEl = activeNode?.closest('table');
-      if (tableEl) {
-        const td = container.nodeType === Node.TEXT_NODE ? container.parentElement.closest('td') : container.closest('td');
-        if (td) {
-          const tr = td.parentElement;
-          const tbody = tr.parentElement;
-          return {
-            lineIndex,
-            anchor: {
-              chunkIndex: dataIndex,
-              type: 'table',
-              detail: {
-                rowIndex: Array.from(tbody.children).indexOf(tr),
-                colIndex: Array.from(tr.children).indexOf(td),
-                offset: cursorOffset
-              }
-            }
-          };
-        }
-      }
+      // 🚀 개선된 테이블 감지 로직
+      // activeNode가 텍스트 노드일 수 있으므로, 실제 엘리먼트를 먼저 찾습니다.
+      const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
+      const tableEl = targetEl?.closest('table');
 
-      // ✨ 2. 비디오/이미지 등 Atomic Chunk인 경우 감지
-      // activeNode의 classList나 data-type 속성 등을 활용합니다.
-      let chunkType = 'text'; // 기본값
-      if (activeNode) {
-          if (activeNode.classList.contains('chunk-video') || activeNode.querySelector('iframe, video')) {
-              chunkType = 'video';
-          } else if (activeNode.classList.contains('chunk-image') || activeNode.querySelector('img')) {
-              chunkType = 'image';
-          } else if (activeNode.dataset.type) {
-              // 만약 청크 생성 시 data-type="video" 식의 속성을 넣어두었다면 가장 정확합니다.
-              chunkType = activeNode.dataset.type;
+      if (tableEl) {
+          // container(실제 커서가 있는 위치)를 기준으로 TD를 찾습니다.
+          const td = container.nodeType === Node.TEXT_NODE 
+              ? container.parentElement.closest('td') 
+              : container.closest('td');
+
+          if (td) {
+              const tr = td.parentElement;
+              const tbody = tr.closest('tbody') || tableEl; // tbody가 없을 수도 있으므로 안전하게 처리
+              
+              return {
+                  lineIndex,
+                  anchor: {
+                      chunkIndex: dataIndex,
+                      type: 'table',
+                      detail: {
+                          rowIndex: Array.from(tbody.rows || tbody.children).indexOf(tr),
+                          colIndex: Array.from(tr.cells || tr.children).indexOf(td),
+                          offset: cursorOffset // 👈 이제 'ㅁㄴㅇ' 중 'ㄴ' 뒤에 있으면 2가 들어옵니다.
+                      }
+                  }
+              };
           }
       }
 
-      // 3. 통합 반환
+      // 2. 비디오/이미지 등 Atomic Chunk (기존 유지)
+      let chunkType = 'text';
+      if (targetEl) {
+          if (targetEl.classList.contains('chunk-video') || targetEl.querySelector('iframe, video')) {
+              chunkType = 'video';
+          } else if (targetEl.classList.contains('chunk-image') || targetEl.querySelector('img')) {
+              chunkType = 'image';
+          } else if (targetEl.dataset.type) {
+              chunkType = targetEl.dataset.type;
+          }
+      }
+
       return {
-        lineIndex,
-        anchor: {
-          chunkIndex: dataIndex ?? 0,
-          type: chunkType, // 추출된 실제 타입 (text, video, image 등)
-          offset: cursorOffset
-        }
+          lineIndex,
+          anchor: {
+              chunkIndex: dataIndex ?? 0,
+              type: chunkType,
+              offset: cursorOffset
+          }
       };
-    }
+  }
   /*
   function getSelectionPosition() {
     const sel = window.getSelection();
-    if (!sel.rangeCount) return null;
+    if (!sel || !sel.rangeCount) return null;
 
     const context = getSelectionContext(); 
     if (!context) return null;
 
     const { lineIndex, dataIndex, activeNode, container, cursorOffset } = context;
 
-    // [Case A] 테이블 내부인 경우 상세 좌표 추출
-    // activeNode 자체가 TABLE이거나 TABLE의 자식인 경우
+    // 1. 테이블 내부인 경우 (기존 로직 유지 및 보강)
     const tableEl = activeNode?.closest('table');
     if (tableEl) {
       const td = container.nodeType === Node.TEXT_NODE ? container.parentElement.closest('td') : container.closest('td');
       if (td) {
         const tr = td.parentElement;
-        const tbody = tr.parentElement; // 보통 tbody가 존재함
-        
+        const tbody = tr.parentElement;
         return {
           lineIndex,
           anchor: {
@@ -111,12 +114,26 @@ export function createSelectionService({ root }) {
       }
     }
 
-    // [Case B] 일반 텍스트 또는 기타 청크인 경우
+    // ✨ 2. 비디오/이미지 등 Atomic Chunk인 경우 감지
+    // activeNode의 classList나 data-type 속성 등을 활용합니다.
+    let chunkType = 'text'; // 기본값
+    if (activeNode) {
+        if (activeNode.classList.contains('chunk-video') || activeNode.querySelector('iframe, video')) {
+            chunkType = 'video';
+        } else if (activeNode.classList.contains('chunk-image') || activeNode.querySelector('img')) {
+            chunkType = 'image';
+        } else if (activeNode.dataset.type) {
+            // 만약 청크 생성 시 data-type="video" 식의 속성을 넣어두었다면 가장 정확합니다.
+            chunkType = activeNode.dataset.type;
+        }
+    }
+
+    // 3. 통합 반환
     return {
       lineIndex,
       anchor: {
         chunkIndex: dataIndex ?? 0,
-        type: 'text',
+        type: chunkType, // 추출된 실제 타입 (text, video, image 등)
         offset: cursorOffset
       }
     };

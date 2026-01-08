@@ -79,26 +79,29 @@ export function createEditorFactory() {
 
     // 4. Table Chunk 핸들러
     chunkRegistry.register('table', {
-        isText   : false,
-        canSplit : false,
-        create   : (rows, cols) => TableChunkModel(rows, cols),
+        isText: false,
+        canSplit: false,
+        create: (rows, cols) => TableChunkModel(rows, cols),
         getLength: () => 1,
-        clone    : (chunk) => {
-            const cloned = {
+        clone: (chunk) => {
+            return {
                 ...chunk,
-                // 2차원 배열 내부의 객체들까지 모두 새로 생성 (Deep Clone)
-                data : chunk.data.map(row => 
+                data: chunk.data.map(row => 
                     row.map(cell => ({
+                        ...cell,
                         text: cell.text,
-                        style: { ...cell.style }
+                        style: { ...cell.style },
+                        // ✅ 셀 내부 chunks 배열도 깊은 복사
+                        chunks: cell.chunks 
+                            ? cell.chunks.map(c => ({ ...c, style: { ...c.style } })) 
+                            : undefined
                     }))
                 ),
                 style: { ...chunk.style }
             };
-            return cloned;
         },
-        applyStyle: (chunk) => chunk // 개별 셀 스타일은 프로세서에서 처리하므로 여기선 유지
-    });    
+        applyStyle: (chunk) => chunk 
+    });
     /*
     chunkRegistry.register('table', {
         isText    : false,
