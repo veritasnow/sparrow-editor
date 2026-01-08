@@ -105,6 +105,130 @@ function calculateDeleteSelectionState(editorState, ranges) {
  * ⌫ Backspace Key 상태 계산 통합 함수
  */
 export function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
+    // 1. 선택 영역 삭제 (기존 유지)
+    if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
+        return calculateDeleteSelectionState(currentState, ranges);
+    }
+
+    const nextState = [...currentState];
+    const currentLine = currentState[lineIndex];
+
+    // 🚀 [해결 1] 줄 병합 로직 (offset이 0일 때)
+    // 이 부분이 정상적으로 살아있어야 윗줄 맨 뒤로 커서가 올라갑니다.
+    if (offset === 0 && lineIndex > 0) {
+        const prevLine = nextState[lineIndex - 1];
+        const lastChunkIdx = Math.max(0, prevLine.chunks.length - 1);
+        const lastChunk = prevLine.chunks[lastChunkIdx];
+        const handler = chunkRegistry.get(lastChunk.type);
+        const lastChunkLen = handler ? handler.getLength(lastChunk) : 0;
+
+        const mergedChunks = [
+            ...prevLine.chunks.map(cloneChunk), 
+            ...currentLine.chunks.map(cloneChunk)
+        ];
+
+        nextState[lineIndex - 1] = EditorLineModel(
+            prevLine.align, 
+            normalizeLineChunks(mergedChunks)
+        );
+        nextState.splice(lineIndex, 1);
+
+        return {
+            newState: nextState,
+            newPos: {
+                lineIndex: lineIndex - 1,
+                anchor: { 
+                    chunkIndex: lastChunkIdx, 
+                    type: lastChunk.type, 
+                    offset: lastChunkLen 
+                }
+            },
+            deletedLineIndex: lineIndex,
+            updatedLineIndex: lineIndex - 1
+        };
+    }
+
+    // 2. 현재 줄 내부 삭제 로직 시작
+    const newChunks = [];
+    let deleted = false;
+    let acc = 0;
+    let targetAnchor = null;
+
+    // 🚀 [해결 2] 삭제 대상 청크(targetIndex) 정밀 탐색
+    let targetIndex = -1;
+    let tempAcc = 0;
+    for (let i = 0; i < currentLine.chunks.length; i++) {
+        const chunk = currentLine.chunks[i];
+        const len = chunkRegistry.get(chunk.type).getLength(chunk);
+        // 커서가 청크 범위 내에 있을 때 (Start < offset <= End)
+        if (offset > tempAcc && offset <= tempAcc + len) {
+            targetIndex = i;
+            break;
+        }
+        tempAcc += len;
+    }
+
+    // 3. 청크 재구성 루프
+    acc = 0;
+    for (let i = 0; i < currentLine.chunks.length; i++) {
+        const chunk = currentLine.chunks[i];
+        const handler = chunkRegistry.get(chunk.type);
+        const chunkLen = handler.getLength(chunk);
+        const chunkStart = acc;
+
+        // 타겟 청크를 만났고 아직 삭제를 수행하지 않은 경우
+        if (i === targetIndex && !deleted) {
+            if (handler.canSplit) { 
+                // [텍스트 삭제]
+                const cut = offset - chunkStart;
+                const newText = chunk.text.slice(0, cut - 1) + chunk.text.slice(cut);
+                
+                if (newText.length > 0) {
+                    newChunks.push(handler.create(newText, chunk.style));
+                    targetAnchor = { chunkIndex: i, type: 'text', offset: cut - 1 };
+                } else {
+                    // 텍스트 청크가 비면 삭제, 커서는 이전 청크의 끝으로
+                    targetAnchor = { 
+                        chunkIndex: Math.max(0, i - 1), 
+                        type: i > 0 ? currentLine.chunks[i-1].type : 'text', 
+                        offset: i > 0 ? chunkRegistry.get(currentLine.chunks[i-1].type).getLength(currentLine.chunks[i-1]) : 0 
+                    };
+                }
+            } else {
+                // [Atomic(이미지/테이블) 삭제]
+                console.log(`[Atomic Delete] ${chunk.type} 삭제`);
+                targetAnchor = {
+                    chunkIndex: Math.max(0, i - 1),
+                    type: i > 0 ? currentLine.chunks[i-1].type : 'text',
+                    offset: i > 0 ? chunkRegistry.get(currentLine.chunks[i-1].type).getLength(currentLine.chunks[i-1]) : 0
+                };
+                // push 하지 않음으로써 삭제
+            }
+            deleted = true;
+        } else {
+            // 삭제 대상이 아닌 청크는 그대로 복사
+            newChunks.push(cloneChunk(chunk));
+        }
+        acc += chunkLen;
+    }
+
+    // 만약 삭제된 것이 없다면 (예: 줄의 맨 앞인데 위에서 병합 처리가 안 된 특수 상황 등)
+    if (!deleted) return { newState: currentState, newPos: null };
+
+    // 결과 반영
+    nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(newChunks));
+    
+    return {
+        newState: nextState,
+        newPos: {
+            lineIndex,
+            anchor: targetAnchor || { chunkIndex: 0, type: 'text', offset: Math.max(0, offset - 1) }
+        },
+        updatedLineIndex: lineIndex
+    };
+}
+/*
+export function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
     // 1. 선택 영역 삭제
     if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
         return calculateDeleteSelectionState(currentState, ranges);
@@ -208,6 +332,7 @@ export function calculateBackspaceState(currentState, lineIndex, offset, ranges 
         updatedLineIndex: lineIndex
     };
 }
+*/    
 
 // ⏎ Enter Key
 /**

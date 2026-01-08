@@ -30,9 +30,7 @@ export function executeEnter({ state, ui, domSelection }) {
 /**
  * 백스페이스 키 실행 프로세서
  */
-/**
- * 백스페이스 키 실행 프로세서
- */
+
 export function executeBackspace(e, { state, ui, domSelection }) {
 const currentState = state.get();
     const domRanges = domSelection.getDomSelection();
