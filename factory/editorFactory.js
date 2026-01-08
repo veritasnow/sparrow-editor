@@ -79,6 +79,28 @@ export function createEditorFactory() {
 
     // 4. Table Chunk 핸들러
     chunkRegistry.register('table', {
+        isText   : false,
+        canSplit : false,
+        create   : (rows, cols) => TableChunkModel(rows, cols),
+        getLength: () => 1,
+        clone    : (chunk) => {
+            const cloned = {
+                ...chunk,
+                // 2차원 배열 내부의 객체들까지 모두 새로 생성 (Deep Clone)
+                data : chunk.data.map(row => 
+                    row.map(cell => ({
+                        text: cell.text,
+                        style: { ...cell.style }
+                    }))
+                ),
+                style: { ...chunk.style }
+            };
+            return cloned;
+        },
+        applyStyle: (chunk) => chunk // 개별 셀 스타일은 프로세서에서 처리하므로 여기선 유지
+    });    
+    /*
+    chunkRegistry.register('table', {
         isText    : false,
         canSplit  : false,
         create    : (rows, cols) => TableChunkModel(rows, cols),
@@ -92,6 +114,7 @@ export function createEditorFactory() {
         },
         applyStyle: (chunk) => chunk
     });
+    */
 
     // DOM 구조 생성
     const domService = createDOMCreateService(rootId);

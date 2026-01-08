@@ -1,9 +1,5 @@
 // extensions/video/service/videoInsertService.js
-
 import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
-
-
-
 
 /**
  * 🎬 비디오 삽입 핵심 로직

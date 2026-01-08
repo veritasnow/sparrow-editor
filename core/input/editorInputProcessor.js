@@ -40,14 +40,9 @@ export function createEditorInputProcessor(app, ui, domSelection) {
         } 
         // Case 2: 테이블 청크 업데이트
         else if (dataIndex !== null && updatedLine.chunks[dataIndex]?.type === 'table') {
-            const tableEl = activeNode.closest?.('table');
-            if (tableEl) {
-                const { data } = ui.extractTableDataFromDOM(tableEl);
-                const tablePos = domSelection.getTableInternalPosition(); // Selection 서비스에서 좌표 획득
-                result = inputModelService.updateTableModel(updatedLine, dataIndex, data, tablePos, lineIndex);
-                flags.isChunkRendering = !!result;
-            }
-        } 
+            result = handleTableUpdate(updatedLine, dataIndex, activeNode, lineIndex);
+            flags.isChunkRendering = !!result; // 데이터 변화가 있을 때만 true가 됨
+        }
         // Case 3: 구조적 변화 (DOM Rebuild)
         if (!result) {
             const rebuild = ui.parseLineDOM(selection.parentP, currentLine.chunks, selection.container, cursorOffset, lineIndex);
@@ -98,6 +93,47 @@ export function createEditorInputProcessor(app, ui, domSelection) {
             domSelection.restoreCursor(restoreData);
         }
     }
+
+    function handleTableUpdate(updatedLine, dataIndex, activeNode, lineIndex) {
+        const tableEl = activeNode.tagName === 'TABLE' ? activeNode : activeNode.closest?.('table');
+        if (!tableEl) return null;
+
+        // 1. 데이터 추출 및 변경 확인
+        const { data } = ui.extractTableDataFromDOM(tableEl);
+        const oldChunk = updatedLine.chunks[dataIndex];
+        if (JSON.stringify(oldChunk.data) === JSON.stringify(data)) return null;
+
+        // 2. 현재 커서의 셀 위치(Row/Col) 추적
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return null;
+
+        const range = sel.getRangeAt(0);
+        const td = range.startContainer.nodeType === 3 
+            ? range.startContainer.parentElement.closest('td') 
+            : range.startContainer.closest('td');
+
+        if (!td) return null;
+
+        const tr = td.parentElement;
+        const rowIndex = Array.from(tr.parentElement.children).indexOf(tr);
+        const colIndex = Array.from(tr.children).indexOf(td);
+
+        // 3. 모델 교체 및 결과 반환
+        const newChunks = [...updatedLine.chunks];
+        newChunks[dataIndex] = { ...oldChunk, data };
+
+        return {
+            updatedLine: { ...updatedLine, chunks: newChunks },
+            restoreData: {
+                lineIndex,
+                anchor: {
+                    chunkIndex: dataIndex,
+                    type: 'table',
+                    detail: { rowIndex, colIndex, offset: range.startOffset }
+                }
+            }
+        };
+    }    
 
     return { processInput };
 }
