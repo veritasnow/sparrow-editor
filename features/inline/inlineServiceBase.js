@@ -8,6 +8,53 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
      */
     function applyInline(updateFn, options = { saveCursor: true }) {
         const currentState = stateAPI.get();
+        const currentPos = uiAPI.getSelectionPosition();
+        
+        // 🔍 로그 추가: 현재 커서 위치 확인
+        console.log('[applyInline] currentPos:', currentPos);
+
+        if (!currentPos) return;
+
+        const domRanges = uiAPI.getDomSelection();
+        if (!domRanges || domRanges.length === 0) return;
+
+        const baseRanges = getRanges(currentState, domRanges);
+
+        const rangesWithDetail = baseRanges.map(range => ({
+            ...range,
+            detail: currentPos.anchor.type === 'table' ? currentPos.anchor.detail : null
+        }));
+
+        // 🔍 로그 추가: 가공된 ranges 확인
+        console.log('[applyInline] rangesWithDetail:', rangesWithDetail);
+
+        const newState = updateFn(currentState, rangesWithDetail);
+
+        stateAPI.save(newState);
+
+        if (options.saveCursor) {
+            stateAPI.saveCursor(currentPos);
+        }
+
+        rangesWithDetail.forEach(({ lineIndex }) => {
+            if (stateAPI.isLineChanged(lineIndex)) {
+                uiAPI.renderLine(lineIndex, newState[lineIndex]);
+            }
+        });
+
+        setTimeout(() => {
+            uiAPI.restoreCursor(currentPos);
+        }, 0);
+    }
+
+    return { applyInline };
+}
+/*
+export function createInlineServiceBase(stateAPI, uiAPI) {
+     // updateFn: (currentState, ranges) => newState
+     // options: { saveCursor: boolean }
+    function applyInline(updateFn, options = { saveCursor: true }) {
+        const currentState = stateAPI.get();
         
         // 1. 통합 커서 포지션 정보를 가져옴 (테이블 여부 등 포함)
         const currentPos = uiAPI.getSelectionPosition();
@@ -46,4 +93,4 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
     }
 
     return { applyInline };
-}
+}    */

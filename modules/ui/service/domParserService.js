@@ -79,39 +79,35 @@ export function createDOMParseService() {
      * @returns {{ rows: number, cols: number, data: string[][] }}
      */
     function extractTableDataFromDOM(tableEl) {
-        console.log('[extractTableDataFromDOM] input:', tableEl);
-        console.log('[extractTableDataFromDOM] tagName:', tableEl?.tagName);
-
         if (!tableEl || tableEl.tagName !== 'TABLE') {
-            console.warn(
-                '[extractTableDataFromDOM] INVALID TABLE',
-                tableEl
-            );
             return { rows: 0, cols: 0, data: [] };
         }
 
         const trList = Array.from(tableEl.querySelectorAll('tr'));
-        const data   = [];
+        const data = [];
 
         trList.forEach((tr, rowIndex) => {
             const tdList = Array.from(tr.querySelectorAll('td, th'));
-            const row    = [];
+            const row = [];
 
             tdList.forEach((cell, colIndex) => {
-                /**
-                 * ⚠️ innerText 사용 시:
-                 * - &nbsp; → '' 로 바뀔 수 있음
-                 * - 줄바꿈 자동 제거
-                 *
-                 * 👉 textContent 우선 + fallback 처리
-                 */
+                // 1. 텍스트 추출
                 let text = cell.textContent ?? '';
+                if (text === '') text = '\u00A0';
 
-                // 완전 빈 셀은 nbsp 유지 (렌더/커서 안정성)
-                if (text === '') {
-                    text = '\u00A0';
-                }
-                row[colIndex] = text;
+                // 2. 중요: 스타일 추출 (인라인 스타일을 객체로 변환)
+                // 나중에 글자 굵게(fontWeight) 등을 적용했을 때 여기서 읽어옵니다.
+                const style = {};
+                if (cell.style.fontWeight) style.fontWeight = cell.style.fontWeight;
+                if (cell.style.fontSize) style.fontSize = cell.style.fontSize;
+                if (cell.style.color) style.color = cell.style.color;
+                if (cell.style.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
+
+                // 3. 문자열이 아닌 객체 구조로 저장
+                row[colIndex] = {
+                    text: text,
+                    style: style
+                };
             });
             data[rowIndex] = row;
         });
@@ -119,11 +115,7 @@ export function createDOMParseService() {
         const rowCount = data.length;
         const colCount = rowCount > 0 ? Math.max(...data.map(r => r.length)) : 0;
 
-        return {
-            rows : rowCount,
-            cols : colCount,
-            data
-        };
+        return { rows: rowCount, cols: colCount, data };
     }
 
 

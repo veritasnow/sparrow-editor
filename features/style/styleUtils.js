@@ -3,6 +3,90 @@ import { EditorLineModel } from '../../model/editorLineModel.js';
 import { chunkRegistry } from '../../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 import { splitChunkByOffset, mergeChunks } from "../../utils/mergeUtils.js";
 
+/**
+ * 에디터 상태의 특정 범위(ranges)에 스타일 패치를 적용합니다.
+ * @param {Array} editorState - 현재 에디터 전체 상태
+ * @param {Array} ranges - 보정된 범위 객체 배열 ({ lineIndex, startIndex, endIndex, detail })
+ * @param {Object} patch - 적용할 스타일 객체 (예: { fontWeight: 'bold' } 또는 { fontWeight: undefined })
+ */
+export function applyStylePatch(editorState, ranges, patch) {
+    const newState = [...editorState];
+
+    ranges.forEach(({ lineIndex, startIndex, endIndex, detail }) => {
+        const line = editorState[lineIndex];
+        if (!line) return;
+
+        let acc = 0; 
+        const newChunks = [];
+
+        line.chunks.forEach(chunk => {
+            const handler = chunkRegistry.get(chunk.type);
+            const chunkLen = handler.getLength(chunk);
+            const chunkStart = acc;
+            const chunkEnd = acc + chunkLen;
+
+            if (endIndex <= chunkStart || startIndex >= chunkEnd) {
+                newChunks.push(chunk);
+            } 
+            else {
+                // ✅ [A] 테이블 정밀 타격 (최우선순위)
+                // detail이 존재하고, 현재 처리 중인 청크가 테이블인 경우
+                if (chunk.type === 'table' && detail && typeof detail.rowIndex === 'number') {
+                    console.log('[applyStylePatch] 테이블 셀 타격 시작:', detail);
+                    
+                    const newData = chunk.data.map(row => 
+                        row.map(cell => ({ 
+                            ...cell, 
+                            style: { ...(cell.style || {}) } 
+                        }))
+                    );
+
+                    const targetCell = newData[detail.rowIndex][detail.colIndex];
+                    const newStyle = { ...(targetCell.style || {}), ...patch };
+                    
+                    Object.keys(newStyle).forEach(k => {
+                        if (newStyle[k] === undefined) delete newStyle[k];
+                    });
+
+                    newData[detail.rowIndex][detail.colIndex] = {
+                        ...targetCell,
+                        style: newStyle
+                    };
+
+                    // 중요: 테이블 전체 style은 건드리지 않고 data만 교체
+                    newChunks.push({ ...chunk, data: newData });
+                } 
+                // [B] 텍스트 청크 처리
+                else if (chunk.type === 'text') {
+                    const relativeStart = Math.max(0, startIndex - chunkStart);
+                    const relativeEnd = Math.min(chunkLen, endIndex - chunkStart);
+                    const { before, target, after } = splitChunkByOffset(chunk, relativeStart, relativeEnd);
+
+                    newChunks.push(...before);
+                    target.forEach(t => {
+                        const newStyle = { ...(t.style || {}), ...patch };
+                        Object.keys(newStyle).forEach(k => { if (newStyle[k] === undefined) delete newStyle[k]; });
+                        newChunks.push(handler.create(t.text, newStyle));
+                    });
+                    newChunks.push(...after);
+                } 
+                // [C] 기타 Atomic (이미지 등)
+                else {
+                    // 테이블인데 detail이 없는 경우 혹은 진짜 다른 블록인 경우
+                    const newStyle = { ...(chunk.style || {}), ...patch };
+                    Object.keys(newStyle).forEach(k => { if (newStyle[k] === undefined) delete newStyle[k]; });
+                    newChunks.push({ ...chunk, style: newStyle });
+                }
+            }
+            acc += chunkLen;
+        });
+
+        newState[lineIndex] = EditorLineModel(line.align, mergeChunks(newChunks));
+    });
+
+    return newState;
+}
+/*
 export function applyStylePatch(editorState, ranges, patch) {
     const newState = [...editorState];
 
@@ -63,10 +147,52 @@ export function applyStylePatch(editorState, ranges, patch) {
 
     return newState;
 }
+*/
 
 /**
  * 토글 체크 시에도 동일하게 getLength 적용
  */
+// styleUtils.js
+
+export function toggleInlineStyle(editorState, ranges, styleKey, styleValue) {
+    let allApplied = true;
+
+    ranges.forEach(({ lineIndex, startIndex, endIndex, detail }) => {
+        const line = editorState[lineIndex];
+        if (!line) return;
+
+        let acc = 0;
+        for (const chunk of line.chunks) {
+            const handler = chunkRegistry.get(chunk.type);
+            const chunkLen = handler.getLength(chunk);
+            const chunkStart = acc;
+            const chunkEnd = acc + chunkLen;
+
+            if (endIndex > chunkStart && startIndex < chunkEnd) {
+                // ✅ 테이블이면 해당 셀의 스타일을 정확히 체크
+                let currentStyle = chunk.style;
+                if (chunk.type === 'table' && detail && detail.rowIndex !== undefined) {
+                    const cell = chunk.data[detail.rowIndex][detail.colIndex];
+                    currentStyle = cell.style || {};
+                }
+
+                if (!(currentStyle && currentStyle[styleKey] === styleValue)) {
+                    allApplied = false;
+                }
+            }
+            acc += chunkLen;
+        }
+    });
+
+    const patch = allApplied
+        ? { [styleKey]: undefined } 
+        : { [styleKey]: styleValue };
+
+    // 여기서 ranges(detail 포함)와 함께 다시 applyStylePatch로 갑니다.
+    return applyStylePatch(editorState, ranges, patch);
+}
+
+/*
 export function toggleInlineStyle(editorState, ranges, styleKey, styleValue) {
     let allApplied = true;
 
@@ -94,99 +220,6 @@ export function toggleInlineStyle(editorState, ranges, styleKey, styleValue) {
     const patch = allApplied
         ? { [styleKey]: undefined } 
         : { [styleKey]: styleValue };
-
-    return applyStylePatch(editorState, ranges, patch);
-}
-
-
-
-/**
- * 선택 영역에 스타일 patch 적용
- */
-
-/*
-export function applyStylePatch(editorState, ranges, patch) {
-    const newState = [...editorState];
-
-    ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
-        const line = editorState[lineIndex];
-        if (!line) return;
-
-        let offset = 0;
-        const newChunks = [];
-
-        line.chunks.forEach(chunk => {
-            const chunkStart = offset;
-            const chunkEnd   = offset + (chunk.text?.length || 0);
-
-            if (endIndex <= chunkStart || startIndex >= chunkEnd) {
-                // 영역 밖
-                newChunks.push(chunk);
-            } else {
-                // 영역 안 → 분리 후 patch 적용
-                const { before, target, after } = splitChunkByOffset(
-                    chunk,
-                    Math.max(0, startIndex - chunkStart),
-                    Math.min(chunk.text?.length || 0, endIndex - chunkStart)
-                );
-
-                newChunks.push(...before);
-
-                if (target.length) {
-                    target.forEach(t => {
-                        const newStyle = { ...t.style, ...patch };
-                        Object.keys(newStyle).forEach(k => newStyle[k] === undefined && delete newStyle[k]);
-
-                        if (t.type === 'text') {
-                            const handler  = chunkRegistry.get('text');
-                            newChunks.push(handler.create(t.text, newStyle));
-                        } else {
-                            // 비텍스트(chunk.type !== 'text')는 기존 속성을 유지, style만 업데이트
-                            newChunks.push({ ...t, style: newStyle });
-                        }
-                    });
-                }
-
-                newChunks.push(...after);
-            }
-
-            offset += chunk.text?.length || 0;
-        });
-
-        newState[lineIndex] = EditorLineModel(line.align, mergeChunks(newChunks));
-    });
-
-    return newState;
-}
-*/
-/**
- * 토글 스타일
- */
-/*
-export function toggleInlineStyle(editorState, ranges, styleKey, styleValue) {
-    let allApplied = true;
-
-    ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
-        const line = editorState[lineIndex];
-        if (!line) return;
-
-        let offset = 0;
-        for (const chunk of line.chunks) {
-            const chunkStart = offset;
-            const chunkEnd = offset + (chunk.text?.length || 0);
-
-            if (endIndex > chunkStart && startIndex < chunkEnd) {
-                if (!(chunk.style && chunk.style[styleKey] === styleValue)) {
-                    allApplied = false;
-                }
-            }
-            offset += chunk.text?.length || 0;
-        }
-    });
-
-    const patch = allApplied
-        ? { [styleKey]: undefined }   // 제거
-        : { [styleKey]: styleValue }; // 적용
 
     return applyStylePatch(editorState, ranges, patch);
 }
