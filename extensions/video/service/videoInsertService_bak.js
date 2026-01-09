@@ -1,6 +1,10 @@
 // extensions/video/service/videoInsertService.js
 import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
 
+/**
+ * 🎬 비디오 삽입 핵심 로직
+ * stateAPI, uiAPI를 통해 상태 변경/커서 이동/렌더링 처리
+ */
 export function createVideoInsertService(stateAPI, uiAPI) {
     function insertVideo(url, cursorPos) {
         if (!url) {
@@ -14,49 +18,45 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             return false;
         }
 
-        // 1. 활성화된 영역(본문 또는 TD)의 Key와 해당 영역 데이터 가져오기
-        const activeKey = uiAPI.getLastActiveKey();
-        if (!activeKey) return false;
+        const editorState = stateAPI.get();
 
-        const areaState = stateAPI.get(activeKey); // 영역별 상태 추출
-
-        // 2. 위치 결정
+        // 1. 위치 결정: 주입된 좌표 -> 저장된 마지막 유효 절대 좌표 -> 안전장치(끝 지점)
         let pos = cursorPos || uiAPI.getLastValidPosition();
         
         if (!pos) {
-            const lastIdx = Math.max(0, areaState.length - 1);
+            const lastIdx = Math.max(0, editorState.length - 1);
             pos = {
                 lineIndex: lastIdx,
-                absoluteOffset: areaState[lastIdx]?.chunks.reduce((s, c) => s + (c.text?.length || 0), 0) || 0
+                absoluteOffset: editorState[lastIdx]?.chunks.reduce((s, c) => s + (c.text?.length || 0), 0) || 0
             };
         }
 
         const { lineIndex, absoluteOffset } = pos;
 
-        // 3. 상태 변경 (해당 영역의 데이터만 전달)
+        // 2. 상태 변경 실행 (절대 오프셋 전달)
         const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset } = applyVideoBlock(
-            areaState,
+            editorState,
             videoId,
             lineIndex,
             absoluteOffset
         );
 
-        // 4. 상태 저장 (Key 기반 저장)
-        stateAPI.save(activeKey, newState);
+        // 3. 상태 저장
+        stateAPI.save(newState);
 
+        // 4. 복구용 통합 모델 객체 생성
         const nextCursorPos = {
-            containerId: activeKey, // 💡 컨테이너 정보 포함
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
-                type: 'text',
-                offset: restoreOffset
+                type      : 'text',
+                offset    : restoreOffset
             }
         };
 
-        // 5. 커서 정보 저장 및 UI 반영
         stateAPI.saveCursor(nextCursorPos);
-        
+
+        // 5. UI 반영
         uiAPI.renderLine(lineIndex, newState[lineIndex]);
         if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
             uiAPI.renderLine(restoreLineIndex, newState[restoreLineIndex]);
