@@ -39,6 +39,7 @@ export function createHistoryStore(initialState = {}) {
       // 히스토리 타임라인 업데이트
       history = history.slice(0, currentIndex + 1);
       history.push(nextMap);
+      console.log('history data : ', history);      
 
       if (history.length > MAX_HISTORY) {
         history.shift();

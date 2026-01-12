@@ -18,7 +18,7 @@ export function createCursorHistoryStore(initialCursor = null) {
       if (history.length > MAX_HISTORY) {
         history = history.slice(history.length - MAX_HISTORY);
       }
-
+      console.log('history cursor : ', history);
       currentIndex = history.length - 1;
     },
 

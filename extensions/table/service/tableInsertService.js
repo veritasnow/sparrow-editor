@@ -1,36 +1,52 @@
 // extensions/table/service/tableInsertService.js
 import { applyTableBlock } from '../utils/tableBlockUtil.js';
+import { EditorLineModel } from '../../../model/editorLineModel.js';
+import { TextChunkModel } from '../../../model/editorModel.js';
+import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
 
 export function createTableInsertService(stateAPI, uiAPI) {
+    
     function insertTable(rows, cols, cursorPos) {
         if (!rows || !cols) return false;
 
-        const editorState = stateAPI.get();
+        // 1. 현재 포커스가 있는 컨테이너 키 획득
+        const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
+        const editorState = stateAPI.get(activeKey);
 
-        // 1. 위치 결정 로직: 외부 주입 좌표 -> 없으면 마지막 유효 좌표 -> 없으면 문서 맨 끝
+        // 2. 위치 결정
         let pos = cursorPos || uiAPI.getLastValidPosition();
-
         if (!pos) {
             const lastLineIdx = Math.max(0, editorState.length - 1);
-            const lastLine = editorState[lastLineIdx];
             pos = {
                 lineIndex: lastLineIdx,
-                absoluteOffset: lastLine?.chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0) || 0
+                absoluteOffset: editorState[lastLineIdx]?.chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0) || 0
             };
         }
 
         const { lineIndex, absoluteOffset } = pos;
 
-        // 2. 상태 계산 (테이블 생성 및 삽입 위치 계산)
-        // applyTableBlock 내부에서도 이제 absoluteOffset을 사용하도록 맞춰야 합니다.
-        const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset } =
+        // 3. 상태 계산 (테이블 청크 및 새로운 라인 배열 생성)
+        const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset, tableChunk } =
             applyTableBlock(editorState, rows, cols, lineIndex, absoluteOffset);
 
-        // 3. 상태 저장
-        stateAPI.save(newState);
+        // 4. 🔥 [핵심] 각 셀의 ID를 State 엔진에 개별 컨테이너로 등록
+        tableChunk.data.forEach(row => {
+            row.forEach(cell => {
+                // 셀 내부의 초기 데이터는 빈 텍스트 라인 하나
+                stateAPI.save(cell.id, [
+                    EditorLineModel('left', [
+                        TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })
+                    ])
+                ]);
+            });
+        });
 
-        // 4. 커서 위치 객체 생성 (이미지 서비스와 동일한 규격)
+        // 5. 부모 컨테이너 상태 업데이트
+        stateAPI.save(activeKey, newState);
+
+        // 6. 커서 위치 정보 구성
         const nextCursorPos = {
+            containerId: activeKey, 
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
@@ -38,18 +54,18 @@ export function createTableInsertService(stateAPI, uiAPI) {
                 offset: restoreOffset
             }
         };
-
         stateAPI.saveCursor(nextCursorPos);
 
-        // 5. UI 렌더링: 변경된 줄과 커서가 이동할 줄 모두 갱신
-        uiAPI.renderLine(lineIndex, newState[lineIndex]);
-        
+        // 7. UI 렌더링
+        uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey);
         if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
-            uiAPI.renderLine(restoreLineIndex, newState[restoreLineIndex]);
+            uiAPI.renderLine(restoreLineIndex, newState[restoreLineIndex], activeKey);
         }
 
-        // 6. 실제 DOM 커서 복원
-        uiAPI.restoreCursor(nextCursorPos);
+        // 8. 커서 복원 (DOM 렌더링 동기화를 위해 setTimeout 사용)
+        setTimeout(() => {
+            uiAPI.restoreCursor(nextCursorPos);
+        }, 0);
 
         return true;
     }

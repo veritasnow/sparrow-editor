@@ -39,15 +39,13 @@ export function createEditorFactory() {
      * ───────────────────────────── */
     let mounted   = false;
     let disposers = [];
-
-    // 메인 본문 영역의 고유 키 설정
     const MAIN_CONTENT_KEY = `${rootId}-content`;
 
     /* ─────────────────────────────
-     * 1️⃣ 코어 서비스 초기화 (인스턴스 생성)
+     * 1️⃣ 코어 서비스 초기화
      * ───────────────────────────── */
 
-    // 1. Text Chunk 핸들러
+    // Chunk Registry 등록 (텍스트, 비디오, 이미지, 테이블)
     chunkRegistry.register('text', {
       isText: true,
       canSplit: true,
@@ -57,7 +55,6 @@ export function createEditorFactory() {
       applyStyle: (chunk, patch) => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
     });
 
-    // 2. Video Chunk 핸들러
     chunkRegistry.register('video', {
       isText: false,
       canSplit: false,
@@ -67,7 +64,6 @@ export function createEditorFactory() {
       applyStyle: (chunk) => chunk
     });
 
-    // 3. Image Chunk 핸들러
     chunkRegistry.register('image', {
       isText: false,
       canSplit: false,
@@ -77,93 +73,83 @@ export function createEditorFactory() {
       applyStyle: (chunk) => chunk
     });
 
-    // 4. Table Chunk 핸들러 (개선된 깊은 복사 포함)
     chunkRegistry.register('table', {
-        isText: false,
-        canSplit: false,
-        create: (rows, cols) => TableChunkModel(rows, cols),
-        getLength: () => 1,
-        clone: (chunk) => {
-            return {
-                ...chunk,
-                // 💡 셀 내부 데이터(state)는 Key-Value 스토어에 따로 있으므로,
-                // 테이블 청크 자체는 구조(ID 맵)만 복사하면 됩니다.
-                data: chunk.data.map(row =>
-                    row.map(cell => ({
-                        id: cell.id, // ID 유지
-                        style: { ...cell.style } // 스타일만 복사
-                    }))
-                ),
-                style: { ...chunk.style }
-            };
-        },
-        applyStyle: (chunk, patch) => ({ ...chunk, style: { ...chunk.style, ...patch } })
+      isText: false,
+      canSplit: false,
+      create: (rows, cols) => TableChunkModel(rows, cols),
+      getLength: () => 1,
+      clone: (chunk) => ({
+        ...chunk,
+        data: chunk.data.map(row =>
+          row.map(cell => ({
+            ...cell,
+            style: { ...cell.style },
+            chunks: cell.chunks ? cell.chunks.map(c => ({ ...c, style: { ...c.style } })) : undefined
+          }))
+        ),
+        style: { ...chunk.style }
+      }),
+      applyStyle: (chunk) => chunk
     });
 
-    // DOM 구조 생성
+    // DOM/Core 초기화
     const domService = createDOMCreateService(rootId);
     domService.create();
 
-    // 💡 상태 관리 엔진 (Key-Value 맵 구조로 초기화)
     const state = createEditorApp({
       [MAIN_CONTENT_KEY]: [
-        EditorLineModel(
-          DEFAULT_LINE_STYLE.align,
-          [TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })]
-        )
+        EditorLineModel(DEFAULT_LINE_STYLE.align, [TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })])
       ]
     });
 
-    // UI 및 렌더링 엔진
     const ui = createUiApplication({
       rootId: MAIN_CONTENT_KEY,
       rendererRegistry: {
-        text: textRenderer,
-        video: videoRenderer,
-        image: imageRenderer,
-        table: tableRenderer
+        text: textRenderer, video: videoRenderer, image: imageRenderer, table: tableRenderer
       }
     });
 
     const editorEl = document.getElementById(MAIN_CONTENT_KEY);
-
-    // 선택 시스템
     const domSelection = createSelectionService({ root: editorEl });
-
-    // 입력 시스템
     const inputApp = createInputApplication({ editorEl });
-    // inputProcessor가 MAIN_CONTENT_KEY를 인지하도록 전달
     const inputProcessor = createEditorInputProcessor(state, ui, domSelection, MAIN_CONTENT_KEY);
 
     /* ─────────────────────────────
-     * 2️⃣ 내부 API 정의 (Key 기반 대응)
+     * 2️⃣ 내부 API 정의 (중복 로직 통합 및 동적 타겟팅)
      * ───────────────────────────── */
+
+    /**
+     * @private 현재 작업 대상 컨테이너 키 결정 유틸리티
+     */
+    const getTargetKey = (explicitKey) => 
+        explicitKey || domSelection.getActiveKey() || MAIN_CONTENT_KEY;
+
     const stateAPI = {
-      // 인자가 없으면 메인 키 사용, 있으면 해당 키 사용
-      get: (key = MAIN_CONTENT_KEY) => state.getState(key),
+      get: (key) => state.getState(getTargetKey(key)),
+      
       save: (keyOrData, data) => {
-        // save(data) 형태로 호출되면 메인 키로 저장
-        if (data === undefined) {
-          state.saveEditorState(MAIN_CONTENT_KEY, keyOrData);
-        } else {
-          // save(key, data) 형태로 호출되면 해당 키로 저장
-          state.saveEditorState(keyOrData, data);
-        }
+        // 인자가 1개면 현재 활성 영역에 저장, 2개면 명시된 키에 저장
+        const isExplicit = data !== undefined;
+        const targetKey = isExplicit ? keyOrData : getTargetKey();
+        const stateData = isExplicit ? data : keyOrData;
+        state.saveEditorState(targetKey, stateData);
       },
+      
       saveCursor: (cursor) => state.saveCursorState(cursor),
       undo: () => state.undo(),
       redo: () => state.redo(),
-      isLineChanged: (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
-      getLines: (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
-      getLineRange: (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
+      
+      isLineChanged: (lineIdx, key) => state.isLineChanged(getTargetKey(key), lineIdx),
+      getLines: (idxs, key) => state.getLines(getTargetKey(key), idxs),
+      getLineRange: (start, end, key) => state.getLineRange(getTargetKey(key), start, end),
     };
 
     const uiAPI = {
-      render: (data) => ui.render(data),
-      renderLine: (i, d) => ui.renderLine(i, d),
+      render: (data, key) => ui.render(data, getTargetKey(key)),
+      renderLine: (lineIdx, data, key) => ui.renderLine(lineIdx, data, getTargetKey(key)),
+      insertLine: (lineIdx, align, key) => ui.insertNewLineElement(lineIdx, getTargetKey(key), align),
+      removeLine: (lineIdx, key) => ui.removeLineElement(lineIdx, getTargetKey(key)),
       restoreCursor: (pos) => domSelection.restoreCursor(pos),
-      insertLine: (i, a) => ui.insertNewLineElement(i, a),
-      removeLine: (i) => ui.removeLineElement(i),
       getDomSelection: () => domSelection.getDomSelection(),
       getSelectionPosition: () => domSelection.getSelectionPosition(),
       getInsertionAbsolutePosition: () => domSelection.getInsertionAbsolutePosition(),
@@ -175,11 +161,7 @@ export function createEditorFactory() {
 
     const editorAPI = {
       getToolbarButton(name) {
-        const buttonIds = {
-          video: `${rootId}-addVideoBtn`,
-          image: `${rootId}-addImageBtn`,
-          table: `${rootId}-addTableBtn`,
-        };
+        const buttonIds = { video: `${rootId}-addVideoBtn`, image: `${rootId}-addImageBtn`, table: `${rootId}-addTableBtn` };
         return document.getElementById(buttonIds[name] || name);
       }
     };
@@ -190,33 +172,20 @@ export function createEditorFactory() {
 
     function mount() {
       if (mounted) return;
-
       try {
-        // A. 초기 렌더링 (메인 키의 데이터 로드)
+        // 초기 본문 로드 및 커서 설정
         const currentContent = stateAPI.get(MAIN_CONTENT_KEY);
-        uiAPI.render(currentContent);
+        uiAPI.render(currentContent, MAIN_CONTENT_KEY);
         uiAPI.restoreCursor({
+          containerId: MAIN_CONTENT_KEY,
           lineIndex: 0,
-          anchor: {
-            chunkIndex: 0,
-            type: 'text',
-            offset: 0
-          }
+          anchor: { chunkIndex: 0, type: 'text', offset: 0 }
         });
 
-        // B. 기본 입력 바인딩
+        // 입력 바인딩
         inputApp.bindInput(inputProcessor.processInput);
-        disposers.push(() => {
-          console.log(`[${rootId}] Unbinding input processor...`);
-        });
 
-        // C. 키보드 서비스 바인딩
-        const keyProcessor = createEditorKeyHandler({
-          state: stateAPI,
-          ui: uiAPI,
-          domSelection: domSelection
-        });
-
+        const keyProcessor = createEditorKeyHandler({ state: stateAPI, ui: uiAPI, domSelection });
         inputApp.bindKeydown({
           handleEnter: keyProcessor.processEnter,
           handleBackspace: keyProcessor.processBackspace,
@@ -224,7 +193,7 @@ export function createEditorFactory() {
           redo: keyProcessor.redo
         });
 
-        // D. 툴바 및 피처 바인딩
+        // 툴바 및 기능 바인딩
         const styleToolbar = {
           boldBtn: document.getElementById(`${rootId}-boldBtn`),
           italicBtn: document.getElementById(`${rootId}-italicBtn`),
@@ -239,32 +208,21 @@ export function createEditorFactory() {
           rightBtn: document.getElementById(`${rootId}-alignRightBtn`)
         };
 
-        // Selection 피처 바인딩
         bindSelectionFeature(stateAPI, uiAPI, editorEl, { ...styleToolbar, ...alignToolbar });
+        
+        const sDisp = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
+        const aDisp = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
+        if (sDisp) disposers.push(sDisp);
+        if (aDisp) disposers.push(aDisp);
 
-        // 스타일 및 정렬 버튼
-        const styleDisposer = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
-        if (styleDisposer) disposers.push(styleDisposer);
-
-        const alignDisposer = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
-        if (alignDisposer) disposers.push(alignDisposer);
-
-        // E. 익스텐션 실행
+        // 익스텐션 설정
         extensions.forEach(ext => {
           if (!ext) return;
-          console.log(`[${rootId}] Setting up extension:`, ext);
-          
-          const extDisposer = ext.setup?.({ stateAPI, uiAPI, editorAPI });
-          
-          if (typeof extDisposer === 'function') {
-            disposers.push(extDisposer);
-          } else if (ext.destroy) {
-            disposers.push(() => ext.destroy());
-          }
+          const extDisp = ext.setup?.({ stateAPI, uiAPI, editorAPI });
+          if (typeof extDisp === 'function') disposers.push(extDisp);
         });
 
         mounted = true;
-        console.log(`[SparrowEditor] Instance ${rootId} mounted.`);
       } catch (error) {
         console.error(`[SparrowEditor] Mount failed:`, error);
         unmount(); 
@@ -273,45 +231,20 @@ export function createEditorFactory() {
 
     function unmount() {
       if (!mounted) return;
-
-      console.log(`[SparrowEditor] Unmounting ${rootId}...`);
-      
-      while (disposers.length > 0) {
-        const dispose = disposers.pop();
-        try {
-          if (typeof dispose === 'function') dispose();
-        } catch (e) {
-          console.error(`[SparrowEditor] Error during disposal:`, e);
-        }
-      }
-
+      disposers.forEach(d => { try { d?.(); } catch(e){} });
+      disposers = [];
       mounted = false;
     }
 
     function destroy() {
       unmount();
-      
       ui.destroy();
       state.destroy();
       inputApp.destroy();
       domService.destroy();
-
-      console.log(`[SparrowEditor] Instance ${rootId} destroyed.`);
     }
 
-    /* ─────────────────────────────
-     * 4️⃣ 외부 노출 인터페이스
-     * ───────────────────────────── */
-    return {
-      mount,
-      unmount,
-      destroy,
-      isMounted: () => mounted,
-      state,
-      ui,
-      stateAPI,
-      uiAPI
-    };
+    return { mount, unmount, destroy, isMounted: () => mounted, state, ui, stateAPI, uiAPI };
   }
 
   return { create };
