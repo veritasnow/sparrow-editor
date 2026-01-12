@@ -157,7 +157,7 @@ export function createEditorFactory() {
       redo: () => state.redo(),
       isLineChanged: (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
       getLines: (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
-      getLineRange: (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end)
+      getLineRange: (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
     };
 
     const uiAPI = {

@@ -1,44 +1,45 @@
+// store/historyStore.js
 export function createHistoryStore(initialState = {}) {
   const MAX_HISTORY = 50;
+  const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
-  // 1. 초기 상태 설정 (불필요한 전체 딥클론 제거, 얕은 복사만)
-  let history = [{ ...initialState }];
+  const baseState = deepClone(initialState);
+  let history = [deepClone(baseState)];
   let currentIndex = 0;
 
   return {
     // ----------------------------
-    // [1] 상태 조회 (참조 비교를 위해 원본 그대로 반환)
+    // [1] 상태 조회 (Key 필수)
     // ----------------------------
+    // 특정 키의 현재 데이터를 가져옴
     getState: (key) => {
       const present = history[currentIndex];
       return present[key] || [];
     },
 
+    // 히스토리 전체 정보 (언두/레두 카운트용)
     getHistoryStatus: () => ({
       pastCount: currentIndex,
       futureCount: history.length - currentIndex - 1,
-      present: history[currentIndex]
+      present: history[currentIndex] // 전체 Map
     }),
 
     // ----------------------------
-    // [2] 상태 변경 (구조적 공유 적용)
+    // [2] 상태 변경 (Key 기반)
     // ----------------------------
     applyPatch: (key, patch, reducer) => {
       const prevMap = history[currentIndex];
       const currentData = prevMap[key] || [];
-      
-      // 리듀서에서 '변경된 부분만 새 객체'로 반환한다고 가정 (고수의 전제조건)
       const newData = reducer(currentData, patch);
 
-      // [성능 핵심] 주소값 비교. 데이터가 안 변했으면 연산 종료.
-      if (currentData === newData) return;
+      if (JSON.stringify(currentData) === JSON.stringify(newData)) return;
 
-      // 새 Map 생성 (바뀐 key만 교체, 나머지는 이전 참조 유지)
       const nextMap = { ...prevMap, [key]: newData };
 
-      // 히스토리 타임라인 업데이트
       history = history.slice(0, currentIndex + 1);
       history.push(nextMap);
+
+      console.log(nextMap);
 
       if (history.length > MAX_HISTORY) {
         history.shift();
@@ -57,10 +58,7 @@ export function createHistoryStore(initialState = {}) {
       return history[currentIndex];
     },
 
-    // 현재 히스토리 인덱스에서 데이터만 살짝 교체 (Undo 기록 안 남김)
     replacePresent: (key, newData) => {
-      if (history[currentIndex][key] === newData) return;
-      
       history[currentIndex] = { 
         ...history[currentIndex], 
         [key]: newData 
@@ -68,16 +66,21 @@ export function createHistoryStore(initialState = {}) {
     },
 
     // ----------------------------
-    // [3] 변경 감지 (O(1) 성능의 혁명)
+    // [3] 변경 감지 (Key 기반)
     // ----------------------------
     isLineChanged: (key, lineIndex) => {
-      const prev = history[currentIndex - 1]?.[key]?.[lineIndex];
-      const curr = history[currentIndex]?.[key]?.[lineIndex];
-      
-      // [성능 핵심] 텍스트 전체를 비교하지 않고 '주소'가 바뀌었는지만 확인
-      return prev !== curr;
+      const prev = history[currentIndex - 1];
+      const curr = history[currentIndex];
+      if (!prev || !prev[key]) return true;
+
+      const prevLine = prev[key][lineIndex];
+      const currLine = curr[key][lineIndex];
+
+      if (!prevLine || !currLine) return prevLine !== currLine;
+      return JSON.stringify(prevLine) !== JSON.stringify(currLine);
     },
 
+    // 모든 Key 중 변경된 데이터가 있는 Key와 그 데이터를 반환
     getChangedMap: () => {
       const prev = history[currentIndex - 1] || {};
       const curr = history[currentIndex] || {};
@@ -85,8 +88,7 @@ export function createHistoryStore(initialState = {}) {
 
       const allKeys = new Set([...Object.keys(prev), ...Object.keys(curr)]);
       allKeys.forEach(key => {
-        // 주소값이 다르면 해당 키의 데이터는 변경된 것임
-        if (prev[key] !== curr[key]) {
+        if (JSON.stringify(prev[key] || null) !== JSON.stringify(curr[key] || null)) {
           changed[key] = curr[key] || [];
         }
       });
@@ -94,7 +96,7 @@ export function createHistoryStore(initialState = {}) {
     },
 
     // ----------------------------
-    // [4] 조회 헬퍼 (원본 유지)
+    // [4] 조회 헬퍼 (Key 기반)
     // ----------------------------
     getHistory: () => history,
 
@@ -109,11 +111,12 @@ export function createHistoryStore(initialState = {}) {
     },
 
     // ----------------------------
-    // [5] 리셋
+    // [5] reset
     // ----------------------------
     reset: () => {
-      history = [{ ...initialState }];
+      history = [deepClone(baseState)];
       currentIndex = 0;
+      console.log("🧹 HistoryStore reset");
     }
   };
 }
