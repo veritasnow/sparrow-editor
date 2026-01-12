@@ -1,10 +1,13 @@
 // /module/uiModule/service/inputModelService.js
+
 import { EditorLineModel } from '../../model/editorLineModel.js';
 import { chunkRegistry } from '../chunk/chunkRegistry.js';
 
 export const inputModelService = {
     /**
-     * 텍스트 청크 업데이트 (containerId 포함)
+     * [개선] 텍스트 업데이트
+     * - 이제 본문 root 뿐만 아니라 TD(셀) 내부의 텍스트 수정도 이 함수가 담당합니다.
+     * - 어느 컨테이너인지는 restoreData에 포함된 containerId로 구분합니다.
      */
     updateTextChunk(currentLine, dataIndex, textContent, cursorOffset, lineIndex, containerId) {
         const oldChunk = currentLine.chunks[dataIndex];
@@ -17,7 +20,7 @@ export const inputModelService = {
         return {
             updatedLine: EditorLineModel(currentLine.align, newChunks),
             restoreData: {
-                containerId,
+                containerId, // 💡 어느 박스(본문 or 셀)인지 기록
                 lineIndex,
                 anchor: { 
                     chunkIndex: dataIndex, 
@@ -29,7 +32,8 @@ export const inputModelService = {
     },
 
     /**
-     * 기본 복원 데이터 생성
+     * [개선] 기본 복원 데이터 생성
+     * - 테이블 특수 detail을 제거하고 containerId를 추가했습니다.
      */
     createDefaultRestoreData(currentLine, lineIndex, containerId) {
         const chunks = currentLine.chunks;
@@ -37,6 +41,7 @@ export const inputModelService = {
         if (lastIdx < 0) return null;
 
         const lastChunk = chunks[lastIdx];
+
         return {
             containerId,
             lineIndex,
@@ -49,37 +54,20 @@ export const inputModelService = {
     },
 
     /**
-     * 정규화 로직 (💡 detail 필드 보존 필수!) 유틸로 이관함... 추후 삭제예정
+     * [유지/개선] 정규화 로직
+     * - anchor 구조로 통일하며 detail 필드를 제거합니다.
      */
-    /*
     normalizeRestoreData(restoreData, defaultContainerId) {
         if (!restoreData) return null;
         
-        // anchor 구조인 경우
-        if (restoreData.anchor) {
-            return {
-                containerId: restoreData.containerId || defaultContainerId,
-                lineIndex: restoreData.lineIndex,
-                anchor: {
-                    ...restoreData.anchor, // 💡 detail(rowIndex, colIndex 등)을 통째로 유지
-                    chunkIndex: restoreData.anchor.chunkIndex ?? 0,
-                    type: restoreData.anchor.type || 'text',
-                    offset: restoreData.anchor.offset ?? 0
-                }
-            };
-        }
-
-        // 평면 구조(구형)인 경우 대응
         return {
             containerId: restoreData.containerId || defaultContainerId,
             lineIndex: restoreData.lineIndex,
             anchor: {
-                chunkIndex: restoreData.chunkIndex ?? 0,
-                type: restoreData.type || 'text',
-                offset: restoreData.offset ?? 0,
-                detail: restoreData.detail || null // 💡 detail이 있다면 유지
+                chunkIndex: restoreData.anchor?.chunkIndex ?? restoreData.chunkIndex ?? 0,
+                type: restoreData.anchor?.type || 'text',
+                offset: restoreData.anchor?.offset ?? restoreData.offset ?? 0
             }
         };
     }
-    */
 };

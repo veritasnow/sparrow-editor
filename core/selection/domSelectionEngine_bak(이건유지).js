@@ -2,47 +2,80 @@
 
 export function createSelectionService({ root }) {
     let lastValidPos = null;
+    // 💡 팝업 대응을 위해 마지막 활성 키를 저장할 변수 추가
     let lastActiveKey = null;
 
     /**
-     * 0. 현재 커서 위치의 고유 Key(ID) 반환 및 갱신
+     * [Helper] 현재 커서가 속한 편집 영역(본문 또는 TD)의 DOM 객체를 가져옵니다.
+     */
+    function getActiveContainer() {
+        const activeKey = getActiveKey();
+        if (!activeKey) return root;
+        
+        // ID로 엘리먼트를 찾되, 없으면 root를 반환
+        return document.getElementById(activeKey) || root;
+    }
+
+    /**
+     * 0. 현재 커서 위치의 고유 Key(ID) 반환
      */
     function getActiveKey() {
         const sel = window.getSelection();
+        
+        // 커서가 유효할 때만 실시간 키를 업데이트
         if (sel && sel.rangeCount > 0) {
             const range = sel.getRangeAt(0);
             let node = range.startContainer;
-            if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
 
-            // ID가 있는 가장 가까운 편집 영역(Root 혹은 TD/TH) 탐색
+            if (node.nodeType === Node.TEXT_NODE) {
+                node = node.parentElement;
+            }
+
             const container = node.closest('[contenteditable="true"], td[id], th[id]');
+            
             if (container && container.id) {
+                // 💡 유효한 편집 영역이면 lastActiveKey를 갱신
                 lastActiveKey = container.id;
                 return container.id;
             }
         }
+
+        // 💡 팝업창 클릭 등으로 포커스를 잃었을 경우, 마지막으로 기억된 키를 반환
         return lastActiveKey;
     }
 
-    /**
-     * 활성화된 컨테이너 DOM 객체 반환
-     */
-    function getActiveContainer() {
-        const activeKey = getActiveKey();
-        return (activeKey ? document.getElementById(activeKey) : null) || root;
+    // 💡 외부에서 강제로 마지막 키를 가져오고 싶을 때 사용
+    function getLastActiveKey() {
+        return lastActiveKey;
+    }
+
+    function updateLastValidPosition() {
+        // 절대 위치를 저장하면서 동시에 activeKey도 스냅샷 찍음
+        const pos = getInsertionAbsolutePosition();
+        if (pos) {
+            lastValidPos = pos;
+            getActiveKey(); // lastActiveKey 갱신 유도
+        }
+    }
+
+    function getLastValidPosition() {
+        return lastValidPos;
     }
 
     /**
-     * 1. 통합 모델 추출 (Container ID 및 테이블 정밀 좌표 포함)
+     * 1. 통합 모델 추출 (Container 기준 보정)
      */
     function getSelectionPosition() {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+
         const context = getSelectionContext(); 
         if (!context) return null;
 
-        const { lineIndex, dataIndex, activeNode, container, cursorOffset, activeContainer } = context;
+        const { lineIndex, dataIndex, activeNode, container, cursorOffset } = context;
         const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
         
-        // 테이블 내부 감지 및 상세 좌표(rowIndex, colIndex) 추출
+        // 테이블 내부 감지
         const tableEl = targetEl?.closest('table');
         if (tableEl) {
             const td = container.nodeType === Node.TEXT_NODE 
@@ -54,7 +87,6 @@ export function createSelectionService({ root }) {
                 const tbody = tr.closest('tbody') || tableEl;
                 
                 return {
-                    containerId: activeContainer.id,
                     lineIndex,
                     anchor: {
                         chunkIndex: dataIndex,
@@ -69,11 +101,15 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 일반 청크(텍스트, 이미지, 비디오) 처리
-        let chunkType = activeNode?.dataset?.type || 'text';
+        // 일반 청크 처리
+        let chunkType = 'text';
+        if (targetEl) {
+            if (targetEl.classList.contains('chunk-video') || targetEl.querySelector('iframe, video')) chunkType = 'video';
+            else if (targetEl.classList.contains('chunk-image') || targetEl.querySelector('img')) chunkType = 'image';
+            else if (targetEl.dataset.type) chunkType = targetEl.dataset.type;
+        }
 
         return {
-            containerId: activeContainer.id,
             lineIndex,
             anchor: {
                 chunkIndex: dataIndex ?? 0,
@@ -84,12 +120,15 @@ export function createSelectionService({ root }) {
     }
 
     /**
-     * 2. 커서 복원 (Container ID 기반 영역 타겟팅)
+     * 2. 커서 복원 (Container 기준 보정)
      */
     function restoreCursor(cursorData) {
         if (!cursorData || cursorData.lineIndex === undefined) return;
 
         const { lineIndex, anchor, containerId } = cursorData;
+        
+        // 💡 중요: 전달받은 containerId가 있으면 해당 영역을 찾고, 
+        // 없으면 getActiveKey()(즉, lastActiveKey 포함)를 통해 영역 탐색
         const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
         if (!targetContainer) return;
 
@@ -105,7 +144,6 @@ export function createSelectionService({ root }) {
         const sel = window.getSelection();
 
         try {
-            // 테이블 전용 복원
             if (anchor.type === 'table' && anchor.detail) {
                 const { rowIndex, colIndex, offset } = anchor.detail;
                 const tr = chunkEl.querySelectorAll('tr')[rowIndex];
@@ -115,11 +153,9 @@ export function createSelectionService({ root }) {
                 let targetNode = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
                 range.setStart(targetNode, Math.min(offset, targetNode.length));
             } 
-            // 이미지/비디오 복원 (청크 뛰어넘기 방지)
             else if (anchor.type === 'video' || anchor.type === 'image') {
                 anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
             } 
-            // 일반 텍스트 복원
             else {
                 let targetNode = Array.from(chunkEl.childNodes).find(n => n.nodeType === Node.TEXT_NODE) 
                                  || chunkEl.appendChild(document.createTextNode(''));
@@ -133,32 +169,44 @@ export function createSelectionService({ root }) {
     }
 
     /**
-     * 3. 기초 컨텍스트 추출 (활성 컨테이너 기준)
+     * 3. 기초 컨텍스트 추출 (기준점 보정)
      */
     function getSelectionContext() {
         const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return null;
+        if (!sel.rangeCount) return null;
 
         const range = sel.getRangeAt(0);
         const container = range.startContainer;
         const cursorOffset = range.startOffset;
+
+        // 현재 속한 컨테이너(Root 혹은 TD)를 동적으로 파악
         const activeContainer = getActiveContainer();
 
         let el = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
         const parentP = el.closest('p');
 
-        // 찾은 P태그가 현재 활성화된 영역(root 혹은 특정 TD) 내부에 있는지 검증
+        // 찾은 P태그가 현재 활성화된 영역 내부에 있는지 검증
         if (!parentP || !activeContainer.contains(parentP)) return null;
         
+        // Index를 activeContainer 기준으로 추출
         const lineIndex = Array.from(activeContainer.children).indexOf(parentP);
+
         const activeNode = el.closest('[data-index]');
         const dataIndex = activeNode ? parseInt(activeNode.dataset.index, 10) : null;
 
-        return { activeContainer, lineIndex, parentP, container, cursorOffset, activeNode, dataIndex };
+        return { 
+            activeContainer,
+            lineIndex, 
+            parentP, 
+            container, 
+            cursorOffset,
+            activeNode, 
+            dataIndex 
+        };
     }
 
     /**
-     * 4. 멀티 라인 드래그 선택 영역 추출
+     * 4. 멀티 라인 선택 (기준점 보정)
      */
     function getDomSelection() {
         const sel = window.getSelection();
@@ -210,13 +258,24 @@ export function createSelectionService({ root }) {
     }
 
     /**
-     * 5. 삽입을 위한 절대 위치 추출
+     * 5. 절대 위치 추출 (기준점 보정)
      */
     function getInsertionAbsolutePosition() {
-        const context = getSelectionContext();
-        if (!context) return null;
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return null;
 
-        const { lineIndex, container, cursorOffset, parentP } = context;
+        const range = sel.getRangeAt(0);
+        const container = range.startContainer;
+        const offsetInNode = range.startOffset;
+        const activeContainer = getActiveContainer();
+
+        const parentP = container.nodeType === Node.TEXT_NODE 
+            ? container.parentElement.closest('p') 
+            : container.closest('p');
+
+        if (!parentP || !activeContainer.contains(parentP)) return null;
+        
+        const lineIndex = Array.from(activeContainer.children).indexOf(parentP);
 
         let absoluteOffset = 0;
         const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
@@ -224,7 +283,7 @@ export function createSelectionService({ root }) {
         while (walker.nextNode()) {
             const node = walker.currentNode;
             if (node === container) {
-                absoluteOffset += cursorOffset;
+                absoluteOffset += offsetInNode;
                 break;
             }
             absoluteOffset += node.textContent.length;
@@ -236,24 +295,15 @@ export function createSelectionService({ root }) {
     return { 
         getSelectionPosition, 
         getActiveKey,
-        getLastActiveKey: () => lastActiveKey,
+        getLastActiveKey, // 💡 추가된 반환 함수
         getInsertionAbsolutePosition,
-        updateLastValidPosition: () => {
-            const pos = getSelectionPosition();
-            if (pos) {
-                lastValidPos = { 
-                    lineIndex: pos.lineIndex, 
-                    absoluteOffset: getInsertionAbsolutePosition()?.absoluteOffset || 0 
-                };
-                lastActiveKey = pos.containerId;
-            }
-        },
-        getLastValidPosition: () => lastValidPos,
+        updateLastValidPosition,
+        getLastValidPosition,
         getSelectionContext, 
         restoreCursor,
         getDomSelection,
-        // 구형 호환성 메서드
-        restoreSelectionPositionByChunk: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: data }),
-        restoreTableSelection: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
+        // 구형 함수 호환성 유지
+        restoreSelectionPositionByChunk: (data) => restoreCursor({ lineIndex: data.lineIndex, anchor: data }),
+        restoreTableSelection: (data) => restoreCursor({ lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
     };
 }
