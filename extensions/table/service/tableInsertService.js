@@ -46,7 +46,7 @@ export function createTableInsertService(stateAPI, uiAPI) {
                     EditorLineModel('left', [
                         TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })
                     ])
-                ]);
+                ], false);
             });
         });
 

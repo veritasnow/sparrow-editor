@@ -139,11 +139,11 @@ export function createEditorFactory() {
      * ───────────────────────────── */
     const stateAPI = {
       get: (key = MAIN_CONTENT_KEY) => state.getState(key),
-      save: (keyOrData, data) => {
+      save: (key, data, options = { saveHistory: true }) => {
         if (data === undefined) {
-          state.saveEditorState(MAIN_CONTENT_KEY, keyOrData);
+          state.saveEditorState(MAIN_CONTENT_KEY, data, options);
         } else {
-          state.saveEditorState(keyOrData, data);
+          state.saveEditorState(key, data, options);
         }
       },
       saveCursor: (cursor) => state.saveCursorState(cursor),
@@ -205,6 +205,7 @@ export function createEditorFactory() {
         uiAPI.render(currentContent, MAIN_CONTENT_KEY);
         
         uiAPI.restoreCursor({
+          containerId: MAIN_CONTENT_KEY,
           lineIndex: 0,
           anchor: {
             chunkIndex: 0,

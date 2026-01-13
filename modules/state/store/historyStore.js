@@ -23,29 +23,33 @@ export function createHistoryStore(initialState = {}) {
     // ----------------------------
     // [2] 상태 변경 (구조적 공유 적용)
     // ----------------------------
-    applyPatch: (key, patch, reducer) => {
+    applyPatch: (key, patch, reducer, options = { saveHistory: true }) => {
       const prevMap = history[currentIndex];
       const currentData = prevMap[key] || [];
-      
-      // 리듀서에서 '변경된 부분만 새 객체'로 반환한다고 가정 (고수의 전제조건)
       const newData = reducer(currentData, patch);
 
-      // [성능 핵심] 주소값 비교. 데이터가 안 변했으면 연산 종료.
       if (currentData === newData) return;
 
-      // 새 Map 생성 (바뀐 key만 교체, 나머지는 이전 참조 유지)
       const nextMap = { ...prevMap, [key]: newData };
 
-      // 히스토리 타임라인 업데이트
-      history = history.slice(0, currentIndex + 1);
-      history.push(nextMap);
-      console.log('history data : ', history);      
-
-      if (history.length > MAX_HISTORY) {
-        history.shift();
+      if (options.saveHistory) {
+        // [기존 방식] 히스토리 타임라인을 새로 생성 (Undo 가능)
+        history = history.slice(0, currentIndex + 1);
+        history.push(nextMap);
+        
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          currentIndex++;
+        }
       } else {
-        currentIndex++;
+        // [Silent 방식] 현재 타임라인의 데이터만 교체 (Undo 기록 안 남음)
+        // 💡 이렇게 하면 여러 번 save해도 히스토리 스택은 1칸만 유지됩니다.
+        history[currentIndex] = nextMap;
       }
+
+      console.log('history:', history);
+
     },
 
     undo: () => {

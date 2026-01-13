@@ -42,10 +42,10 @@ export function createEditorApp(initialState = {}) {
   // ----------------------------
   // [3] 상태 변경 API (Key 필수)
   // ----------------------------
-  const saveEditorState = (key, state) => {
+  const saveEditorState = (key, state, options) => {
     assertAlive();
-    // snapshotService가 내부적으로 store.applyPatch(key, ...)를 호출하도록 수정되어야 함
-    snapshotService.saveEditorState(key, state);
+    // snapshotService로 options(saveHistory 등)를 전달합니다.
+    snapshotService.saveEditorState(key, state, options);
   };
 
   const saveCursorState = (cursor) => {
