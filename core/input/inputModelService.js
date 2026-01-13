@@ -47,39 +47,4 @@ export const inputModelService = {
             }
         };
     },
-
-    /**
-     * 정규화 로직 (💡 detail 필드 보존 필수!) 유틸로 이관함... 추후 삭제예정
-     */
-    /*
-    normalizeRestoreData(restoreData, defaultContainerId) {
-        if (!restoreData) return null;
-        
-        // anchor 구조인 경우
-        if (restoreData.anchor) {
-            return {
-                containerId: restoreData.containerId || defaultContainerId,
-                lineIndex: restoreData.lineIndex,
-                anchor: {
-                    ...restoreData.anchor, // 💡 detail(rowIndex, colIndex 등)을 통째로 유지
-                    chunkIndex: restoreData.anchor.chunkIndex ?? 0,
-                    type: restoreData.anchor.type || 'text',
-                    offset: restoreData.anchor.offset ?? 0
-                }
-            };
-        }
-
-        // 평면 구조(구형)인 경우 대응
-        return {
-            containerId: restoreData.containerId || defaultContainerId,
-            lineIndex: restoreData.lineIndex,
-            anchor: {
-                chunkIndex: restoreData.chunkIndex ?? 0,
-                type: restoreData.type || 'text',
-                offset: restoreData.offset ?? 0,
-                detail: restoreData.detail || null // 💡 detail이 있다면 유지
-            }
-        };
-    }
-    */
-};
+}

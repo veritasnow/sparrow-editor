@@ -5,7 +5,7 @@ import { createDOMParseService } from "../service/domParserService.js";
 /**
  * UI 애플리케이션을 생성합니다.
  * UI 레이어는 Model <-> View 변환의 경계층이며
- * DOM의 생명주기를 단일 책임으로 관리합니다.
+ * targetKey(activeKey)를 통해 본문 및 테이블 셀 등 특정 영역의 DOM 생명주기를 관리합니다.
  */
 export function createUiApplication({ rootId, rendererRegistry }) {
 
@@ -17,7 +17,8 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     throw new Error(`❌ UI root element not found: ${rootId}`);
   }
 
-  const renderService    = createRenderService({ rootId, rendererRegistry });
+  // 💡 renderService 생성 시 rootId 전달 (기본 컨테이너로 설정)
+  const renderService = createRenderService({ rootId, rendererRegistry });
   const domParserService = createDOMParseService();
 
   let destroyed = false;
@@ -35,61 +36,68 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     if (destroyed) return;
     destroyed = true;
 
-    // 1. Selection 해제
+    // Selection 해제
     const sel = window.getSelection();
     sel?.removeAllRanges();
 
-    // 2. root 내부 DOM 정리
+    // root 내부 DOM 정리
     rootEl.innerHTML = "";
 
-    console.log("🗑️ UiApplication destroyed : ", rootEl);
+    console.log("🗑️ UiApplication destroyed : ", rootId);
   }
 
   // ----------------------------
-  // [3] 외부 노출 API
+  // [3] 외부 노출 API (targetKey 지원)
   // ----------------------------
   return {
-    // 💡 rootId 노출 (상위 레이어 연계용)
     rootId,
 
     // ───────── 렌더링 (Model → View) ─────────
-    render(editorState) {
+    
+    /**
+     * @param {Array} editorState - 라인 모델 배열
+     * @param {string} targetKey - 렌더링할 대상 ID (기본값: 메인 rootId)
+     */
+    render(editorState, targetKey = rootId) {
       assertAlive();
-      renderService.render(editorState);
+      renderService.render(editorState, targetKey);
     },
 
-    renderLine(lineIndex, lineData) {
+    renderLine(lineIndex, lineData, targetKey = rootId) {
       assertAlive();
-      renderService.renderLine(lineIndex, lineData);
+      renderService.renderLine(lineIndex, lineData, targetKey);
     },
 
-    renderChunk(lineIndex, chunkIndex, chunkData) {
+    renderChunk(lineIndex, chunkIndex, chunkData, targetKey = rootId) {
       assertAlive();
-      renderService.renderChunk(lineIndex, chunkIndex, chunkData);
+      renderService.renderChunk(lineIndex, chunkIndex, chunkData, targetKey);
     },
 
-    ensureFirstLine() {
+    // 💡 renderService의 명칭 'ensureFirstLineP'와 일치시킴
+    ensureFirstLineP(targetKey = rootId) {
       assertAlive();
-      renderService.ensureFirstLineP();
+      renderService.ensureFirstLineP(targetKey);
     },
 
-    shiftLinesDown(fromIndex) {
+    shiftLinesDown(fromIndex, targetKey = rootId) {
       assertAlive();
-      renderService.shiftLinesDown(fromIndex);
+      renderService.shiftLinesDown(fromIndex, targetKey);
     },
 
     // ───────── DOM 구조 조작 ─────────
-    insertNewLineElement(lineIndex, align) {
+
+    insertLine(lineIndex, align, targetKey = rootId) {
       assertAlive();
-      renderService.insertNewLineElement(lineIndex, align);
+      renderService.insertLine(lineIndex, align, targetKey);
     },
 
-    removeLineElement(lineIndex) {
+    removeLine(lineIndex, targetKey = rootId) {
       assertAlive();
-      renderService.removeLineElement(lineIndex);
+      renderService.removeLine(lineIndex, targetKey);
     },
 
     // ───────── DOM → Model 파싱 ─────────
+    
     parseLineDOM(
       parentP,
       currentLineChunks,
@@ -107,10 +115,6 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       );
     },
 
-    /**
-     * 📌 Table DOM → table chunk data 변환
-     *    table chunk 업데이트 시 사용
-     */
     extractTableDataFromDOM(tableElement) {
       assertAlive();
       return domParserService.extractTableDataFromDOM(tableElement);

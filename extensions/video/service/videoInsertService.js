@@ -1,7 +1,15 @@
 // extensions/video/service/videoInsertService.js
 import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
 
+/**
+ * 유튜브 비디오 삽입 서비스
+ */
 export function createVideoInsertService(stateAPI, uiAPI) {
+    
+    /**
+     * @param {string} url - 유튜브 URL
+     * @param {object} cursorPos - 삽입할 구체적 위치 (선택 사항)
+     */
     function insertVideo(url, cursorPos) {
         if (!url) {
             alert('유튜브 URL을 입력하세요.');
@@ -14,13 +22,16 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             return false;
         }
 
-        // 1. 활성화된 영역(본문 또는 TD)의 Key와 해당 영역 데이터 가져오기
-        const activeKey = uiAPI.getLastActiveKey();
+        // 1. 활성화된 영역(본문 또는 TD)의 Key 확보
+        // 💡 포커스가 빠졌을 상황을 대비해 LastActiveKey까지 체크
+        const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
         if (!activeKey) return false;
 
-        const areaState = stateAPI.get(activeKey); // 영역별 상태 추출
+        // 2. 해당 영역 데이터 가져오기
+        const areaState = stateAPI.get(activeKey);
+        if (!areaState) return false;
 
-        // 2. 위치 결정
+        // 3. 위치 결정
         let pos = cursorPos || uiAPI.getLastValidPosition();
         
         if (!pos) {
@@ -33,7 +44,7 @@ export function createVideoInsertService(stateAPI, uiAPI) {
 
         const { lineIndex, absoluteOffset } = pos;
 
-        // 3. 상태 변경 (해당 영역의 데이터만 전달)
+        // 4. 상태 변경 (비즈니스 로직 실행)
         const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset } = applyVideoBlock(
             areaState,
             videoId,
@@ -41,11 +52,12 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             absoluteOffset
         );
 
-        // 4. 상태 저장 (Key 기반 저장)
+        // 5. 상태 저장 (Key 기반)
         stateAPI.save(activeKey, newState);
 
+        // 6. 복원할 커서 정보 생성
         const nextCursorPos = {
-            containerId: activeKey, // 💡 컨테이너 정보 포함
+            containerId: activeKey, // 💡 컨테이너 정보 주입
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
@@ -54,15 +66,14 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             }
         };
 
-        // 5. 커서 정보 저장 및 UI 반영
+        // 7. 커서 정보 저장 (History 관리용)
         stateAPI.saveCursor(nextCursorPos);
         
-        uiAPI.renderLine(lineIndex, newState[lineIndex]);
-        if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
-            uiAPI.renderLine(restoreLineIndex, newState[restoreLineIndex]);
-        }
+        // 8. UI 반영 (activeKey 타겟팅)
+        // 💡 비디오 블록은 새로운 라인을 생성하거나 구조를 바꾸므로 전체 render가 안전합니다.
+        uiAPI.render(newState, activeKey);
         
-        // 6. 커서 최종 복원
+        // 9. 커서 최종 복원 (해당 셀 내부로 복귀)
         uiAPI.restoreCursor(nextCursorPos);
 
         return true;

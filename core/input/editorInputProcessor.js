@@ -3,8 +3,6 @@ import { EditorLineModel } from '../../model/editorLineModel.js';
 import { inputModelService } from './inputModelService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-
-
 export function createEditorInputProcessor(state, ui, domSelection, defaultKey) {
 
     /**
@@ -14,26 +12,29 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         // 1. 현재 포커스가 위치한 컨테이너(본문 root 또는 특정 TD/TH)의 ID 확보
         const activeKey = domSelection.getActiveKey() || defaultKey;
         const selection = domSelection.getSelectionContext();
-
+        
+        console.log('[InputProcessor] ActiveKey:', activeKey);
+        
         if (!selection || selection.lineIndex < 0) return;
 
-        ui.ensureFirstLine(); 
+        // 💡 렌더링 시 targetKey(activeKey)를 전달하도록 수정
+        ui.ensureFirstLineP(activeKey); 
 
         // 2. 해당 영역(Key)의 상태 데이터 및 현재 줄 모델 확보
         const currentState = state.getState(activeKey); 
         const currentLine = currentState[selection.lineIndex] || EditorLineModel();
 
-        // 3. 모델 업데이트 계산 (activeKey를 전달하여 restoreData에 귀속시킴)
+        // 3. 모델 업데이트 계산
         const { updatedLine, flags, restoreData } = calculateUpdate(currentLine, selection, activeKey);
-        
+
         if (!flags || !flags.hasChange || updatedLine === currentLine) return;
 
         // 4. 상태 저장 및 커서 위치 기록
         saveFinalState(activeKey, selection.lineIndex, updatedLine, restoreData);
         
-        // 5. UI 렌더링 실행
+        // 5. [중요] UI 렌더링 실행 (activeKey 전달)
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);
-        executeRendering(updatedLine, selection.lineIndex, flags, finalRestoreData);
+        executeRendering(updatedLine, selection.lineIndex, flags, finalRestoreData, activeKey);
     }
 
     /**
@@ -44,7 +45,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         let result = null;
         let flags = { isNewChunk: false, isChunkRendering: false };
 
-        // --- Case 1: 단순 텍스트 업데이트 (본문/테이블 셀 공통) ---
+        // --- Case 1: 단순 텍스트 업데이트 ---
         if (dataIndex !== null && currentLine.chunks[dataIndex]?.type === 'text') {
             result = inputModelService.updateTextChunk(
                 currentLine, dataIndex, activeNode.textContent, cursorOffset, lineIndex, activeKey
@@ -52,7 +53,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             flags.isChunkRendering = !!result;
         } 
         
-        // --- Case 2: 구조적 변화 (Enter, Delete, 스타일 변경 등 DOM Rebuild) ---
+        // --- Case 2: 구조적 변화 (DOM Rebuild) ---
         if (!result) {
             const rebuild = ui.parseLineDOM(
                 selection.parentP, 
@@ -73,7 +74,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         if (!result) return { flags: { hasChange: false } };
 
-        // 복원 데이터가 없는 경우 기본값 생성
+        // 복원 데이터 안전 장치
         if (flags.isNewChunk && !result.restoreData) {
             result.restoreData = inputModelService.createDefaultRestoreData(result.updatedLine, lineIndex, activeKey);
         }
@@ -98,11 +99,12 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     }
 
     /**
-     * 변경된 모델에 맞춰 UI 업데이트
+     * 💡 변경된 모델에 맞춰 UI 업데이트 (targetKey 추가)
      */
-    function executeRendering(updatedLine, lineIndex, flags, restoreData) {
+    function executeRendering(updatedLine, lineIndex, flags, restoreData, targetKey) {
         if (flags.isNewChunk) {
-            ui.renderLine(lineIndex, updatedLine);
+            // 💡 uiAPI.renderLine에 targetKey 전달
+            ui.renderLine(lineIndex, updatedLine, targetKey);
             if (restoreData) domSelection.restoreCursor(restoreData);
             return;
         }
@@ -111,11 +113,12 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             const chunkIndex = restoreData.anchor.chunkIndex;
             const chunk = updatedLine.chunks[chunkIndex];
 
-            // 텍스트 청크만 부분 렌더링, 나머지는 라인 전체 렌더링
             if (!chunk || chunk.type !== 'text') {
-                ui.renderLine(lineIndex, updatedLine);
+                // 💡 uiAPI.renderLine에 targetKey 전달
+                ui.renderLine(lineIndex, updatedLine, targetKey);
             } else {
-                ui.renderChunk(lineIndex, chunkIndex, chunk);
+                // 💡 uiAPI.renderChunk에 targetKey 전달
+                ui.renderChunk(lineIndex, chunkIndex, chunk, targetKey);
             }
             domSelection.restoreCursor(restoreData);
         }
