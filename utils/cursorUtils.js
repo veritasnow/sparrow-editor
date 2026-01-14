@@ -8,6 +8,40 @@
  */
 export function normalizeCursorData(restoreData, defaultContainerId) {
     if (!restoreData) return null;
+
+    // 1. 다중 라인 블록 선택 영역인 경우 (배열로 들어옴)
+    if (Array.isArray(restoreData)) {
+        return {
+            containerId: defaultContainerId,
+            isSelection: true,
+            ranges: restoreData.map(r => ({
+                lineIndex: r.lineIndex,
+                startIndex: r.startIndex,
+                endIndex: r.endIndex
+            }))
+        };
+    }
+
+    // 2. 단일 커서 위치인 경우 (객체로 들어옴)
+    const containerId = restoreData.containerId || defaultContainerId;
+    const lineIndex = restoreData.lineIndex;
+    const anchor = restoreData.anchor || restoreData; // 구조 유연성 대응
+
+    return {
+        containerId,
+        lineIndex,
+        isSelection: false,
+        anchor: {
+            chunkIndex: anchor.chunkIndex ?? 0,
+            type: anchor.type || 'text',
+            offset: anchor.offset ?? 0,
+            detail: anchor.detail || null
+        }
+    };
+}
+/*
+export function normalizeCursorData(restoreData, defaultContainerId) {
+    if (!restoreData) return null;
     
     // anchor 구조인 경우
     if (restoreData.anchor) {
@@ -35,3 +69,4 @@ export function normalizeCursorData(restoreData, defaultContainerId) {
         }
     };
 }
+*/

@@ -140,6 +140,7 @@ export function createSelectionService({ root }) {
      */
     function getSelectionContext() {
         const sel = window.getSelection();
+        console.log('selection:', sel.rangeCount);
         if (!sel || !sel.rangeCount) return null;
 
         const range = sel.getRangeAt(0);
@@ -150,7 +151,9 @@ export function createSelectionService({ root }) {
         const parentP = el.closest('p');
 
         // P태그가 현재 활성 컨테이너 내부에 있는지 검증
-        if (!parentP || !activeContainer.contains(parentP)) return null;
+        if (!parentP || !activeContainer.contains(parentP)) {
+            return null;            
+        }
         
         const lineIndex = Array.from(activeContainer.children).indexOf(parentP);
         const activeNode = el.closest('[data-index]');
@@ -164,11 +167,12 @@ export function createSelectionService({ root }) {
      */
     function getSelectionPosition() {
         const context = getSelectionContext(); 
+        console.log('context:', context);
         if (!context) return null;
 
         const { lineIndex, dataIndex, activeNode, container, cursorOffset, activeContainer } = context;
-        const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
-        
+        //const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
+        /*
         const tableEl = targetEl?.closest('table');
         if (tableEl) {
             const td = container.nodeType === Node.TEXT_NODE 
@@ -194,6 +198,7 @@ export function createSelectionService({ root }) {
                 };
             }
         }
+        */
 
         let chunkType = activeNode?.dataset?.type || 'text';
         return {
@@ -210,6 +215,132 @@ export function createSelectionService({ root }) {
     /**
      * 7. 커서 복원
      */
+    /**
+     * 에디터의 커서 또는 선택 영역(Block)을 복원합니다.
+     * @param {Object} cursorData - normalizeCursorData를 통해 정규화된 데이터
+     */
+    function restoreBlockCursor(cursorData) {
+        if (!cursorData) return;
+
+        // 1. 컨테이너 찾기
+        const targetContainer = cursorData.containerId 
+            ? document.getElementById(cursorData.containerId) 
+            : document.querySelector('.sparrow-contents'); // 기본 컨테이너 클래스
+        if (!targetContainer) return;
+
+        const sel = window.getSelection();
+        const range = document.createRange();
+
+        // --- CASE A: 블록 지정 복원 (isSelection: true) ---
+        if (cursorData.isSelection && cursorData.ranges && cursorData.ranges.length > 0) {
+            try {
+                const ranges = cursorData.ranges;
+                const startData = ranges[0];
+                const endData = ranges[ranges.length - 1];
+
+                // 시작점 설정: 첫 번째 라인의 startIndex 위치 찾기
+                const startLine = targetContainer.children[startData.lineIndex];
+                if (!startLine) return;
+                const startPos = findNodeAndOffset(startLine, startData.startIndex);
+                range.setStart(startPos.node, startPos.offset);
+
+                // 끝점 설정: 마지막 라인의 endIndex 위치 찾기
+                const endLine = targetContainer.children[endData.lineIndex];
+                if (!endLine) return;
+                const endPos = findNodeAndOffset(endLine, endData.endIndex);
+                range.setEnd(endPos.node, endPos.offset);
+
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {
+                console.error('Multi-line selection restore failed:', e);
+            }
+            return;
+        }
+
+        // --- CASE B: 단일 커서 복원 (isSelection: false) ---
+        if (cursorData.lineIndex === undefined) return;
+        
+        const { lineIndex, anchor } = cursorData;
+        const lineEl = targetContainer.children[lineIndex];
+        if (!lineEl) return;
+
+        try {
+            // 1. 테이블 내 커서 복원
+            if (anchor.type === 'table' && anchor.detail) {
+                const chunkEl = Array.from(lineEl.children).find(
+                    el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
+                );
+                if (!chunkEl) return;
+
+                const { rowIndex, colIndex, offset } = anchor.detail;
+                const tr = chunkEl.querySelectorAll('tr')[rowIndex];
+                const td = tr?.querySelectorAll('td')[colIndex];
+                if (!td) return;
+                
+                let targetNode = td.firstChild || td.appendChild(document.createTextNode(''));
+                range.setStart(targetNode, Math.min(offset, targetNode.length));
+            } 
+            // 2. 미디어(비디오, 이미지) 커서 복원
+            else if (anchor.type === 'video' || anchor.type === 'image') {
+                const chunkEl = Array.from(lineEl.children).find(
+                    el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
+                );
+                if (!chunkEl) return;
+                anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+            } 
+            // 3. 일반 텍스트 커서 복원 (쪼개진 청크 대응)
+            else {
+                // 단일 커서라도 스타일로 인해 청크가 나뉘어 있을 수 있으므로 findNodeAndOffset 사용
+                const pos = findNodeAndOffset(lineEl, anchor.offset || 0);
+                range.setStart(pos.node, pos.offset);
+            }
+
+            range.collapse(true); // 커서 형태로 합침
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } catch (e) {
+            console.warn('Single cursor restore failed:', e);
+        }
+    }
+
+    /**
+     * 특정 엘리먼트(Line) 내에서 논리적 오프셋(targetOffset)을 기반으로
+     * 실제 DOM 텍스트 노드와 그 노드 안에서의 상대적 오프셋을 찾습니다.
+     */
+    function findNodeAndOffset(lineEl, targetOffset) {
+        // TreeWalker를 사용하여 lineEl 내부의 모든 텍스트 노드를 순서대로 탐색
+        const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
+        let cumulativeOffset = 0;
+        let lastNode = null;
+
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const nodeLength = node.textContent.length;
+
+            // 타겟 오프셋이 현재 노드의 범위 내에 있는지 확인
+            if (targetOffset >= cumulativeOffset && targetOffset <= cumulativeOffset + nodeLength) {
+                return {
+                    node: node,
+                    offset: targetOffset - cumulativeOffset
+                };
+            }
+            cumulativeOffset += nodeLength;
+            lastNode = node;
+        }
+
+        // 만약 오프셋을 찾지 못했다면 (줄의 끝이거나 비어있는 경우)
+        if (!lastNode) {
+            // 텍스트 노드가 하나도 없는 경우 빈 노드 생성 후 반환
+            const textNode = document.createTextNode('');
+            lineEl.appendChild(textNode);
+            return { node: textNode, offset: 0 };
+        }
+        
+        // 타겟이 전체 길이보다 크면 마지막 노드의 끝으로 설정
+        return { node: lastNode, offset: lastNode.textContent.length };
+    }
+
     function restoreCursor(cursorData) {
         if (!cursorData || cursorData.lineIndex === undefined) return;
 
@@ -294,6 +425,7 @@ export function createSelectionService({ root }) {
         getLastValidPosition: () => lastValidPos,
         getSelectionContext, 
         restoreCursor,
+        restoreBlockCursor,
         getDomSelection,
         restoreSelectionPositionByChunk: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: data }),
         restoreTableSelection: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })

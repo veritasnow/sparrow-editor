@@ -23,6 +23,41 @@ export function createHistoryStore(initialState = {}) {
     // ----------------------------
     // [2] 상태 변경 (구조적 공유 적용)
     // ----------------------------
+    applyBatchPatch: (updates, options = { saveHistory: true }) => {
+      // 1. 현재 시점의 전체 맵(모든 셀 데이터)을 가져옵니다.
+      const prevMap = history[currentIndex];
+      
+      // 2. 새로운 맵을 생성하고 모든 업데이트를 적용합니다.
+      let nextMap = { ...prevMap };
+      
+      updates.forEach(({ key, patch, reducer }) => {
+        const currentData = nextMap[key] || [];
+        const newData = reducer(currentData, patch);
+        if (currentData !== newData) {
+          nextMap[key] = newData;
+        }
+      });
+
+      // 3. 변경 사항이 없다면 종료
+      if (prevMap === nextMap) return;
+
+      // 4. 히스토리 처리
+      if (options.saveHistory) {
+        // 새로운 히스토리 칸을 생성 (Undo 가능)
+        history = history.slice(0, currentIndex + 1);
+        history.push(nextMap);
+        
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          currentIndex++;
+        }
+      } else {
+        // 현재 칸을 덮어씀 (Silent)
+        history[currentIndex] = nextMap;
+      }
+    },
+
     applyPatch: (key, patch, reducer, options = { saveHistory: true }) => {
       const prevMap = history[currentIndex];
       const currentData = prevMap[key] || [];

@@ -48,6 +48,12 @@ export function createEditorApp(initialState = {}) {
     snapshotService.saveEditorState(key, state, options);
   };
 
+  // 💡 [배치 API 추가]
+  const saveEditorBatchState = (updates, options) => {
+    assertAlive();
+    snapshotService.saveEditorBatchState(updates, options);
+  };  
+
   const saveCursorState = (cursor) => {
     assertAlive();
     // cursor 데이터 내부에 어떤 key(rootId)인지 정보가 포함되어야 함
@@ -137,6 +143,7 @@ export function createEditorApp(initialState = {}) {
     getHistoryStatus,
     getCursor,
     saveEditorState,
+    saveEditorBatchState,
     saveCursorState,
     setPrevEditorState,
     undo,

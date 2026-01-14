@@ -146,6 +146,11 @@ export function createEditorFactory() {
           state.saveEditorState(key, data, options);
         }
       },
+      // 💡 인라인 서비스에서 호출할 배치 저장 API 추가
+      saveBatch: (updates, options = { saveHistory: true }) => {
+        // updates: [{ key, newState, ranges }, ...] 형태의 배열을 기대함
+        state.saveEditorBatchState(updates, options);
+      },      
       saveCursor: (cursor) => state.saveCursorState(cursor),
       undo: () => state.undo(),
       redo: () => state.redo(),
@@ -168,6 +173,7 @@ export function createEditorFactory() {
       removeLine: (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
       
       restoreCursor: (pos) => domSelection.restoreCursor(pos),
+      restoreBlockCursor: (pos) => domSelection.restoreBlockCursor(pos),
       getDomSelection: (targetKey) => domSelection.getDomSelection(targetKey),
       getSelectionPosition: () => domSelection.getSelectionPosition(),
       getInsertionAbsolutePosition: () => domSelection.getInsertionAbsolutePosition(),
