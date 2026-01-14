@@ -67,6 +67,7 @@ export function executeBackspace(e, { state, ui, domSelection }) {
     let lineIndex = firstDomRange.lineIndex;
     let offset = firstDomRange.endIndex;
 
+    console.log('firstDomRange:', firstDomRange);
     const isSelection = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
 
     // --- [Step 1] 셀 보호 로직 ---
@@ -86,8 +87,15 @@ export function executeBackspace(e, { state, ui, domSelection }) {
     if (isSelection) {
         ranges = getRanges(currentState, domRanges);
         const startRange = ranges[0];
+        console.log('startRange:', startRange);
+        
         lineIndex = startRange.lineIndex;
-        offset = startRange.startIndex;
+        
+        // 🚀 핵심 수정: startIndex가 아닌 endIndex를 offset으로 잡아야 합니다.
+        // 그래야 '이미지(0~7)' 선택 시 offset이 7이 되어 이미지를 지우는 로직으로 들어갑니다.
+        offset = startRange.endIndex; 
+        
+        console.log('🎯 [Selection Fix] Offset set to endIndex:', offset, 'Ranges:', ranges);
     } else {
         const currentLine = currentState[lineIndex];
         if (!currentLine) return;
@@ -97,6 +105,7 @@ export function executeBackspace(e, { state, ui, domSelection }) {
             const targetChunk = currentLine.chunks[context.dataIndex];
             const handler = chunkRegistry.get(targetChunk.type);
             
+            // 커서가 0인데 Atomic 청크 뒤에 있는 경우 보정 (기존 로직 유지)
             if (handler && !handler.canSplit && offset === 0) {
                 offset = 1; 
             }
@@ -104,6 +113,13 @@ export function executeBackspace(e, { state, ui, domSelection }) {
         const lineLen = getLineLengthFromState(currentLine);
         offset = Math.max(0, Math.min(offset, lineLen));
     }
+
+
+        console.log('삭제중.....currentState :', currentState);
+        console.log('삭제중.....lineIndex :', lineIndex);
+        console.log('삭제중.....offset :', offset);
+        console.log('삭제중.....ranges :', ranges);
+
 
     // --- [Step 3] 상태 계산 ---
     const { newState, newPos, deletedLineIndex, updatedLineIndex } =
@@ -117,6 +133,7 @@ export function executeBackspace(e, { state, ui, domSelection }) {
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
 
     if (finalPos) {
+        console.log("테스트..!!");
         state.saveCursor(finalPos);
 
         // 💡 [중요] 라인 삭제 처리: uiApplication의 removeLine 호출
