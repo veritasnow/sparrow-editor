@@ -54,52 +54,6 @@ export function createSelectionService({ root }) {
 
         return lastActiveKey;
     }
-    /*
-    function getActiveKey() {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            
-            // 💡 핵심: startContainer 대신 commonAncestorContainer를 사용
-            // 선택 영역 전체를 아우르는 가장 깊은 부모 노드를 찾습니다.
-            let node = range.commonAncestorContainer;
-
-            // 텍스트 노드라면 부모 엘리먼트로 이동
-            if (node.nodeType === Node.TEXT_NODE) {
-                node = node.parentElement;
-            }
-
-            // 여기서부터 위로 올라가며 ID를 찾음
-            const container = node.closest('td[id], th[id], [contenteditable="true"]');
-            
-            if (container && container.id) {
-                // 💡 추가 로직: 만약 찾은 컨테이너가 최상위 root라면, 
-                // 혹시 선택 영역 안에 TD가 포함되어 있는지 한 번 더 검사할 수 있습니다.
-                lastActiveKey = container.id;
-                return container.id;
-            }
-        }
-        return lastActiveKey;
-    }
-    */
-    /*
-    function getActiveKey() {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            let node = range.startContainer;
-            if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-
-            // ID가 있는 가장 가까운 편집 영역(Root 혹은 TD/TH) 탐색
-            const container = node.closest('[contenteditable="true"], td[id], th[id]');
-            if (container && container.id) {
-                lastActiveKey = container.id;
-                return container.id;
-            }
-        }
-        return lastActiveKey;
-    }
-    */
 
     /**
      * 활성화된 컨테이너 DOM 객체 반환
@@ -303,6 +257,59 @@ export function createSelectionService({ root }) {
 
         return ranges.length ? ranges : null;
     }
+
+    /**
+     * 5. 삽입을 위한 절대 위치 추출
+     */
+    function getInsertionAbsolutePosition() {
+        const context = getSelectionContext();
+        if (!context) return null;
+
+        const { lineIndex, container, cursorOffset, parentP } = context;
+
+        let absoluteOffset = 0;
+        const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
+
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node === container) {
+                absoluteOffset += cursorOffset;
+                break;
+            }
+            absoluteOffset += node.textContent.length;
+        }
+
+        return { lineIndex, absoluteOffset };
+    }
+
+    return { 
+        getSelectionPosition, 
+        getActiveKey,
+        getLastActiveKey: () => lastActiveKey,
+        getInsertionAbsolutePosition,
+        updateLastValidPosition: () => {
+            const pos = getSelectionPosition();
+            if (pos) {
+                lastValidPos = { 
+                    lineIndex: pos.lineIndex, 
+                    absoluteOffset: getInsertionAbsolutePosition()?.absoluteOffset || 0 
+                };
+                lastActiveKey = pos.containerId;
+            }
+        },
+        getLastValidPosition: () => lastValidPos,
+        getSelectionContext, 
+        restoreCursor,
+        getDomSelection,
+        // 구형 호환성 메서드
+        restoreSelectionPositionByChunk: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: data }),
+        restoreTableSelection: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
+    };
+}
+
+
+
+
     /*
     기존 보정로직
     function getDomSelection() {
@@ -392,52 +399,3 @@ export function createSelectionService({ root }) {
         return ranges.length ? ranges : null;
     }
     */
-
-    /**
-     * 5. 삽입을 위한 절대 위치 추출
-     */
-    function getInsertionAbsolutePosition() {
-        const context = getSelectionContext();
-        if (!context) return null;
-
-        const { lineIndex, container, cursorOffset, parentP } = context;
-
-        let absoluteOffset = 0;
-        const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
-
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            if (node === container) {
-                absoluteOffset += cursorOffset;
-                break;
-            }
-            absoluteOffset += node.textContent.length;
-        }
-
-        return { lineIndex, absoluteOffset };
-    }
-
-    return { 
-        getSelectionPosition, 
-        getActiveKey,
-        getLastActiveKey: () => lastActiveKey,
-        getInsertionAbsolutePosition,
-        updateLastValidPosition: () => {
-            const pos = getSelectionPosition();
-            if (pos) {
-                lastValidPos = { 
-                    lineIndex: pos.lineIndex, 
-                    absoluteOffset: getInsertionAbsolutePosition()?.absoluteOffset || 0 
-                };
-                lastActiveKey = pos.containerId;
-            }
-        },
-        getLastValidPosition: () => lastValidPos,
-        getSelectionContext, 
-        restoreCursor,
-        getDomSelection,
-        // 구형 호환성 메서드
-        restoreSelectionPositionByChunk: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: data }),
-        restoreTableSelection: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
-    };
-}
