@@ -17,7 +17,7 @@ export function createEditorAlignService(stateAPI, uiAPI) {
         if (!activeKey) return;
 
         // 2. 현재 선택된 범위(DOM Selection) 가져오기
-        const domRanges = uiAPI.getDomSelection();
+        const domRanges = uiAPI.getDomSelection(activeKey);
         if (!domRanges || domRanges.length === 0) return;
 
         // 3. 해당 영역의 상태 데이터 가져오기

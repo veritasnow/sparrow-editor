@@ -168,12 +168,13 @@ export function createEditorFactory() {
       removeLine: (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
       
       restoreCursor: (pos) => domSelection.restoreCursor(pos),
-      getDomSelection: () => domSelection.getDomSelection(),
+      getDomSelection: (targetKey) => domSelection.getDomSelection(targetKey),
       getSelectionPosition: () => domSelection.getSelectionPosition(),
       getInsertionAbsolutePosition: () => domSelection.getInsertionAbsolutePosition(),
       updateLastValidPosition: () => domSelection.updateLastValidPosition(),
       getLastValidPosition: () => domSelection.getLastValidPosition(),
       getActiveKey: () => domSelection.getActiveKey(),
+      getActiveKeys: () => domSelection.getActiveKeys(),
       getLastActiveKey: () => domSelection.getLastActiveKey(),
       
       // DOM -> Model 파싱 브릿지

@@ -11,11 +11,14 @@ import { normalizeCursorData } from '../../utils/cursorUtils.js';
 export function executeEnter({ state, ui, domSelection }) {
     // 1. 현재 포커스된 컨테이너(본문 혹은 TD) ID 확보
     const activeKey = domSelection.getActiveKey();
+    console.log('executeBackspace activeKey :', activeKey);
+
     if (!activeKey) return;
 
     // 2. 해당 영역의 상태 및 커서 위치 정보 확보
     const currentState = state.get(activeKey);
-    const domRanges = domSelection.getDomSelection();
+    const domRanges = domSelection.getDomSelection(activeKey);
+    console.log('executeEnter domRanges:', domRanges);
     if (!domRanges || domRanges.length === 0) return;
 
     const { lineIndex, endIndex: domOffset } = domRanges[0];
@@ -60,7 +63,7 @@ export function executeBackspace(e, { state, ui, domSelection }) {
 
     // 2. 해당 영역의 상태 및 DOM 선택 정보 확보
     const currentState = state.get(activeKey);
-    const domRanges = domSelection.getDomSelection();
+    const domRanges = domSelection.getDomSelection(activeKey);
     if (!domRanges || domRanges.length === 0) return;
 
     const firstDomRange = domRanges[0];
