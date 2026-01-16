@@ -4,7 +4,7 @@ import { bindImageButton } from './imageFeatureBinder.js';
 
 export function createImageExtension(rootId) {
   return {
-    name: 'video',
+    name: 'image',
 
     /**
      * Editor 초기화 시 호출됨
