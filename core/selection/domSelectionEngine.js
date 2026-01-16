@@ -171,8 +171,7 @@ export function createSelectionService({ root }) {
         if (!context) return null;
 
         const { lineIndex, dataIndex, activeNode, container, cursorOffset, activeContainer } = context;
-        //const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
-        /*
+        const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
         const tableEl = targetEl?.closest('table');
         if (tableEl) {
             const td = container.nodeType === Node.TEXT_NODE 
@@ -198,7 +197,6 @@ export function createSelectionService({ root }) {
                 };
             }
         }
-        */
 
         let chunkType = activeNode?.dataset?.type || 'text';
         return {
@@ -341,47 +339,165 @@ export function createSelectionService({ root }) {
         return { node: lastNode, offset: lastNode.textContent.length };
     }
 
+    /**
+     * 커서 및 선택 영역 복원
+     */
     function restoreCursor(cursorData) {
-        if (!cursorData || cursorData.lineIndex === undefined) return;
+        if (!cursorData) return;
 
-        const { lineIndex, anchor, containerId } = cursorData;
+        const { containerId, ranges, anchor, lineIndex } = cursorData;
         const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
         if (!targetContainer) return;
 
-        const lineEl = targetContainer.children[lineIndex];
-        if (!lineEl) return;
-
-        const chunkEl = Array.from(lineEl.children).find(
-            el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
-        );
-        if (!chunkEl) return;
-
-        const range = document.createRange();
         const sel = window.getSelection();
+        sel.removeAllRanges();
 
-        try {
-            if (anchor.type === 'table' && anchor.detail) {
-                const { rowIndex, colIndex, offset } = anchor.detail;
-                const tr = chunkEl.querySelectorAll('tr')[rowIndex];
-                const td = tr?.querySelectorAll('td')[colIndex];
-                if (!td) return;
-                let targetNode = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
-                range.setStart(targetNode, Math.min(offset, targetNode.length));
-            } 
-            else if (anchor.type === 'video' || anchor.type === 'image') {
-                anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
-            } 
-            else {
-                let targetNode = Array.from(chunkEl.childNodes).find(n => n.nodeType === Node.TEXT_NODE) 
-                                 || chunkEl.appendChild(document.createTextNode(''));
-                range.setStart(targetNode, Math.min(anchor.offset || 0, targetNode.length));
+        // --- [CASE A] 다중 선택 영역(ranges)이 있는 경우 (드래그 상태 복원) ---
+        if (ranges && ranges.length > 0) {
+            ranges.forEach(rangeInfo => {
+                try {
+                    const lineEl = targetContainer.children[rangeInfo.lineIndex];
+                    if (!lineEl) return;
+
+                    const textNode = findFirstTextNode(lineEl);
+                    if (textNode) {
+                        const newRange = document.createRange();
+                        newRange.setStart(textNode, Math.min(rangeInfo.startIndex, textNode.length));
+                        newRange.setEnd(textNode, Math.min(rangeInfo.endIndex, textNode.length));
+                        sel.addRange(newRange);
+                    }
+                } catch (e) { console.warn('[Restore] Range failed:', e); }
+            });
+            return; 
+        }
+
+        // --- [CASE B] 일반 커서(anchor) 정보가 있는 경우 (포커스 복원) ---
+        if (lineIndex !== undefined && anchor) {
+            try {
+                const lineEl = targetContainer.children[lineIndex];
+                if (!lineEl) return;
+
+                // 사용자님의 안전한 data-index 검색 로직
+                const chunkEl = Array.from(lineEl.children).find(
+                    el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
+                );
+                if (!chunkEl) return;
+
+                const range = document.createRange();
+
+                // 1. 테이블 내부 커서 처리
+                if (anchor.type === 'table' && anchor.detail) {
+                    const { rowIndex, colIndex, offset } = anchor.detail;
+                    const tr = chunkEl.querySelectorAll('tr')[rowIndex];
+                    const td = tr?.querySelectorAll('td')[colIndex];
+                    if (!td) return;
+                    
+                    let targetNode = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
+                    range.setStart(targetNode, Math.min(offset, targetNode.length));
+                } 
+                // 2. 미디어(비디오, 이미지) 커서 처리
+                else if (anchor.type === 'video' || anchor.type === 'image') {
+                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+                } 
+                // 3. 일반 텍스트 커서 처리
+                else {
+                    // 헬퍼를 사용하여 중첩된 스타일 태그 안에서도 텍스트 노드를 정확히 찾음
+                    let targetNode = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
+                    range.setStart(targetNode, Math.min(anchor.offset || 0, targetNode.length));
+                }
+
+                range.collapse(true); // 커서 형태로 축합
+                sel.addRange(range);
+            } catch (e) { 
+                console.warn('[Restore] Anchor failed:', e); 
             }
-
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        } catch (e) { console.warn('Restore failed:', e); }
+        }
     }
+
+    /**
+     * 헬퍼: 엘리먼트 내에서 실제 글자가 담긴 첫 번째 텍스트 노드를 재귀적으로 탐색
+     */
+    function findFirstTextNode(el) {
+        if (!el) return null;
+        if (el.nodeType === Node.TEXT_NODE) return el;
+        
+        for (let child of el.childNodes) {
+            const found = findFirstTextNode(child);
+            if (found) return found;
+        }
+        return null;
+    }
+    /*
+    function restoreCursor(cursorData) {
+        if (!cursorData) return;
+
+        const { containerId, ranges, anchor, lineIndex } = cursorData;
+        const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
+        if (!targetContainer) return;
+
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+
+        // 💡 Case A: ranges 데이터가 있는 경우 (범위 선택 복원)
+        if (ranges && ranges.length > 0) {
+            ranges.forEach(rangeInfo => {
+                try {
+                    const lineEl = targetContainer.children[rangeInfo.lineIndex];
+                    if (!lineEl) return;
+
+                    const newRange = document.createRange();
+                    // 단순화를 위해 첫 번째 텍스트 노드 기준으로 범위를 잡습니다.
+                    // 상세 로직은 에디터의 렌더링 방식에 따라 조정 필요
+                    let textNode = lineEl.firstChild;
+                    while (textNode && textNode.nodeType !== Node.TEXT_NODE) {
+                        textNode = textNode.firstChild;
+                    }
+
+                    if (textNode) {
+                        newRange.setStart(textNode, Math.min(rangeInfo.startIndex, textNode.length));
+                        newRange.setEnd(textNode, Math.min(rangeInfo.endIndex, textNode.length));
+                        sel.addRange(newRange);
+                    }
+                } catch (e) { console.warn('Range restore failed:', e); }
+            });
+            return; // 범위 복원 완료 시 종료
+        }
+
+        // 💡 Case B: anchor 데이터가 있는 경우 (기존 로직 유지)
+        if (lineIndex !== undefined && anchor) {
+            const lineEl = targetContainer.children[lineIndex];
+            if (!lineEl) return;
+
+            const chunkEl = Array.from(lineEl.children).find(
+                el => parseInt(el.dataset.index, 10) === anchor.chunkIndex
+            );
+            if (!chunkEl) return;
+
+            const range = document.createRange();
+            try {
+                if (anchor.type === 'table' && anchor.detail) {
+                    const { rowIndex, colIndex, offset } = anchor.detail;
+                    const tr = chunkEl.querySelectorAll('tr')[rowIndex];
+                    const td = tr?.querySelectorAll('td')[colIndex];
+                    if (!td) return;
+                    let targetNode = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
+                    range.setStart(targetNode, Math.min(offset, targetNode.length));
+                } 
+                else if (anchor.type === 'video' || anchor.type === 'image') {
+                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+                } 
+                else {
+                    let targetNode = Array.from(chunkEl.childNodes).find(n => n.nodeType === Node.TEXT_NODE) 
+                                    || chunkEl.appendChild(document.createTextNode(''));
+                    range.setStart(targetNode, Math.min(anchor.offset || 0, targetNode.length));
+                }
+
+                range.collapse(true);
+                sel.addRange(range);
+            } catch (e) { console.warn('Anchor restore failed:', e); }
+        }
+    }
+    */
 
     /**
      * 8. 삽입을 위한 절대 위치 추출

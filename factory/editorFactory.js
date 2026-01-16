@@ -49,41 +49,41 @@ export function createEditorFactory() {
 
     // 1. Text Chunk 핸들러
     chunkRegistry.register('text', {
-      isText: true,
-      canSplit: true,
-      create: (text = '', style = {}) => TextChunkModel('text', text, style),
-      getLength: (chunk) => chunk.text.length,
-      clone: (chunk) => TextChunkModel('text', chunk.text, { ...chunk.style }),
+      isText    : true,
+      canSplit  : true,
+      create    : (text = '', style = {}) => TextChunkModel('text', text, style),
+      getLength : (chunk) => chunk.text.length,
+      clone     : (chunk) => TextChunkModel('text', chunk.text, { ...chunk.style }),
       applyStyle: (chunk, patch) => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
     });
 
     // 2. Video Chunk 핸들러
     chunkRegistry.register('video', {
-      isText: false,
-      canSplit: false,
-      create: (videoId, src) => VideoChunkModel(videoId, src),
-      getLength: () => 1,
-      clone: (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
+      isText    : false,
+      canSplit  : false,
+      create    : (videoId, src) => VideoChunkModel(videoId, src),
+      getLength : () => 1,
+      clone     : (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
       applyStyle: (chunk) => chunk
     });
 
     // 3. Image Chunk 핸들러
     chunkRegistry.register('image', {
-      isText: false,
-      canSplit: false,
-      create: (src) => ImageChunkModel(src),
-      getLength: () => 1,
-      clone: (chunk) => ImageChunkModel(chunk.src),
+      isText    : false,
+      canSplit  : false,
+      create    : (src) => ImageChunkModel(src),
+      getLength : () => 1,
+      clone     : (chunk) => ImageChunkModel(chunk.src),
       applyStyle: (chunk) => chunk
     });
 
     // 4. Table Chunk 핸들러
     chunkRegistry.register('table', {
-        isText: false,
-        canSplit: false,
-        create: (rows, cols) => TableChunkModel(rows, cols),
+        isText   : false,
+        canSplit : false,
+        create   : (rows, cols) => TableChunkModel(rows, cols),
         getLength: () => 1,
-        clone: (chunk) => {
+        clone    : (chunk) => {
             return {
                 ...chunk,
                 data: chunk.data.map(row =>
@@ -116,20 +116,20 @@ export function createEditorFactory() {
     const ui = createUiApplication({
       rootId: MAIN_CONTENT_KEY,
       rendererRegistry: {
-        text: textRenderer,
-        video: videoRenderer,
-        image: imageRenderer,
-        table: tableRenderer
+        text  : textRenderer,
+        video : videoRenderer,
+        image : imageRenderer,
+        table : tableRenderer
       }
     });
 
-    const editorEl = document.getElementById(MAIN_CONTENT_KEY);
+    const editorEl       = document.getElementById(MAIN_CONTENT_KEY);
 
     // 선택 시스템
-    const domSelection = createSelectionService({ root: editorEl });
+    const domSelection   = createSelectionService({ root: editorEl });
 
     // 입력 시스템
-    const inputApp = createInputApplication({ editorEl });
+    const inputApp       = createInputApplication({ editorEl });
     
     // inputProcessor 생성 시 MAIN_CONTENT_KEY 전달
     const inputProcessor = createEditorInputProcessor(state, ui, domSelection, MAIN_CONTENT_KEY);
@@ -138,8 +138,8 @@ export function createEditorFactory() {
      * 2️⃣ 내부 API 정의 (Key 기반 대응)
      * ───────────────────────────── */
     const stateAPI = {
-      get: (key = MAIN_CONTENT_KEY) => state.getState(key),
-      save: (key, data, options = { saveHistory: true }) => {
+      get           : (key = MAIN_CONTENT_KEY) => state.getState(key),
+      save          : (key, data, options = { saveHistory: true }) => {
         if (data === undefined) {
           state.saveEditorState(MAIN_CONTENT_KEY, data, options);
         } else {
@@ -147,45 +147,43 @@ export function createEditorFactory() {
         }
       },
       // 💡 인라인 서비스에서 호출할 배치 저장 API 추가
-      saveBatch: (updates, options = { saveHistory: true }) => {
+      saveBatch     : (updates, options = { saveHistory: true }) => {
         // updates: [{ key, newState, ranges }, ...] 형태의 배열을 기대함
         state.saveEditorBatchState(updates, options);
       },      
-      saveCursor: (cursor) => state.saveCursorState(cursor),
-      undo: () => state.undo(),
-      redo: () => state.redo(),
-      isLineChanged: (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
-      getLines: (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
-      getLineRange: (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
+      saveCursor    : (cursor) => state.saveCursorState(cursor),
+      getCursor     : () => state.getCursor(),
+      undo          : () => state.undo(),
+      redo          : () => state.redo(),
+      isLineChanged : (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
+      getLines      : (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
+      getLineRange  : (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
     };
 
     /**
      * 💡 uiAPI: 모든 렌더링 관련 함수가 targetKey를 선택적으로 받도록 개선
      */
     const uiAPI = {
-      render: (data, key = MAIN_CONTENT_KEY) => ui.render(data, key),
-      renderLine: (i, d, key = MAIN_CONTENT_KEY) => ui.renderLine(i, d, key),
-      renderChunk: (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
-      ensureFirstLineP: (key = MAIN_CONTENT_KEY) => ui.ensureFirstLineP(key),
-      shiftLinesDown: (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),
-      
-      insertLine: (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
-      removeLine: (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
-      
-      restoreCursor: (pos) => domSelection.restoreCursor(pos),
-      restoreBlockCursor: (pos) => domSelection.restoreBlockCursor(pos),
-      getDomSelection: (targetKey) => domSelection.getDomSelection(targetKey),
-      getSelectionPosition: () => domSelection.getSelectionPosition(),
+      render                      : (data, key = MAIN_CONTENT_KEY) => ui.render(data, key),
+      renderLine                  : (i, d, key = MAIN_CONTENT_KEY) => ui.renderLine(i, d, key),
+      renderChunk                 : (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
+      ensureFirstLineP            : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLineP(key),
+      shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),
+      insertLine                  : (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
+      removeLine                  : (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
+      restoreCursor               : (pos) => domSelection.restoreCursor(pos),
+      restoreBlockCursor          : (pos) => domSelection.restoreBlockCursor(pos),
+      getDomSelection             : (targetKey) => domSelection.getDomSelection(targetKey),
+      getSelectionPosition        : () => domSelection.getSelectionPosition(),
       getInsertionAbsolutePosition: () => domSelection.getInsertionAbsolutePosition(),
-      updateLastValidPosition: () => domSelection.updateLastValidPosition(),
-      getLastValidPosition: () => domSelection.getLastValidPosition(),
-      getActiveKey: () => domSelection.getActiveKey(),
-      getActiveKeys: () => domSelection.getActiveKeys(),
-      getLastActiveKey: () => domSelection.getLastActiveKey(),
-      
+      updateLastValidPosition     : () => domSelection.updateLastValidPosition(),
+      getLastValidPosition        : () => domSelection.getLastValidPosition(),
+      getActiveKey                : () => domSelection.getActiveKey(),
+      getActiveKeys               : () => domSelection.getActiveKeys(),
+      getLastActiveKey            : () => domSelection.getLastActiveKey(),
       // DOM -> Model 파싱 브릿지
-      parseLineDOM: (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
-      extractTableDataFromDOM: (tableEl) => ui.extractTableDataFromDOM(tableEl)
+      parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
+      extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl)
     };
 
     const editorAPI = {
@@ -212,12 +210,12 @@ export function createEditorFactory() {
         uiAPI.render(currentContent, MAIN_CONTENT_KEY);
         
         uiAPI.restoreCursor({
-          containerId: MAIN_CONTENT_KEY,
-          lineIndex: 0,
+          containerId : MAIN_CONTENT_KEY,
+          lineIndex   : 0,
           anchor: {
-            chunkIndex: 0,
-            type: 'text',
-            offset: 0
+            chunkIndex : 0,
+            type       : 'text',
+            offset     : 0
           }
         });
 
@@ -229,31 +227,31 @@ export function createEditorFactory() {
 
         // C. 키보드 핸들러 (Enter, Backspace 등)
         const keyProcessor = createEditorKeyHandler({
-          state: stateAPI,
-          ui: uiAPI,
+          state       : stateAPI,
+          ui          : uiAPI,
           domSelection: domSelection
         });
 
         inputApp.bindKeydown({
-          handleEnter: keyProcessor.processEnter,
-          handleBackspace: keyProcessor.processBackspace,
-          undo: keyProcessor.undo,
-          redo: keyProcessor.redo
+          handleEnter     : keyProcessor.processEnter,
+          handleBackspace : keyProcessor.processBackspace,
+          undo            : keyProcessor.undo,
+          redo            : keyProcessor.redo
         });
 
         // D. 툴바 피처 바인딩
         const styleToolbar = {
-          boldBtn: document.getElementById(`${rootId}-boldBtn`),
-          italicBtn: document.getElementById(`${rootId}-italicBtn`),
-          underLineBtn: document.getElementById(`${rootId}-underLineBtn`),
+          boldBtn       : document.getElementById(`${rootId}-boldBtn`),
+          italicBtn     : document.getElementById(`${rootId}-italicBtn`),
+          underLineBtn  : document.getElementById(`${rootId}-underLineBtn`),
           fontSizeSelect: document.getElementById(`${rootId}-fontSizeSelect`),
-          textColorBtn: document.getElementById(`${rootId}-textColorBtn`)
+          textColorBtn  : document.getElementById(`${rootId}-textColorBtn`)
         };
 
         const alignToolbar = {
-          leftBtn: document.getElementById(`${rootId}-alignLeftBtn`),
-          centerBtn: document.getElementById(`${rootId}-alignCenterBtn`),
-          rightBtn: document.getElementById(`${rootId}-alignRightBtn`)
+          leftBtn   : document.getElementById(`${rootId}-alignLeftBtn`),
+          centerBtn : document.getElementById(`${rootId}-alignCenterBtn`),
+          rightBtn  : document.getElementById(`${rootId}-alignRightBtn`)
         };
 
         // Selection 상태에 따른 버튼 활성화 바인딩

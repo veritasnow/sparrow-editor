@@ -118,10 +118,10 @@ export function executeBackspace(e, { state, ui, domSelection }) {
     }
 
 
-        console.log('삭제중.....currentState :', currentState);
-        console.log('삭제중.....lineIndex :', lineIndex);
-        console.log('삭제중.....offset :', offset);
-        console.log('삭제중.....ranges :', ranges);
+    console.log('삭제중.....currentState :', currentState);
+    console.log('삭제중.....lineIndex :', lineIndex);
+    console.log('삭제중.....offset :', offset);
+    console.log('삭제중.....ranges :', ranges);
 
 
     // --- [Step 3] 상태 계산 ---
