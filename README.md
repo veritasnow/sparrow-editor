@@ -63,6 +63,7 @@ sparrow-editor
 ---
 
 ## 🚀 사용 방법 (Getting Started)
+* 서버 환경에서만 동작합니다. 테스트하려면 최소한 VSCODE -> Extentions에서 Live Server를 설치후 우측 하단의 Go Live로 실행해주시기 바랍니다.
 
 ### 1️⃣ 에디터 생성
 
