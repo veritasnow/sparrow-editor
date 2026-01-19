@@ -1,4 +1,7 @@
-import { executeEnter, executeBackspace, executeDelete, executePaste } from '../../core/keyInput/keyProcessors.js';
+import { executePaste } from './processors/keyPasteProcessors.js';
+import { executeEnter } from '../../core/keyInput/processors/keyEnterProcessors.js';
+import { executeDelete } from '../../core/keyInput/processors/keyDeleteProcessors.js';
+import { executeBackspace } from '../../core/keyInput/processors/keyBackspaceProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
 
 /**
