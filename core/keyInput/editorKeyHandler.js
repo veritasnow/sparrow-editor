@@ -1,4 +1,4 @@
-import { executeEnter, executeBackspace } from '../../core/keyInput/keyProcessors.js';
+import { executeEnter, executeBackspace, executeDelete } from '../../core/keyInput/keyProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
 
 /**
@@ -18,6 +18,11 @@ export function createEditorKeyHandler(context) {
         executeBackspace(e, { state, ui, domSelection });
     };
 
+    // 델 키 처리
+    const processDelete = (e) => {
+        executeDelete(e, { state, ui, domSelection });
+    };    
+
     // 실행 취소
     const callUndo = () => {
         executeHistory('undo', { state, ui, domSelection });
@@ -31,6 +36,7 @@ export function createEditorKeyHandler(context) {
     return {
         processEnter,
         processBackspace,
+        processDelete,
         undo: callUndo,
         redo: callRedo
     };

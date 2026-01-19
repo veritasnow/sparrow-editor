@@ -1,6 +1,6 @@
 // store/cursorHistoryStore.js
 export function createCursorHistoryStore(initialCursor = null) {
-  const MAX_HISTORY = 30;
+  const MAX_HISTORY = 50;
   let history = [initialCursor];
   let currentIndex = 0;
 

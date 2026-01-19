@@ -167,3 +167,108 @@ export function executeBackspace(e, { state, ui, domSelection }) {
         domSelection.restoreCursor(finalPos);
     }
 }
+
+
+/**
+ * ⌦ Delete 키 실행: 커서 뒤의 문자 삭제 또는 다음 라인 병합
+ */
+export function executeDelete(e, { state, ui, domSelection }) {
+    // 1. 현재 활성화된 영역 ID 확보
+    const activeKey = domSelection.getActiveKey();
+    if (!activeKey) return;
+
+    // 2. 해당 영역의 상태 및 DOM 선택 정보 확보
+    const currentState = state.get(activeKey);
+    const domRanges = domSelection.getDomSelection(activeKey);
+    if (!domRanges || domRanges.length === 0) return;
+
+    const firstDomRange = domRanges[0];
+    let lineIndex = firstDomRange.lineIndex;
+    let offset = firstDomRange.startIndex; // Delete는 시작 지점 기준
+
+    const isSelection = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
+
+    // --- [Step 1] 셀 보호 및 경계 검사 ---
+    if (!isSelection) {
+        const currentLine = currentState[lineIndex];
+        const lineLen = getLineLengthFromState(currentLine);
+        
+        // 마지막 라인의 맨 끝에서 Delete를 누를 경우 동작 차단
+        if (lineIndex === currentState.length - 1 && offset === lineLen) {
+            e.preventDefault();
+            return;
+        }
+
+        // 테이블 셀 내부 보호 (선택 영역이 없을 때 마지막 칸에서 나가는 것 방지)
+        const activeContainer = document.getElementById(activeKey);
+        const isCell = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
+        if (isCell && lineIndex === currentState.length - 1 && offset === lineLen) {
+            e.preventDefault();
+            return;
+        }
+    }
+
+    // --- [Step 2] 위치 및 범위 계산 ---
+    let ranges = [];
+    if (isSelection) {
+        // 드래그 선택 상태라면 Backspace와 동일한 삭제 로직을 사용해도 무방합니다.
+        ranges = getRanges(currentState, domRanges);
+        const startRange = ranges[0];
+        lineIndex = startRange.lineIndex;
+        offset = startRange.startIndex; 
+    } else {
+        const currentLine = currentState[lineIndex];
+        if (!currentLine) return;
+
+        // Atomic(이미지 등) 바로 앞에서 Delete를 누를 경우 처리
+        const context = domSelection.getSelectionContext();
+        if (context && context.dataIndex !== null) {
+            const targetChunk = currentLine.chunks[context.dataIndex];
+            const handler = chunkRegistry.get(targetChunk.type);
+            // 만약 현재 커서 위치가 Atomic 요소의 바로 시작점이라면 offset 보정 필요할 수 있음
+        }
+        
+        const lineLen = getLineLengthFromState(currentLine);
+        offset = Math.max(0, Math.min(offset, lineLen));
+    }
+
+    // --- [Step 3] 상태 계산 (calculateDeleteState 구현 필요) ---
+    // 백스페이스와 유사하지만, 병합 대상이 lineIndex + 1이 됩니다.
+    const { newState, newPos, deletedLineIndex, updatedLineIndex } =
+        calculateDeleteState(currentState, lineIndex, offset, ranges);
+
+    if (newState === currentState) return;
+
+    // --- [Step 4] 저장 및 UI 동기화 ---
+    state.save(activeKey, newState);
+    
+    const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
+
+    if (finalPos) {
+        state.saveCursor(finalPos);
+
+        // UI에서 라인 삭제 (다음 줄이 현재 줄로 합쳐질 때 다음 줄이 삭제됨)
+        if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
+            let startIdx, deleteCount;
+            if (typeof deletedLineIndex === 'object') {
+                startIdx = deletedLineIndex.start;
+                deleteCount = deletedLineIndex.count || 1;
+            } else {
+                startIdx = deletedLineIndex;
+                deleteCount = 1;
+            }
+
+            for (let i = 0; i < deleteCount; i++) {
+                ui.removeLine(startIdx, activeKey);
+            }
+        }
+
+        // 현재 라인 리렌더링
+        if (updatedLineIndex !== null && newState[updatedLineIndex]) {
+            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey);
+        }
+
+        ui.ensureFirstLineP(activeKey);
+        domSelection.restoreCursor(finalPos);
+    }
+}
