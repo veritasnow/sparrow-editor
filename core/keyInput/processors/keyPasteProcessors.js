@@ -1,6 +1,7 @@
 // /core/keyInput/processors/keyPasteProcessors.js
 import { HtmlDeserializer } from '../../convert/HtmlDeserializer.js';
 import { EditorLineModel} from '../../../model/editorLineModel.js';
+import { TextChunkModel } from '../../../model/editorModel.js';
 import { mergeChunks} from '../../../utils/mergeUtils.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
