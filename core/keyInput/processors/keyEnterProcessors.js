@@ -1,5 +1,5 @@
 // /core/keyInput/processors/keyEnterProcessors.js
-import { cloneChunk, normalizeLineChunks} from '../serivce/keyCommonService.js';
+import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
 import { getLineLengthFromState } from '../../../utils/editorStateUtils.js';
 import { normalizeCursorData } from '../../../utils/cursorUtils.js';
 import { EditorLineModel } from '../../../model/editorLineModel.js';

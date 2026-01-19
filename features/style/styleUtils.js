@@ -1,7 +1,7 @@
 // ───────── styleUtils.js ─────────
 import { EditorLineModel } from '../../model/editorLineModel.js';
 import { chunkRegistry } from '../../core/chunk/chunkRegistry.js';
-import { splitChunkByOffset, mergeChunks } from "../../utils/mergeUtils.js";
+import { splitChunkByOffset, normalizeLineChunks } from "../../utils/mergeUtils.js";
 /**
  * 에디터 상태(특정 영역의 line 배열)의 특정 범위에 스타일을 적용합니다.
  */
@@ -64,7 +64,7 @@ export function applyStylePatch(areaState, ranges, patch) {
         });
 
         // 같은 스타일을 가진 텍스트 청크끼리 다시 합쳐서 최적화
-        newState[lineIndex] = EditorLineModel(line.align, mergeChunks(newChunks));
+        newState[lineIndex] = EditorLineModel(line.align, normalizeLineChunks(newChunks));
     });
 
     return newState;

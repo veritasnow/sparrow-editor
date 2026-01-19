@@ -4,7 +4,8 @@ import { getRanges } from "../../../utils/rangeUtils.js";
 import { chunkRegistry } from '../../chunk/chunkRegistry.js';
 import { normalizeCursorData } from '../../../utils/cursorUtils.js';
 import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { cloneChunk, normalizeLineChunks, calculateDeleteSelectionState} from '../serivce/keyCommonService.js';
+import { calculateDeleteSelectionState} from '../service/keyCommonService.js';
+import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
 
 /**
  * ⌦ Delete 키 실행: 커서 뒤의 문자 삭제 또는 다음 라인 병합

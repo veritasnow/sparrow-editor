@@ -1,6 +1,33 @@
 // ───────── chunkUtils.js ─────────
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js'; // 레지스트리 도입
 
+// -----------------------------------------------------------------
+// 🚀 공통 로직: Registry를 이용해 추상화된 복제
+// -----------------------------------------------------------------
+export function cloneChunk(chunk) {
+    // Registry의 각 핸들러가 가진 clone 기능을 사용합니다.
+    return chunkRegistry.get(chunk.type).clone(chunk);
+}
+
+// -----------------------------------------------------------------
+// 🚀 공통 로직: 정규화
+// -----------------------------------------------------------------
+export function normalizeLineChunks(chunks) {
+    // 1. 길이가 0인 텍스트 청크를 필터링 (단, 전체가 비었을 때는 제외)
+    let filtered = chunks.filter(chunk => {
+        if (chunk.type === 'text' && chunk.text === "") return false;
+        return true;
+    });
+
+    // 2. 만약 모든 청크가 지워졌다면(완전 빈 줄), 기본 빈 청크 하나 생성
+    if (filtered.length === 0) {
+        return [chunkRegistry.get('text').create("", { fontSize: "14px" })];
+    }
+
+    // 3. 연속된 텍스트 청크 병합
+    return mergeChunks(filtered.map(cloneChunk));
+}
+
 /**
  * 전체 offset 기준으로 텍스트 청크를 before/target/after로 나눕니다.
  */
