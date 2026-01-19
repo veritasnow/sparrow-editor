@@ -14,6 +14,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         const selection = domSelection.getSelectionContext();
         
         console.log('[InputProcessor] ActiveKey:', activeKey);
+        console.log('[selection] :', selection);        
         
         if (!selection || selection.lineIndex < 0) return;
 
@@ -41,6 +42,83 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
      * 현재 라인 상태와 DOM 정보를 비교하여 업데이트된 모델 생성
      */
     function calculateUpdate(currentLine, selection, activeKey) {
+        const {
+            dataIndex,
+            activeNode,
+            cursorOffset,
+            lineIndex,
+            container,
+            range
+        } = selection;
+
+        let result = null;
+        let flags = { isNewChunk: false, isChunkRendering: false };
+
+        // --- Case 1: 단순 텍스트 업데이트 ---
+        if (
+            dataIndex !== null &&
+            activeNode &&
+            currentLine.chunks[dataIndex]?.type === 'text'
+        ) {
+            const safeText = getSafeTextFromRange(range);
+
+            result = inputModelService.updateTextChunk(
+                currentLine,
+                dataIndex,
+                safeText,          // ✅ textContent 제거
+                cursorOffset,
+                lineIndex,
+                activeKey
+            );
+
+            flags.isChunkRendering = !!result;
+        }
+
+        // --- Case 2: DOM Rebuild ---
+        if (!result) {
+            const rebuild = ui.parseLineDOM(
+                selection.parentP,
+                currentLine.chunks,
+                container,
+                cursorOffset,
+                lineIndex
+            );
+
+            if (rebuild.newChunks !== currentLine.chunks) {
+                result = {
+                    updatedLine: EditorLineModel(
+                        currentLine.align,
+                        rebuild.newChunks
+                    ),
+                    restoreData: {
+                        ...rebuild.restoreData,
+                        containerId: activeKey
+                    }
+                };
+                flags.isNewChunk = true;
+            }
+        }
+
+        if (!result) return { flags: { hasChange: false } };
+
+        return { ...result, flags: { ...flags, hasChange: true } };
+    }
+    
+    function getSafeTextFromRange(range) {
+        if (!range) return '';
+
+        const node = range.startContainer;
+
+        // ✅ 진짜 입력이 발생한 텍스트 노드만
+        if (node.nodeType === Node.TEXT_NODE) {
+            return node.nodeValue ?? '';
+        }
+
+        return '';
+    }    
+
+    /*
+    function calculateUpdate(currentLine, selection, activeKey) {
         const { dataIndex, activeNode, cursorOffset, lineIndex, container } = selection;
         let result = null;
         let flags = { isNewChunk: false, isChunkRendering: false };
@@ -50,11 +128,14 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             result = inputModelService.updateTextChunk(
                 currentLine, dataIndex, activeNode.textContent, cursorOffset, lineIndex, activeKey
             );
+
+            console.log("단순 텍스트 업데이트? :", result);
             flags.isChunkRendering = !!result;
         } 
         
         // --- Case 2: 구조적 변화 (DOM Rebuild) ---
         if (!result) {
+            console.log("DOM Rebuild 탄거야????");            
             const rebuild = ui.parseLineDOM(
                 selection.parentP, 
                 currentLine.chunks, 
@@ -76,11 +157,13 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         // 복원 데이터 안전 장치
         if (flags.isNewChunk && !result.restoreData) {
+            console.log("복원 데이터 안전 장치 탄거야????");
             result.restoreData = inputModelService.createDefaultRestoreData(result.updatedLine, lineIndex, activeKey);
         }
 
         return { ...result, flags: { ...flags, hasChange: true } };
     }
+    */
 
     /**
      * 상태 저장소(Key별 분리)에 저장

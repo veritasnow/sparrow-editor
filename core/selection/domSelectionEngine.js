@@ -140,6 +140,55 @@ export function createSelectionService({ root }) {
      */
     function getSelectionContext() {
         const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+
+        const range = sel.getRangeAt(0);
+        const container = range.startContainer;
+
+        const el =
+            container.nodeType === Node.TEXT_NODE
+                ? container.parentElement
+                : container;
+
+        // ✅ TD / TH 기준 컨테이너 확정
+        const activeContainer = el.closest('td[id], th[id]') || getActiveContainer();
+        if (!activeContainer) return null;
+
+        const parentP = el.closest('p');
+        if (!parentP || !activeContainer.contains(parentP)) return null;
+
+        const lineIndex = Array.from(activeContainer.children).indexOf(parentP);
+        if (lineIndex < 0) return null;
+
+        // ✅ data-index는 반드시 TD 내부
+        const rawActiveNode = el.closest('[data-index]');
+        const activeNode =
+            rawActiveNode && activeContainer.contains(rawActiveNode)
+                ? rawActiveNode
+                : null;
+
+        const dataIndex =
+            activeNode?.dataset.index !== undefined
+                ? parseInt(activeNode.dataset.index, 10)
+                : null;
+
+        return {
+            activeContainer,
+            containerId: activeContainer.id,
+            lineIndex,
+            parentP,
+            container,
+            cursorOffset: range.startOffset,
+            activeNode,
+            dataIndex,
+            range // 🔥 핵심: range 자체를 같이 넘김
+        };
+    }
+
+
+    /*
+    function getSelectionContext() {
+        const sel = window.getSelection();
         console.log('selection:', sel.rangeCount);
         if (!sel || !sel.rangeCount) return null;
 
@@ -161,6 +210,7 @@ export function createSelectionService({ root }) {
 
         return { activeContainer, lineIndex, parentP, container, cursorOffset: range.startOffset, activeNode, dataIndex };
     }
+    */
 
     /**
      * 6. 통합 모델 추출 (단일 지점 좌표)

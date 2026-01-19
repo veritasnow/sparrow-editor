@@ -1,6 +1,6 @@
 // features/inline/inlineServiceBase.js
 import { getRanges } from "../../utils/rangeUtils.js";
-import { normalizeCursorData, adjustRangesByChunks } from "../../utils/cursorUtils.js";
+import { normalizeCursorData } from "../../utils/cursorUtils.js";
 
 /**
  * 인라인 스타일(Bold, Italic 등)을 적용하는 공통 서비스 베이스
@@ -33,12 +33,7 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
                 const currentPos = uiAPI.getDomSelection(activeKey);
                 if (currentPos) {
                     console.log('currentPos111111111111111:', currentPos);
-                    const lineIndex = currentPos[0].lineIndex;
-                    const lineModel = currentState[lineIndex];                    
-                    const adjustedPos = adjustRangesByChunks(currentPos, lineModel);
-                    lastNormalizedPos = normalizeCursorData(adjustedPos, activeKey);
-
-                    //lastNormalizedPos = normalizeCursorData(currentPos, activeKey);
+                    lastNormalizedPos = normalizeCursorData(currentPos, activeKey);
                 }
             }
         });
