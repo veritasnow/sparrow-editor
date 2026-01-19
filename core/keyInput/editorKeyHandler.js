@@ -5,8 +5,7 @@ import { executeBackspace } from './processors/keyBackspaceProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
 
 /**
- * 💚 EditorKeyHandler
- * 모든 핵심 로직은 core/keyInput의 프로세서들이 처리합니다.
+ * EditorKeyHandler
  */
 export function createEditorKeyHandler(context) {
     const { state, ui, domSelection } = context;

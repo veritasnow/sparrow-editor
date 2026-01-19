@@ -5,7 +5,7 @@ import { createVideoInsertService } from './service/videoInsertService.js';
 
 export function bindVideoButton(videoBtn, stateAPI, uiAPI, rootId) {
     const rootEl = document.getElementById(rootId);
-    const toolbar = rootEl.querySelector('.toolbar');
+    const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
     const { popup, inputEl, confirmBtn, open, close } = createVideoPopupView(rootEl, toolbar, videoBtn);

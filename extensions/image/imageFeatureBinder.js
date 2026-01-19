@@ -4,7 +4,7 @@ import { createImageInsertService } from './service/imageInsertService.js';
 // features/image/imageFeatureBinder.js
 export function bindImageButton(imageBtn, stateAPI, uiAPI, rootId) {
     const rootEl = document.getElementById(rootId);
-    const toolbar = rootEl.querySelector('.toolbar');
+    const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     const { popup, inputEl, fileBtn, fileInput, confirmBtn, open, close }
         = createImagePopupView(rootEl, toolbar, imageBtn);

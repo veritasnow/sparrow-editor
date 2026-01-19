@@ -8,7 +8,7 @@ export function createDOMCreateService(rootId) {
   function create() {
 
     root.innerHTML = `
-      <div class="toolbar">
+      <div class="sparrow-toolbar">
         <button id="${rootId}-boldBtn" title="굵게"><b>B</b></button>
         <button id="${rootId}-italicBtn" title="기울이기"><i>I</i></button>
         <button id="${rootId}-underLineBtn" title="밑줄"><u>U</u></button>

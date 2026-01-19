@@ -4,7 +4,7 @@ import { createTableInsertService } from './service/tableInsertService.js';
 
 export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
     const rootEl = document.getElementById(rootId);
-    const toolbar = rootEl.querySelector('.toolbar');
+    const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
     const { popup, grid, sizeText, open, close } 
