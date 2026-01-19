@@ -1,6 +1,7 @@
+import { MAX_HISTORY } from '../constatns/stateConstants.js';
+
 // store/cursorHistoryStore.js
 export function createCursorHistoryStore(initialCursor = null) {
-  const MAX_HISTORY = 50;
   let history = [initialCursor];
   let currentIndex = 0;
 

@@ -1,5 +1,6 @@
+import { MAX_HISTORY } from '../constatns/stateConstants.js';
+
 export function createHistoryStore(initialState = {}) {
-  const MAX_HISTORY = 50;
 
   // 1. 초기 상태 설정 (불필요한 전체 딥클론 제거, 얕은 복사만)
   let history = [{ ...initialState }];
