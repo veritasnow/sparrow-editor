@@ -1,4 +1,4 @@
-import { executeEnter, executeBackspace, executeDelete } from '../../core/keyInput/keyProcessors.js';
+import { executeEnter, executeBackspace, executeDelete, executePaste } from '../../core/keyInput/keyProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
 
 /**
@@ -23,6 +23,11 @@ export function createEditorKeyHandler(context) {
         executeDelete(e, { state, ui, domSelection });
     };    
 
+    // 📋 붙여넣기 처리 추가
+    const processPaste = (e) => {
+        executePaste(e, { state, ui, domSelection });
+    };    
+
     // 실행 취소
     const callUndo = () => {
         executeHistory('undo', { state, ui, domSelection });
@@ -37,6 +42,7 @@ export function createEditorKeyHandler(context) {
         processEnter,
         processBackspace,
         processDelete,
+        processPaste,
         undo: callUndo,
         redo: callRedo
     };

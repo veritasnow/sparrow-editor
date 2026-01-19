@@ -233,10 +233,12 @@ export function createEditorFactory() {
         });
 
         inputApp.bindKeydown({
-          handleEnter     : keyProcessor.processEnter,
-          handleBackspace : keyProcessor.processBackspace,
-          undo            : keyProcessor.undo,
-          redo            : keyProcessor.redo
+          processEnter     : keyProcessor.processEnter,
+          processBackspace : keyProcessor.processBackspace,
+          processDelete    : keyProcessor.processDelete,
+          processPaste     : keyProcessor.processPaste,
+          undo             : keyProcessor.undo,
+          redo             : keyProcessor.redo
         });
 
         // D. 툴바 피처 바인딩

@@ -227,112 +227,6 @@ export function calculateBackspaceState(currentState, lineIndex, offset, ranges 
         updatedLineIndex: lineIndex
     };
 }
-/*
-export function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
-    // 1. 선택 영역 삭제
-    if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
-        return calculateDeleteSelectionState(currentState, ranges);
-    }
-
-    const nextState = [...currentState];
-    const currentLine = currentState[lineIndex];
-
-    console.log("🔍 [디버그 레포트]");
-    console.log("- 전체 오프셋(offset):", offset);
-    console.log("- 청크 개수:", currentLine.chunks.length);
-
-    // 2. 줄 병합 (커서가 줄 맨 앞에 있을 때)
-    if (offset === 0 && lineIndex > 0) {
-        const prevLine = nextState[lineIndex - 1];
-        const lastChunkIdx = Math.max(0, prevLine.chunks.length - 1);
-        const lastChunk = prevLine.chunks[lastChunkIdx];
-        const handler = chunkRegistry.get(lastChunk.type);
-        const lastChunkLen = handler.getLength(lastChunk);
-
-        const mergedChunks = [
-            ...prevLine.chunks.map(cloneChunk), 
-            ...currentLine.chunks.map(cloneChunk)
-        ];
-
-        nextState[lineIndex - 1] = EditorLineModel(
-            prevLine.align, 
-            normalizeLineChunks(mergedChunks)
-        );
-        nextState.splice(lineIndex, 1);
-
-        return {
-            newState: nextState,
-            newPos: {
-                lineIndex: lineIndex - 1,
-                anchor: { chunkIndex: lastChunkIdx, type: lastChunk.type, offset: lastChunkLen }
-            },
-            deletedLineIndex: lineIndex,
-            updatedLineIndex: lineIndex - 1
-        };
-    }
-
-    // 3. 청크 내부 삭제 로직 (Atomic 삭제 대응)
-    const newChunks = [];
-    let deleted = false;
-    let acc = 0;
-    let targetAnchor = null;
-
-    console.log("추가 확인중...!! : " + currentLine.chunks.length);
-
-    for (let i = 0; i < currentLine.chunks.length; i++) {
-        const chunk = currentLine.chunks[i];
-        const handler = chunkRegistry.get(chunk.type);
-        const chunkLen = handler.getLength(chunk);
-        const chunkStart = acc;
-        const chunkEnd = acc + chunkLen;
-
-        // [핵심] Atomic 청크 삭제 분기 (비디오, 이미지 등)
-        // 커서가 청크의 바로 뒤(chunkEnd)에 있을 때 백스페이스를 누르면 해당 청크를 건너뜀
-        if (!handler.canSplit && offset === chunkEnd && !deleted) {
-            console.log(`[Atomic Delete] ${chunk.type} 삭제됨`);
-            deleted = true;
-            targetAnchor = {
-                chunkIndex: Math.max(0, i - 1),
-                type: 'text',
-                offset: i > 0 ? chunkRegistry.get(currentLine.chunks[i-1].type).getLength(currentLine.chunks[i-1]) : 0
-            };
-            // newChunks에 push하지 않음으로써 삭제
-        } 
-        // 삭제 대상이 아닌 청크들
-        else if (deleted || !handler.canSplit || offset <= chunkStart || offset > chunkEnd) {
-            console.log("삭제 대상 아닌 청크??");
-            newChunks.push(cloneChunk(chunk));
-        } 
-        // 텍스트 청크 한 글자 삭제
-        else {
-            const cut = offset - chunkStart;
-            const newText = chunk.text.slice(0, cut - 1) + chunk.text.slice(cut);
-
-            if (newText.length > 0) {
-                newChunks.push(handler.create(newText, chunk.style));
-                targetAnchor = { chunkIndex: i, type: 'text', offset: cut - 1 };
-            } else {
-                targetAnchor = { chunkIndex: Math.max(0, i - 1), type: 'text', offset: 0 };
-            }
-            deleted = true;
-        }
-        acc += chunkLen;
-    }
-
-    if (!deleted) return { newState: currentState, newPos: null };
-
-    nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(newChunks));
-    
-    return {
-        newState: nextState,
-        newPos: {
-            lineIndex,
-            anchor: targetAnchor || { chunkIndex: 0, type: 'text', offset: Math.max(0, offset - 1) }
-        },
-        updatedLineIndex: lineIndex
-    };
-}
-*/    
 
 // ⏎ Enter Key
 /**
@@ -424,58 +318,124 @@ export function calculateEnterState(currentState, lineIndex, offset) {
     };
 }
 
-/*
-export function calculateEnterState(currentState, lineIndex, offset) {
-    const currentLine = currentState[lineIndex];
-    const beforeChunks = [];
-    const afterChunks = [];
-    let acc = 0;
-
-    currentLine.chunks.forEach(chunk => {
-        const handler = chunkRegistry.get(chunk.type);
-        const chunkLen = handler.getLength(chunk);
-        
-        if (!handler.canSplit) {
-            // 비디오/이미지: 오프셋이 이 노드 끝보다 작거나 같으면 다음 줄로
-            if (acc + chunkLen <= offset) {
-                beforeChunks.push(cloneChunk(chunk));
-            } else {
-                afterChunks.push(cloneChunk(chunk));
-            }
-        } else {
-            const start = acc;
-            const end = acc + chunkLen;
-
-            if (offset <= start) {
-                afterChunks.push(cloneChunk(chunk));
-            } else if (offset >= end) {
-                beforeChunks.push(cloneChunk(chunk));
-            } else {
-                const cut = offset - start;
-                const beforeText = chunk.text.slice(0, cut);
-                const afterText = chunk.text.slice(cut);
-                if (beforeText) beforeChunks.push(handler.create(beforeText, chunk.style));
-                if (afterText) afterChunks.push(handler.create(afterText, chunk.style));
-            }
-        }
-        acc += chunkLen;
-    });
-
-    // 핵심: 엔터 친 후 뒷부분이 비어있다면 반드시 빈 텍스트 노드 생성
-    const finalAfterChunks = normalizeLineChunks(afterChunks);
+/**
+ * ⌦ Delete Key 상태 계산 통합 함수
+ */
+export function calculateDeleteState(currentState, lineIndex, offset, ranges = []) {
+    // 1. 선택 영역이 있는 경우 (Selection Delete) - Backspace와 동일한 로직 공유
+    if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
+        return calculateDeleteSelectionState(currentState, ranges);
+    }
 
     const nextState = [...currentState];
-    nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(beforeChunks));
-    const newLineData = EditorLineModel(currentLine.align, finalAfterChunks);
-    nextState.splice(lineIndex + 1, 0, newLineData);
+    const currentLine = currentState[lineIndex];
+    
+    // 현재 라인의 전체 길이 계산
+    const currentLineLen = currentLine.chunks.reduce((acc, chunk) => 
+        acc + chunkRegistry.get(chunk.type).getLength(chunk), 0);
 
-    return { 
-        newState: nextState, 
-        newPos: { 
-            lineIndex: lineIndex + 1, 
-            anchor: { chunkIndex: 0, type: 'text', offset: 0 } 
-        }, 
-        newLineData 
+    // 🚀 [Case 1] 커서가 줄의 맨 끝일 때: 아랫줄을 현재 줄로 병합
+    if (offset === currentLineLen) {
+        if (lineIndex < currentState.length - 1) {
+            const nextLine = currentState[lineIndex + 1];
+            
+            // 현재 줄 청크 + 아랫줄 청크 병합
+            const mergedChunks = [
+                ...currentLine.chunks.map(cloneChunk),
+                ...nextLine.chunks.map(cloneChunk)
+            ];
+
+            nextState[lineIndex] = EditorLineModel(
+                currentLine.align,
+                normalizeLineChunks(mergedChunks)
+            );
+            
+            // 아랫줄 삭제
+            nextState.splice(lineIndex + 1, 1);
+
+            return {
+                newState: nextState,
+                newPos: {
+                    lineIndex,
+                    anchor: {
+                        // 커서 위치는 유지 (현재 라인의 끝 지점)
+                        chunkIndex: currentLine.chunks.length - 1,
+                        type: currentLine.chunks[currentLine.chunks.length - 1].type,
+                        offset: offset 
+                    }
+                },
+                deletedLineIndex: lineIndex + 1,
+                updatedLineIndex: lineIndex
+            };
+        } else {
+            // 마지막 줄의 끝에서는 아무 동작 안 함
+            return { newState: currentState, newPos: null };
+        }
+    }
+
+    // 🚀 [Case 2] 현재 줄 내부에서 뒤의 글자 삭제
+    const newChunks = [];
+    let deleted = false;
+    let acc = 0;
+    let targetAnchor = null;
+
+    // 삭제 대상 청크(targetIndex) 탐색 (Delete는 offset 지점의 글자를 삭제)
+    let targetIndex = -1;
+    let tempAcc = 0;
+    for (let i = 0; i < currentLine.chunks.length; i++) {
+        const chunk = currentLine.chunks[i];
+        const len = chunkRegistry.get(chunk.type).getLength(chunk);
+        // Delete는 커서가 청크의 시작점부터 끝 전까지 있을 때 해당 청크가 타겟 (Start <= offset < End)
+        if (offset >= tempAcc && offset < tempAcc + len) {
+            targetIndex = i;
+            break;
+        }
+        tempAcc += len;
+    }
+
+    acc = 0;
+    for (let i = 0; i < currentLine.chunks.length; i++) {
+        const chunk = currentLine.chunks[i];
+        const handler = chunkRegistry.get(chunk.type);
+        const chunkLen = handler.getLength(chunk);
+        const chunkStart = acc;
+
+        if (i === targetIndex && !deleted) {
+            if (handler.canSplit) {
+                // [텍스트 삭제] - 현재 offset 위치의 글자 하나 제거
+                const cut = offset - chunkStart;
+                const newText = chunk.text.slice(0, cut) + chunk.text.slice(cut + 1);
+
+                if (newText.length > 0) {
+                    newChunks.push(handler.create(newText, chunk.style));
+                    targetAnchor = { chunkIndex: i, type: 'text', offset: cut };
+                } else {
+                    // 청크가 비면 다음 청크나 현재 위치 유지
+                    targetAnchor = { chunkIndex: i, type: 'text', offset: cut };
+                }
+            } else {
+                // [Atomic(이미지/테이블) 삭제]
+                console.log(`[Delete Key] Atomic ${chunk.type} 삭제`);
+                targetAnchor = { chunkIndex: i, type: 'text', offset: offset };
+                // push 하지 않음으로써 삭제
+            }
+            deleted = true;
+        } else {
+            newChunks.push(cloneChunk(chunk));
+        }
+        acc += chunkLen;
+    }
+
+    if (!deleted) return { newState: currentState, newPos: null };
+
+    nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(newChunks));
+
+    return {
+        newState: nextState,
+        newPos: {
+            lineIndex,
+            anchor: targetAnchor || { chunkIndex: 0, type: 'text', offset: offset }
+        },
+        updatedLineIndex: lineIndex
     };
 }
-*/

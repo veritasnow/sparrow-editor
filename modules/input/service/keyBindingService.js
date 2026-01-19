@@ -1,6 +1,5 @@
 /**
- * 🎧 에디터 키보드 입력 이벤트 바인딩 서비스
- * 단일 진입점으로 모든 키 입력을 Core 로직에 위임합니다.
+ * 🎧 에디터 키보드 입력 및 클립보드 이벤트 바인딩 서비스
  */
 export function createKeyBindingService(editorEl) {
 
@@ -11,8 +10,9 @@ export function createKeyBindingService(editorEl) {
     let destroyed = false;
     let bound = false;
 
-    // 🔒 keydown 핸들러 참조 (unbind를 위해 필요)
+    // 🔒 핸들러 참조 (해제를 위해 필요)
     let onKeydown;
+    let onPaste;
 
     function assertAlive() {
         if (destroyed) {
@@ -22,59 +22,80 @@ export function createKeyBindingService(editorEl) {
 
     return {
         /**
-         * @param {Object} handlers - { handleEnter, handleBackspace, handleUndo, handleRedo }
+         * @param {Object} handlers - { processEnter, processBackspace, processDelete, processPaste, undo, redo }
          */
         bindEvents(handlers) {
             assertAlive();
-            if (bound) return; // ✅ 중복 바인딩 방지
+            if (bound) return; 
             bound = true;
 
+            // 1. 키보드 입력 핸들러
             onKeydown = (e) => {
                 const { key, ctrlKey, shiftKey } = e;
 
                 // ENTER
                 if (key === "Enter") {
                     e.preventDefault();
-                    handlers.handleEnter();
+                    handlers.processEnter();
                     return;
                 }
 
                 // BACKSPACE
                 if (key === "Backspace") {
+                    // 기본 동작을 막고 에디터 로직 실행
                     e.preventDefault();
-                    handlers.handleBackspace();
+                    handlers.processBackspace(e);
+                    return;
+                }
+
+                // DELETE 🚀 추가
+                if (key === "Delete") {
+                    e.preventDefault();
+                    handlers.processDelete(e);
                     return;
                 }
 
                 // UNDO (Ctrl + Z)
-                if (ctrlKey && key === "z" && !shiftKey) {
+                if (ctrlKey && key.toLowerCase() === "z" && !shiftKey) {
                     e.preventDefault();
                     handlers.undo();
                     return;
                 }
 
-                // REDO (Ctrl + Shift + Z)
-                if (ctrlKey && key === "Z" && shiftKey) {
+                // REDO (Ctrl + Shift + Z 또는 Ctrl + Y)
+                if (ctrlKey && ( (key.toLowerCase() === "z" && shiftKey) || key.toLowerCase() === "y" )) {
                     e.preventDefault();
                     handlers.redo();
                     return;
                 }
+            };
 
-                // 🔧 여기에 Ctrl+B, Ctrl+I 등 단축키 추가 가능
+            // 2. 붙여넣기 핸들러 🚀 추가
+            onPaste = (e) => {
+                // 커스텀 붙여넣기 로직(HtmlDeserializer 활용 등)을 실행하기 위해 호출
+                handlers.processPaste(e);
             };
 
             editorEl.addEventListener("keydown", onKeydown);
+            editorEl.addEventListener("paste", onPaste); // 붙여넣기 이벤트 바인딩
         },
 
         /**
-         * 키보드 이벤트 바인딩을 해제하고 서비스 생명주기를 종료합니다.
+         * 이벤트 바인딩 해제 및 서비스 종료
          */
         destroy() {
             if (destroyed) return;
             destroyed = true;
 
-            editorEl.removeEventListener("keydown", onKeydown);
+            if (onKeydown) {
+                editorEl.removeEventListener("keydown", onKeydown);
+            }
+            if (onPaste) {
+                editorEl.removeEventListener("paste", onPaste);
+            }
+            
             onKeydown = null;
+            onPaste = null;
         }
     };
 }
