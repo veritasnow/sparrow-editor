@@ -128,8 +128,8 @@ extensions/image
 
 ## 📌 TODO
 
-* [ ] 복사 → 붙여넣기 : 외부 DOM을 Editor의 Line / Chunk 구조로 변환하는 로직 구현예정
-* [ ] Delete / Backspace 처리 미구현
+* [ ] 복사 → 붙여넣기 : 외부 DOM을 Editor의 Line / Chunk 구조로 변환하는 로직(초안완료) 작업중
+* [ ] KeyProcessor 로직이 비대해짐 -> 로직 분리(우선순위로 잡을것!!)
 * [ ] selection 모듈화작업예정
 
 ---
