@@ -117,54 +117,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         return '';
     }    
 
-    /*
-    function calculateUpdate(currentLine, selection, activeKey) {
-        const { dataIndex, activeNode, cursorOffset, lineIndex, container } = selection;
-        let result = null;
-        let flags = { isNewChunk: false, isChunkRendering: false };
-
-        // --- Case 1: 단순 텍스트 업데이트 ---
-        if (dataIndex !== null && currentLine.chunks[dataIndex]?.type === 'text') {
-            result = inputModelService.updateTextChunk(
-                currentLine, dataIndex, activeNode.textContent, cursorOffset, lineIndex, activeKey
-            );
-
-            console.log("단순 텍스트 업데이트? :", result);
-            flags.isChunkRendering = !!result;
-        } 
-        
-        // --- Case 2: 구조적 변화 (DOM Rebuild) ---
-        if (!result) {
-            console.log("DOM Rebuild 탄거야????");            
-            const rebuild = ui.parseLineDOM(
-                selection.parentP, 
-                currentLine.chunks, 
-                container, 
-                cursorOffset, 
-                lineIndex
-            );
-            
-            if (rebuild.newChunks !== currentLine.chunks) {
-                result = { 
-                    updatedLine: EditorLineModel(currentLine.align, rebuild.newChunks), 
-                    restoreData: { ...rebuild.restoreData, containerId: activeKey } 
-                };
-                flags.isNewChunk = true;
-            }
-        }
-
-        if (!result) return { flags: { hasChange: false } };
-
-        // 복원 데이터 안전 장치
-        if (flags.isNewChunk && !result.restoreData) {
-            console.log("복원 데이터 안전 장치 탄거야????");
-            result.restoreData = inputModelService.createDefaultRestoreData(result.updatedLine, lineIndex, activeKey);
-        }
-
-        return { ...result, flags: { ...flags, hasChange: true } };
-    }
-    */
-
     /**
      * 상태 저장소(Key별 분리)에 저장
      */
