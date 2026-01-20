@@ -36,12 +36,14 @@ export function createRenderService({ rootId, rendererRegistry }) {
         }
     }
 
-    function renderLineChunks(line, parentEl) {
+    //function renderLineChunks(line, parentEl) {
+    function renderLineChunks(line, lineIndex, parentEl) {
         line.chunks.forEach((chunk, chunkIndex) => {
             const renderer = rendererRegistry[chunk.type];
             if (!renderer || typeof renderer.render !== "function") return;
 
-            const el = renderer.render(chunk);
+            const el = renderer.render(chunk, lineIndex, chunkIndex);
+            //const el = renderer.render(chunk);
             el.dataset.index = chunkIndex;
             el.classList.add(`chunk-${chunk.type}`);
             parentEl.appendChild(el);
@@ -91,7 +93,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 if (!lineEl) return;
                 lineEl.innerHTML = "";
                 lineEl.style.textAlign = line.align || "left";
-                renderLineChunks(line, lineEl);
+                //renderLineChunks(line, lineEl);
+                renderLineChunks(line, i, lineEl);
             });
         },
 
@@ -129,7 +132,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 br.dataset.marker = "empty";
                 lineEl.appendChild(br);
             } else {
-                renderLineChunks(lineData, lineEl);
+                //renderLineChunks(lineData, lineEl);
+                renderLineChunks(lineData, lineIndex, lineEl);
             }
         },
         
