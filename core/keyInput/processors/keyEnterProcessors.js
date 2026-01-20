@@ -114,6 +114,55 @@ function calculateEnterState(currentState, lineIndex, offset) {
 
     return { newState: nextState, newPos, newLineData, lineIndex };
 }
+
+
+/**
+ * [Step 3] 상태 저장 및 UI 업데이트 반영
+ */
+// keyEnterProcessors.js
+
+function applyEnterResult(activeKey, result, { state, ui, domSelection }) {
+    const { newState, newPos, newLineData, lineIndex } = result;
+
+    // 1. 상태 저장
+    state.save(activeKey, newState);
+
+    // 2. [매우 중요] 현재 DOM(분할 전)에서 테이블들을 미리 꺼내둡니다.
+    // 이 테이블들은 잠시 후 newLineData(lineIndex + 1)를 그릴 때 재사용됩니다.
+    const container = document.getElementById(activeKey);
+    const currentLineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
+    
+    // 현재 라인에 있던 테이블 DOM들을 미리 배열에 담아둡니다.
+    const movingTablePool = currentLineEl 
+        ? Array.from(currentLineEl.querySelectorAll('.chunk-table')) 
+        : [];
+
+    // 3. UI 반영: 줄 삽입 (이 순간 lineIndex + 1 자리에 빈 div가 생기고 기존 줄들은 뒤로 밀림)
+    ui.insertLine(lineIndex + 1, newLineData.align, activeKey); 
+
+    // 4. 기존 줄(lineIndex) 업데이트 
+    // (이제 분할되어 남은 데이터만 그려짐. tablePool은 null이므로 함수가 알아서 추출)
+    ui.renderLine(lineIndex, newState[lineIndex], activeKey);
+
+    // 5. 새 줄(lineIndex + 1) 업데이트
+    // 💡 여기서 아까 추출한 movingTablePool을 직접 주입합니다!
+    ui.renderLine(lineIndex + 1, newState[lineIndex + 1], activeKey, movingTablePool);
+    
+    // 6. 커서 복원
+    const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
+    if (finalPos) {
+        state.saveCursor(finalPos);
+        domSelection.restoreCursor(finalPos);
+    }
+}
+
+
+
+
+
+
+
+
 /*
 function calculateEnterState(currentState, lineIndex, offset) {
     const currentLine = currentState[lineIndex];
@@ -186,29 +235,3 @@ function calculateEnterState(currentState, lineIndex, offset) {
     return { newState: nextState, newPos, newLineData, lineIndex };
 }
 */
-
-/**
- * [Step 3] 상태 저장 및 UI 업데이트 반영
- */
-function applyEnterResult(activeKey, result, { state, ui, domSelection }) {
-    const { newState, newPos, newLineData, lineIndex } = result;
-
-    // 상태 저장
-    state.save(activeKey, newState);
-
-    // 커서 데이터 정규화 및 저장
-    const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
-    if (finalPos) {
-        state.saveCursor(finalPos);
-    }
-
-    // UI 반영: 줄 삽입 및 기존/신규 라인 렌더링
-    ui.insertLine(lineIndex + 1, newLineData.align, activeKey); 
-    ui.renderLine(lineIndex, newState[lineIndex], activeKey);
-    ui.renderLine(lineIndex + 1, newLineData, activeKey);
-    
-    // 커서 복원
-    if (finalPos) {
-        domSelection.restoreCursor(finalPos);
-    }
-}

@@ -56,9 +56,17 @@ export function createEditorAlignService(stateAPI, uiAPI) {
         }
 
         // 9. UI 렌더링 (activeKey를 전달하여 해당 셀/본문만 타겟팅)
+        const container = document.getElementById(activeKey);
+
         for (let i = startLineIndex; i <= endLineIndex; i++) {
-            // 💡 uiApplication에서 수정한 대로 세 번째 인자로 activeKey 전달
-            uiAPI.renderLine(i, newState[i], activeKey);
+            const lineData = newState[i];
+            const lineEl = container?.querySelectorAll(':scope > .text-block')[i];
+
+            // 💡 [추가] 정렬 변경 전, 기존 라인 엘리먼트에서 테이블 DOM들을 백업합니다.
+            const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+
+            // 💡 네 번째 인자로 tablePool을 전달하여 테이블 DOM이 새로 생성되지 않게 합니다.
+            uiAPI.renderLine(i, lineData, activeKey, tablePool);
         }
 
         // 10. 커서 복원

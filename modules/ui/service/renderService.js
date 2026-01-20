@@ -110,39 +110,30 @@ export function createRenderService({ rootId, rendererRegistry }) {
             container.appendChild(firstDiv);
         },
 
-        renderLine(lineIndex, lineData, targetKey) {
+        renderLine(lineIndex, lineData, targetKey, externalPool = null) {
             const container = getTargetElement(targetKey);
             if (!container) return;
 
             const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
             let lineEl = lines[lineIndex];
             
-            // 1. 해당 인덱스에 라인 엘리먼트가 없으면 생성
             if (!lineEl) {
                 lineEl = document.createElement("div");
                 lineEl.className = "text-block";
                 container.appendChild(lineEl);
             }
 
-            // 2. [중요] 기존 라인에 이미 존재하던 테이블 DOM들을 순서대로 백업 (Pool)
-            // 클래스명(.chunk-table)을 기반으로 현재 DOM에 그려진 테이블들을 모두 가져옵니다.
-            const tablePool = Array.from(lineEl.querySelectorAll('.chunk-table'));
+            // 💡 핵심: 외부에서 준 Pool이 있으면 그걸 쓰고, 없으면 현재 내 라인에서 찾음
+            const tablePool = externalPool || Array.from(lineEl.querySelectorAll('.chunk-table'));
 
-            // 3. 라인 기본 스타일 설정 및 내부 초기화
-            lineEl.className = "text-block";
             lineEl.style.textAlign = lineData.align || "left";
-            
-            // innerHTML을 비우기 전에 자식 노드들이 참조를 잃지 않도록 주의해야 하지만,
-            // tablePool에 이미 담아두었으므로 메모리상에는 존재합니다.
-            lineEl.innerHTML = "";
+            lineEl.innerHTML = ""; // 내부를 비워도 tablePool 변수가 참조를 들고 있어 안전함
 
-            // 4. 청크 데이터가 없는 경우 처리
             if (!lineData.chunks || lineData.chunks.length === 0) {
                 const br = document.createElement("br");
                 br.dataset.marker = "empty";
                 lineEl.appendChild(br);
             } else {
-                // 5. 백업된 Pool을 사용하여 청크 렌더링 실행
                 this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
             }
         },

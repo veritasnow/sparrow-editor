@@ -65,17 +65,21 @@ export function createImageInsertService(stateAPI, uiAPI) {
         // 7. 커서 상태 저장 (Undo용)
         stateAPI.saveCursor(nextCursorPos);
         
-        // 8. UI 업데이트 (activeKey 전달이 핵심!)
-        // 이미지가 들어간 라인 렌더링
-        uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey);
-        
-        // 이미지가 삽입되면서 새로 생성되거나 변경된 다음 라인(restoreLine)이 있다면 렌더링
-        if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
-            // 만약 applyImageBlock이 새로운 P 태그를 생성해야 하는 로직을 포함한다면 
-            // ui.insertNewLineElement가 필요할 수 있으나, 보통 render(newState, activeKey)로 전체 동기화하는 것이 안전합니다.
-            uiAPI.render(newState, activeKey); 
+        // 8. UI 업데이트 (activeKey 전달 및 테이블 보호!)
+        const container = document.getElementById(activeKey);
+
+        // A. 이미지가 삽입된 라인 처리
+        if (newState[lineIndex]) {
+            const lineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
+            // 💡 렌더링 전 테이블 DOM 미리 확보
+            const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+            uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey, tablePool);
         }
 
+        // B. 이미지가 삽입되면서 새로 생성되거나 변경된 라인이 있는 경우
+        if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
+            uiAPI.render(newState, activeKey); 
+        }
         // 9. 최종 커서 복원
         uiAPI.restoreCursor(nextCursorPos);
         

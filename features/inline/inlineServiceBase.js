@@ -48,11 +48,25 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             // stateAPI에 새로 만든 batchSave를 호출 (saveHistory는 기본 true)
             stateAPI.saveBatch(updates, { saveHistory: true });
 
-            // 3. UI 렌더링은 별도로 수행
+            // 3. UI 렌더링 수행
             updates.forEach(update => {
+                // 해당 컨테이너 엘리먼트 확보
+                const container = document.getElementById(update.key);
+                if (!container) return;
+                
+                const lineElements = Array.from(container.querySelectorAll(':scope > .text-block'));
+
                 update.ranges.forEach(({ lineIndex }) => {
                     const lineData = update.newState[lineIndex];
-                    uiAPI.renderLine(lineIndex, lineData, update.key);
+                    const lineEl = lineElements[lineIndex];
+
+                    // 💡 [추가] 해당 라인에 테이블이 있는지 확인하고 있으면 Pool 생성
+                    // 인라인 스타일 적용 시 테이블 자체가 타겟은 아니더라도, 
+                    // 테이블이 포함된 라인 전체를 새로 그릴 때 테이블 DOM을 보존해야 합니다.
+                    const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+
+                    // 💡 세 번째 인자로 activeKey, 네 번째 인자로 tablePool 전달
+                    uiAPI.renderLine(lineIndex, lineData, update.key, tablePool);
                 });
             });
         }

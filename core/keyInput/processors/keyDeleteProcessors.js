@@ -197,13 +197,34 @@ function performInternalDelete(currentState, lineIndex, offset) {
 function applyDeleteResult(activeKey, result, { state, ui, domSelection }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
+    // 1. 상태 저장
     state.save(activeKey, newState);
+
+    const container = document.getElementById(activeKey);
+    let combinedTablePool = [];
+
+    // 2. [중요] 삭제되거나 업데이트될 라인들에서 테이블 DOM 미리 확보
+    // 특히 '줄 병합' 시, 삭제될 줄(deletedLineIndex)에 있던 테이블을 살려야 합니다.
+    if (container) {
+        const lineElements = Array.from(container.querySelectorAll(':scope > .text-block'));
+        
+        // 업데이트될 줄의 테이블 확보
+        if (updatedLineIndex !== undefined && lineElements[updatedLineIndex]) {
+            combinedTablePool.push(...lineElements[updatedLineIndex].querySelectorAll('.chunk-table'));
+        }
+        
+        // 삭제될 줄의 테이블 확보 (병합되어 위로 올라올 테이블들)
+        if (deletedLineIndex !== undefined && lineElements[deletedLineIndex]) {
+            combinedTablePool.push(...lineElements[deletedLineIndex].querySelectorAll('.chunk-table'));
+        }
+    }
+
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
 
     if (finalPos) {
         state.saveCursor(finalPos);
 
-        // 다음 줄 삭제 DOM 반영
+        // 3. DOM에서 줄 삭제
         if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
             const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
             const count = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
@@ -212,9 +233,10 @@ function applyDeleteResult(activeKey, result, { state, ui, domSelection }) {
             }
         }
 
-        // 현재 줄 리렌더링
+        // 4. 업데이트된 줄 리렌더링 (확보된 combinedTablePool 주입)
         if (updatedLineIndex !== null && newState[updatedLineIndex]) {
-            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey);
+            // 병합 후 남은 줄에 이전 줄 + 다음 줄의 모든 테이블을 재사용할 기회를 줍니다.
+            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey, combinedTablePool);
         }
 
         ui.ensureFirstLine(activeKey);

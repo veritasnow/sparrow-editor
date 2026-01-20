@@ -137,9 +137,17 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
      * 💡 변경된 모델에 맞춰 UI 업데이트 (targetKey 추가)
      */
     function executeRendering(updatedLine, lineIndex, flags, restoreData, targetKey) {
+        // 1. 컨테이너 및 현재 라인 엘리먼트 확보
+        const container = document.getElementById(targetKey);
+        const lineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
+
         if (flags.isNewChunk) {
-            // 💡 uiAPI.renderLine에 targetKey 전달
-            ui.renderLine(lineIndex, updatedLine, targetKey);
+            // 💡 [추가] 새로운 청크가 생겨서 라인 전체를 다시 그릴 때, 기존 테이블 DOM을 백업합니다.
+            const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+
+            // 💡 uiAPI.renderLine에 targetKey와 tablePool 전달
+            ui.renderLine(lineIndex, updatedLine, targetKey, tablePool);
+            
             if (restoreData) domSelection.restoreCursor(restoreData);
             return;
         }
@@ -149,15 +157,15 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             const chunk = updatedLine.chunks[chunkIndex];
 
             if (!chunk || chunk.type !== 'text') {
-                // 💡 uiAPI.renderLine에 targetKey 전달
-                ui.renderLine(lineIndex, updatedLine, targetKey);
+                // 💡 여기도 마찬가지로 라인 전체 렌더링 시 테이블 보호
+                const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+                ui.renderLine(lineIndex, updatedLine, targetKey, tablePool);
             } else {
-                // 💡 uiAPI.renderChunk에 targetKey 전달
+                // renderChunk는 해당 텍스트 노드의 값만 바꾸므로 테이블 Pool이 필요 없습니다.
                 ui.renderChunk(lineIndex, chunkIndex, chunk, targetKey);
             }
             domSelection.restoreCursor(restoreData);
         }
     }
-
     return { processInput };
 }

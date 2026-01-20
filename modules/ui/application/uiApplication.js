@@ -63,9 +63,9 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       renderService.render(editorState, targetKey);
     },
 
-    renderLine(lineIndex, lineData, targetKey = rootId) {
+    renderLine(lineIndex, lineData, targetKey = rootId, externalPool = null) {
       assertAlive();
-      renderService.renderLine(lineIndex, lineData, targetKey);
+      renderService.renderLine(lineIndex, lineData, targetKey, externalPool);
     },
 
     renderChunk(lineIndex, chunkIndex, chunkData, targetKey = rootId) {
