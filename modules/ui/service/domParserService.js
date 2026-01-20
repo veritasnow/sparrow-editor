@@ -16,13 +16,6 @@ export function createDOMParseService() {
      * @returns {{ newChunks: Array, restoreData: Object }}
      */
     function parseLineDOM(parentP, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
-
-        console.log('parseLineDOM called with parentP:', parentP);
-        console.log('currentLineChunks :', currentLineChunks);
-        console.log('selectionContainer :', selectionContainer);
-        console.log('cursorOffset :', cursorOffset);
-        console.log('lineIndex :', lineIndex);        
-
         const newChunks = [];
         let textBuffer = '';
         let restoreData = null;
