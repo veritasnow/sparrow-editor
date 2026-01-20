@@ -9,26 +9,34 @@ export function createSelectionService({ root }) {
      */ 
     function getActiveKeys() {
         const sel = window.getSelection();
-        // 선택 정보가 아예 없으면 마지막 활성 키 반환
         if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
         const range = sel.getRangeAt(0);
 
-        // 1. 드래그 영역이 있는 경우 (Selection)
         if (!sel.isCollapsed) {
-            // 루트를 포함하여 모든 [data-container-id]를 검색 대상으로 잡습니다.
-            // root 자체가 data-container-id를 가지고 있다면 querySelectorAll 결과에 포함됩니다.
             const searchRoot = root || document.body;
             const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
-            
-            // 만약 root 자기 자신도 ID를 가졌다면 배열에 추가
             if (searchRoot.hasAttribute('data-container-id')) {
                 allPossibleContainers.push(searchRoot);
             }
 
-            const activeIds = allPossibleContainers
-                .filter(container => sel.containsNode(container, true))
-                .map(container => container.getAttribute('data-container-id'));
+            const intersectingContainers = allPossibleContainers.filter(container => 
+                sel.containsNode(container, true)
+            );
+
+            // 💡 필터링 로직 수정
+            const activeIds = intersectingContainers.filter(c1 => {
+                // 1. 만약 다른 컨테이너를 포함하지 않는 최하위(Leaf)라면 무조건 유지
+                const hasSubContainer = intersectingContainers.some(c2 => c1 !== c2 && c1.contains(c2));
+                if (!hasSubContainer) return true;
+
+                // 2. 만약 부모(root)라면, 자식(cell)들 외에 본인 영역에 선택된 '직계 텍스트'가 있는지 확인
+                // Range의 시작점이나 끝점이 c1(부모)의 직계 자식 노드에 걸려있다면 c1은 "직접 선택된 영역"이 있는 것임
+                const startInSelf = c1.contains(range.startContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.startContainer));
+                const endInSelf = c1.contains(range.endContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.endContainer));
+
+                return startInSelf || endInSelf;
+            }).map(container => container.getAttribute('data-container-id'));
 
             if (activeIds.length > 0) {
                 lastActiveKey = activeIds[activeIds.length - 1];
@@ -36,11 +44,9 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 2. 단일 커서(Caret)인 경우
-        // 드래그가 없더라도 현재 커서가 위치한 가장 가까운 컨테이너 하나만 찾으면 됩니다.
+        // 2. 단일 커서(Caret) 처리 (기존과 동일)
         let node = range.startContainer;
         if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-
         const container = node.closest('[data-container-id]');
         if (container) {
             const id = container.getAttribute('data-container-id');
@@ -297,6 +303,122 @@ function restoreMultiBlockCursor(positions) {
         console.error('영역 복구 중 오류:', e);
     }
 }
+
+    /**
+     * 특정 라인 내에서 절대 오프셋을 기준으로 정확한 TextNode와 Offset을 찾아냄
+     */
+    function findNodeAndOffset(lineEl, targetOffset) {
+        // 1. .chunk-text 내부의 텍스트 노드들을 우선 탐색
+        const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
+        let cumulative = 0;
+        let lastNode = null;
+
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const len = node.textContent.length;
+            if (targetOffset <= cumulative + len) {
+                return { node, offset: Math.max(0, targetOffset - cumulative) };
+            }
+            cumulative += len;
+            lastNode = node;
+        }
+
+        // 2. 만약 텍스트 노드를 찾지 못했다면 (빈 줄인 경우)
+        // .chunk-text 엘리먼트 자체라도 찾아서 그 안의 첫번째 자식으로 지정
+        const chunkText = lineEl.querySelector('.chunk-text');
+        if (chunkText) {
+            const textNode = chunkText.firstChild || chunkText.appendChild(document.createTextNode(''));
+            return { node: textNode, offset: 0 };
+        }
+
+        // 3. 최후의 수단: lineEl 자체의 첫번째 자식
+        const fallbackNode = lineEl.firstChild || lineEl.appendChild(document.createTextNode(''));
+        return { node: fallbackNode, offset: 0 };
+    } 
+
+    /**
+     * 7-2. [수정] 일반 커서 복원 (.text-block 기준)
+     */
+    function restoreCursor(cursorData) {
+        if (!cursorData) return;
+        const { containerId, ranges, anchor, lineIndex } = cursorData;
+        const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
+        if (!targetContainer) return;
+
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        const allLines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
+
+        if (lineIndex !== undefined && anchor) {
+            try {
+                const lineEl = allLines[lineIndex];
+                const chunkEl = Array.from(lineEl.children).find(el => parseInt(el.dataset.index, 10) === anchor.chunkIndex);
+                if (!chunkEl) return;
+
+                const range = document.createRange();
+
+                // 1. 테이블 타입이면서 상세 셀 정보가 있는 경우 (셀 내부로 진입)
+                if (anchor.type === 'table' && anchor.detail) {
+                    const td = chunkEl.querySelectorAll('tr')[anchor.detail.rowIndex]?.querySelectorAll('td')[anchor.detail.colIndex];
+                    if (td) {
+                        let node = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
+                        range.setStart(node, Math.min(anchor.detail.offset, node.length));
+                    }
+                } 
+                // 2. 테이블 청크이지만 상세 정보가 없는 경우 (테이블 앞/뒤에 커서 위치)
+                else if (chunkEl.getAttribute('data-type') === 'table') {
+                    // offset이 0이면 테이블 앞, 그외엔 테이블 뒤
+                    if (anchor.offset === 0) {
+                        range.setStartBefore(chunkEl);
+                    } else {
+                        range.setStartAfter(chunkEl);
+                    }
+                }
+                // 3. 비디오나 이미지 (기존 로직 유지)
+                else if (anchor.type === 'video' || anchor.type === 'image') {
+                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+                } 
+                // 4. 일반 텍스트 청크
+                else {
+                    let node = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
+                    range.setStart(node, Math.min(anchor.offset || 0, node.length));
+                }
+
+                range.collapse(true);
+                sel.addRange(range);
+            } catch (e) {
+                console.error("Cursor restoration error:", e);
+            }
+        }
+    }
+
+    function findFirstTextNode(el) {
+        if (!el) return null;
+        if (el.nodeType === Node.TEXT_NODE) return el;
+        for (let child of el.childNodes) {
+            const found = findFirstTextNode(child);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    function getInsertionAbsolutePosition() {
+        const context = getSelectionContext();
+        if (!context) return null;
+        const { lineIndex, container, cursorOffset, parentP } = context;
+        let absoluteOffset = 0;
+        const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node === container) {
+                absoluteOffset += cursorOffset;
+                break;
+            }
+            absoluteOffset += node.textContent.length;
+        }
+        return { lineIndex, absoluteOffset };
+    }
+
     /*
     function restoreMultiBlockCursor(positions) {
         if (!positions?.length) return;
@@ -440,120 +562,7 @@ function restoreMultiBlockCursor(positions) {
     */
 
 
-    /**
-     * 특정 라인 내에서 절대 오프셋을 기준으로 정확한 TextNode와 Offset을 찾아냄
-     */
-    function findNodeAndOffset(lineEl, targetOffset) {
-        // 1. .chunk-text 내부의 텍스트 노드들을 우선 탐색
-        const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
-        let cumulative = 0;
-        let lastNode = null;
 
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            const len = node.textContent.length;
-            if (targetOffset <= cumulative + len) {
-                return { node, offset: Math.max(0, targetOffset - cumulative) };
-            }
-            cumulative += len;
-            lastNode = node;
-        }
-
-        // 2. 만약 텍스트 노드를 찾지 못했다면 (빈 줄인 경우)
-        // .chunk-text 엘리먼트 자체라도 찾아서 그 안의 첫번째 자식으로 지정
-        const chunkText = lineEl.querySelector('.chunk-text');
-        if (chunkText) {
-            const textNode = chunkText.firstChild || chunkText.appendChild(document.createTextNode(''));
-            return { node: textNode, offset: 0 };
-        }
-
-        // 3. 최후의 수단: lineEl 자체의 첫번째 자식
-        const fallbackNode = lineEl.firstChild || lineEl.appendChild(document.createTextNode(''));
-        return { node: fallbackNode, offset: 0 };
-    } 
-
-    /**
-     * 7-2. [수정] 일반 커서 복원 (.text-block 기준)
-     */
-    function restoreCursor(cursorData) {
-        if (!cursorData) return;
-        const { containerId, ranges, anchor, lineIndex } = cursorData;
-        const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
-        if (!targetContainer) return;
-
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        const allLines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
-
-        if (lineIndex !== undefined && anchor) {
-            try {
-                const lineEl = allLines[lineIndex];
-                const chunkEl = Array.from(lineEl.children).find(el => parseInt(el.dataset.index, 10) === anchor.chunkIndex);
-                if (!chunkEl) return;
-
-                const range = document.createRange();
-
-                // 1. 테이블 타입이면서 상세 셀 정보가 있는 경우 (셀 내부로 진입)
-                if (anchor.type === 'table' && anchor.detail) {
-                    const td = chunkEl.querySelectorAll('tr')[anchor.detail.rowIndex]?.querySelectorAll('td')[anchor.detail.colIndex];
-                    if (td) {
-                        let node = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
-                        range.setStart(node, Math.min(anchor.detail.offset, node.length));
-                    }
-                } 
-                // 2. 테이블 청크이지만 상세 정보가 없는 경우 (테이블 앞/뒤에 커서 위치)
-                else if (chunkEl.getAttribute('data-type') === 'table') {
-                    // offset이 0이면 테이블 앞, 그외엔 테이블 뒤
-                    if (anchor.offset === 0) {
-                        range.setStartBefore(chunkEl);
-                    } else {
-                        range.setStartAfter(chunkEl);
-                    }
-                }
-                // 3. 비디오나 이미지 (기존 로직 유지)
-                else if (anchor.type === 'video' || anchor.type === 'image') {
-                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
-                } 
-                // 4. 일반 텍스트 청크
-                else {
-                    let node = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
-                    range.setStart(node, Math.min(anchor.offset || 0, node.length));
-                }
-
-                range.collapse(true);
-                sel.addRange(range);
-            } catch (e) {
-                console.error("Cursor restoration error:", e);
-            }
-        }
-    }
-
-    function findFirstTextNode(el) {
-        if (!el) return null;
-        if (el.nodeType === Node.TEXT_NODE) return el;
-        for (let child of el.childNodes) {
-            const found = findFirstTextNode(child);
-            if (found) return found;
-        }
-        return null;
-    }
-
-    function getInsertionAbsolutePosition() {
-        const context = getSelectionContext();
-        if (!context) return null;
-        const { lineIndex, container, cursorOffset, parentP } = context;
-        let absoluteOffset = 0;
-        const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            if (node === container) {
-                absoluteOffset += cursorOffset;
-                break;
-            }
-            absoluteOffset += node.textContent.length;
-        }
-        return { lineIndex, absoluteOffset };
-    }
 
     return { 
         getSelectionPosition, 
