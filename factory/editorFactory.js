@@ -172,7 +172,6 @@ export function createEditorFactory() {
       insertLine                  : (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
       removeLine                  : (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
       restoreCursor               : (pos) => domSelection.restoreCursor(pos),
-      restoreBlockCursor          : (pos) => domSelection.restoreBlockCursor(pos),
       restoreMultiBlockCursor     : (positions) => domSelection.restoreMultiBlockCursor(positions),
       getDomSelection             : (targetKey) => domSelection.getDomSelection(targetKey),
       getSelectionPosition        : () => domSelection.getSelectionPosition(),
