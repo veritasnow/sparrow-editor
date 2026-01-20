@@ -111,33 +111,71 @@ export function createRenderService({ rootId, rendererRegistry }) {
         },
 
         renderLine(lineIndex, lineData, targetKey) {
-            console.log("lineData : ", lineData);
-
             const container = getTargetElement(targetKey);
             if (!container) return;
 
             const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
             let lineEl = lines[lineIndex];
             
+            // 1. 해당 인덱스에 라인 엘리먼트가 없으면 생성
             if (!lineEl) {
                 lineEl = document.createElement("div");
                 lineEl.className = "text-block";
                 container.appendChild(lineEl);
             }
 
+            // 2. [중요] 기존 라인에 이미 존재하던 테이블 DOM들을 순서대로 백업 (Pool)
+            // 클래스명(.chunk-table)을 기반으로 현재 DOM에 그려진 테이블들을 모두 가져옵니다.
+            const tablePool = Array.from(lineEl.querySelectorAll('.chunk-table'));
+
+            // 3. 라인 기본 스타일 설정 및 내부 초기화
             lineEl.className = "text-block";
             lineEl.style.textAlign = lineData.align || "left";
+            
+            // innerHTML을 비우기 전에 자식 노드들이 참조를 잃지 않도록 주의해야 하지만,
+            // tablePool에 이미 담아두었으므로 메모리상에는 존재합니다.
             lineEl.innerHTML = "";
 
+            // 4. 청크 데이터가 없는 경우 처리
             if (!lineData.chunks || lineData.chunks.length === 0) {
                 const br = document.createElement("br");
                 br.dataset.marker = "empty";
                 lineEl.appendChild(br);
             } else {
-                //renderLineChunks(lineData, lineEl);
-                renderLineChunks(lineData, lineIndex, lineEl);
+                // 5. 백업된 Pool을 사용하여 청크 렌더링 실행
+                this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
             }
         },
+
+        renderLineChunksWithReuse(line, lineIndex, parentEl, tablePool) {
+            line.chunks.forEach((chunk, chunkIndex) => {
+                // 💡 테이블 타입을 만났을 때
+                if (chunk.type === 'table') {
+                    // 💡 Pool에서 가장 앞에 있는 테이블 DOM을 하나 꺼냄 (Shift)
+                    const oldTable = tablePool.shift();
+                    
+                    if (oldTable) {
+                        // 💡 위치(인덱스) 정보만 최신 데이터로 업데이트
+                        oldTable.dataset.lineIndex = lineIndex;
+                        oldTable.dataset.chunkIndex = chunkIndex;
+                        oldTable.dataset.index = chunkIndex;
+                        
+                        parentEl.appendChild(oldTable);
+                        console.log(`[Reuse] 테이블 DOM 재사용 성공 (ChunkIndex: ${chunkIndex})`);
+                        return; 
+                    }
+                }
+
+                // 일반 텍스트나 새로 추가된 테이블(백업본이 없는 경우)은 새로 렌더링
+                const renderer = rendererRegistry[chunk.type];
+                if (!renderer) return;
+
+                const el = renderer.render(chunk, lineIndex, chunkIndex);
+                el.dataset.index = chunkIndex;
+                el.classList.add(`chunk-${chunk.type}`);
+                parentEl.appendChild(el);
+            });
+        },    
         
         renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
             const container = getTargetElement(targetKey);
