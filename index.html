@@ -145,6 +145,52 @@
       color: var(--text-sub);
       font-size: 0.9rem;
     }
+
+  /* 모바일/반응형 최적화 추가 */
+    @media (max-width: 768px) {
+      header {
+        padding: 40px 15px 20px;
+      }
+
+      h1 {
+        font-size: 2.2rem; /* 제목 크기 축소 */
+        letter-spacing: -1px;
+      }
+
+      .main-wrapper {
+        width: 95%;
+        padding: 15px; /* 여백 축소 */
+        border-radius: 12px;
+      }
+
+      .editor-container {
+        min-height: 350px; /* 모바일에서는 높이를 조금 줄임 */
+      }
+
+      .footer-tools {
+        flex-direction: column; /* 세로 정렬 */
+        gap: 15px;
+        align-items: stretch;
+        text-align: center;
+      }
+
+      .status-info {
+        font-size: 0.75rem;
+        word-break: break-all; /* 긴 URL이 넘치지 않게 */
+      }
+
+      button {
+        width: 100%; /* 버튼을 터치하기 쉽게 가득 채움 */
+        padding: 12px;
+      }
+    }
+
+    /* 아주 작은 화면 (iPhone SE 등) */
+    @media (max-width: 380px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+    }    
   </style>
 </head>
 <body>
@@ -159,7 +205,7 @@
 
     <div class="footer-tools">
       <div class="status-info">
-        https://github.com/veritasnow/sparrow-editor
+        <a href="https://github.com/veritasnow/sparrow-editor">https://github.com/veritasnow/sparrow-editor</a>
       </div>
       <div class="controls">
         <button id="destroyBtn">에디터 종료</button>
