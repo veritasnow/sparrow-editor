@@ -167,7 +167,7 @@ export function createEditorFactory() {
       render                      : (data, key = MAIN_CONTENT_KEY) => ui.render(data, key),
       renderLine                  : (i, d, key = MAIN_CONTENT_KEY) => ui.renderLine(i, d, key),
       renderChunk                 : (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
-      ensureFirstLineP            : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLineP(key),
+      ensureFirstLine            : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLine(key),
       shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),
       insertLine                  : (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
       removeLine                  : (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),

@@ -98,7 +98,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             });
         },
 
-        ensureFirstLineP(targetKey) {
+        ensureFirstLine(targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
             
@@ -111,6 +111,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
         },
 
         renderLine(lineIndex, lineData, targetKey) {
+            console.log("lineData : ", lineData);
+
             const container = getTargetElement(targetKey);
             if (!container) return;
 

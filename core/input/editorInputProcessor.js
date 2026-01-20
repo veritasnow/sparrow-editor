@@ -19,7 +19,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         if (!selection || selection.lineIndex < 0) return;
 
         // 💡 렌더링 시 targetKey(activeKey)를 전달하도록 수정
-        ui.ensureFirstLineP(activeKey); 
+        ui.ensureFirstLine(activeKey); 
 
         // 2. 해당 영역(Key)의 상태 데이터 및 현재 줄 모델 확보
         const currentState = state.getState(activeKey); 

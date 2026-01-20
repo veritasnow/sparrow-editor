@@ -229,7 +229,7 @@ function applyBackspaceResult(activeKey, result, { state, ui, domSelection }) {
             ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey);
         }
 
-        ui.ensureFirstLineP(activeKey);
+        ui.ensureFirstLine(activeKey);
         domSelection.restoreCursor(finalPos);
     }
 }

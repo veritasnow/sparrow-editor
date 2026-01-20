@@ -73,10 +73,9 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       renderService.renderChunk(lineIndex, chunkIndex, chunkData, targetKey);
     },
 
-    // 💡 renderService의 명칭 'ensureFirstLineP'와 일치시킴
-    ensureFirstLineP(targetKey = rootId) {
+    ensureFirstLine(targetKey = rootId) {
       assertAlive();
-      renderService.ensureFirstLineP(targetKey);
+      renderService.ensureFirstLine(targetKey);
     },
 
     shiftLinesDown(fromIndex, targetKey = rootId) {
