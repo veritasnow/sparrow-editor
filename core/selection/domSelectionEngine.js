@@ -50,57 +50,6 @@ export function createSelectionService({ root }) {
 
         return [lastActiveKey].filter(Boolean);
     }
-    /*
-    function getActiveKeys() {
-        const sel = window.getSelection();
-        // 선택 영역이 없으면 마지막 활성화된 키 반환
-        if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
-
-        const range = sel.getRangeAt(0);
-        
-        // 1. 드래그 영역(Selection)이 있는 경우: 범위 내의 모든 컨테이너 탐색
-        // range.commonAncestorContainer는 선택 영역을 포함하는 가장 가까운 공통 부모입니다.
-        const commonAncestor = range.commonAncestorContainer;
-        const searchRoot = commonAncestor.nodeType === Node.ELEMENT_NODE 
-            ? commonAncestor 
-            : commonAncestor.parentElement;
-
-        // 선택 영역 내에 포함된 모든 [data-container-id] 요소를 찾습니다.
-        const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
-        
-        // 브라우저의 containsNode API를 사용하여 실제로 선택 영역과 겹치는 컨테이너만 필터링
-        const activeIds = allPossibleContainers
-            .filter(container => sel.containsNode(container, true)) // true: 부분적으로 겹쳐도 포함
-            .map(container => container.getAttribute('data-container-id'));
-
-        if (activeIds.length > 0) {
-            lastActiveKey = activeIds[activeIds.length - 1];
-            return activeIds;
-        }
-
-        // 2. 드래그 영역이 없거나 매우 좁은 경우 (단일 커서)
-        let node = range.startContainer;
-        if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-        
-        // 커서가 위치한 곳에서 가장 가까운 컨테이너를 찾음
-        const container = node.closest('[data-container-id]');
-        if (container) {
-            const id = container.getAttribute('data-container-id');
-            lastActiveKey = id;
-            return [id];
-        }
-
-        // 3. 컨테이너 내부가 아닌 루트 에디터 빈 공간 등에 있을 경우
-        const rootEditor = node.closest('[data-editor-root]');
-        if (rootEditor) {
-            const rootId = rootEditor.id;
-            lastActiveKey = rootId;
-            return [rootId];
-        }
-
-        return [lastActiveKey].filter(Boolean);
-    }
-    */
 
     function getActiveKey() {
         const keys = getActiveKeys();
@@ -268,6 +217,87 @@ export function createSelectionService({ root }) {
      * - block selection은 DOM Range 기반 유지
      * - table cell은 시각적 선택만
      */
+function restoreMultiBlockCursor(positions) {
+    if (!positions?.length) return;
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+
+    // 1. 시각적 하이라이트 초기화
+    document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
+    
+    try {
+        // 2. 단일 컨테이너 내에서의 선택인지 확인 (JSON 예시처럼 셀 하나 내부만 선택한 경우)
+        const isSingleContainer = positions.length === 1;
+
+        if (isSingleContainer) {
+            const pos = positions[0];
+            const container = document.getElementById(pos.containerId);
+            if (!container || !pos.ranges?.length) return;
+
+            // 셀 내부의 특정 위치 찾기
+            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+            const targetLines = lines.length > 0 ? lines : [container];
+
+            const firstR = pos.ranges[0];
+            const lastR = pos.ranges[pos.ranges.length - 1];
+
+            const sPos = findNodeAndOffset(targetLines[firstR.lineIndex] || container, firstR.startIndex);
+            const ePos = findNodeAndOffset(targetLines[lastR.lineIndex] || container, lastR.endIndex);
+
+            const range = document.createRange();
+            range.setStart(sPos.node, sPos.offset);
+            range.setEnd(ePos.node, ePos.offset);
+            sel.addRange(range);
+            
+            container.focus();
+        } 
+        else {
+            // 3. 여러 컨테이너(셀+바깥 등)에 걸친 다중 선택인 경우
+            let globalStart = null;
+            let globalEnd = null;
+
+            positions.forEach((pos) => {
+                const container = document.getElementById(pos.containerId);
+                if (!container) return;
+
+                // 여러 셀을 넘나들 때는 시각적 클래스 부여 (통째로 선택된 느낌을 줌)
+                container.classList.add('is-selected-range');
+
+                const isMainEditor = pos.containerId.endsWith('-content');
+                const lines = isMainEditor 
+                    ? Array.from(container.children).filter(el => el.classList.contains('text-block') || el.tagName === 'TABLE')
+                    : [container]; // 다중 셀 선택시엔 셀 단위를 한 줄로 취급
+
+                if (pos.ranges?.length > 0) {
+                    const sPos = findNodeAndOffset(lines[pos.ranges[0].lineIndex] || container, pos.ranges[0].startIndex);
+                    const ePos = findNodeAndOffset(lines[pos.ranges[pos.ranges.length - 1].lineIndex] || container, pos.ranges[pos.ranges.length - 1].endIndex);
+
+                    if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                        globalStart = sPos;
+                    }
+                    if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
+                        globalEnd = ePos;
+                    }
+                }
+            });
+
+            if (globalStart && globalEnd) {
+                const range = document.createRange();
+                range.setStart(globalStart.node, globalStart.offset);
+                range.setEnd(globalEnd.node, globalEnd.offset);
+                sel.addRange(range);
+            }
+            
+            const lastId = positions[positions.length - 1].containerId;
+            document.getElementById(lastId)?.focus();
+        }
+
+    } catch (e) {
+        console.error('영역 복구 중 오류:', e);
+    }
+}
+    /*
     function restoreMultiBlockCursor(positions) {
         if (!positions?.length) return;
 
@@ -344,6 +374,70 @@ export function createSelectionService({ root }) {
             console.error('블록 복구 중 오류:', e);
         }
     }
+   */
+
+    /*
+    function restoreMultiBlockCursor(positions) {
+        if (!positions || positions.length === 0) return;
+
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+
+        // 1. 모든 선택 대상 컨테이너에 시각적 하이라이트 적용
+        document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
+        positions.forEach(p => {
+            const el = document.getElementById(p.containerId);
+            if (el) el.classList.add('is-selected-range');
+        });
+
+        try {
+            let globalStart = null;
+            let globalEnd = null;
+
+            // 2. 모든 positions를 돌며 절대적인 시작점과 끝점 후보를 찾음
+            positions.forEach((pos) => {
+                const container = document.getElementById(pos.containerId);
+                if (!container) return;
+
+                const lines = Array.from(container.querySelectorAll(':scope > .text-block, td, th'));
+                if (pos.ranges && pos.ranges.length > 0) {
+                    // 이 컨테이너의 첫 번째 라인 정보
+                    const firstR = pos.ranges[0];
+                    const startLine = lines[firstR.lineIndex] || container;
+                    const sPos = findNodeAndOffset(startLine, firstR.startIndex);
+
+                    // 이 컨테이너의 마지막 라인 정보
+                    const lastR = pos.ranges[pos.ranges.length - 1];
+                    const endLine = lines[lastR.lineIndex] || container;
+                    const ePos = findNodeAndOffset(endLine, lastR.endIndex);
+
+                    // DOM 순서상 가장 앞선 것을 globalStart로, 가장 뒤처진 것을 globalEnd로
+                    if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                        globalStart = sPos;
+                    }
+                    if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
+                        globalEnd = ePos;
+                    }
+                }
+            });
+
+            // 3. 찾은 절대 시작/끝 지점을 단 하나의 Range로 연결
+            if (globalStart && globalEnd) {
+                const finalRange = document.createRange();
+                finalRange.setStart(globalStart.node, globalStart.offset);
+                finalRange.setEnd(globalEnd.node, globalEnd.offset);
+                sel.addRange(finalRange);
+
+                // 포커스는 데이터의 마지막 지점에 줌
+                const lastId = positions[positions.length - 1].containerId;
+                document.getElementById(lastId)?.focus();
+            }
+
+        } catch (e) {
+            console.error("블록 복구 도중 치명적 오류:", e);
+        }
+    }
+    */
 
 
     /**

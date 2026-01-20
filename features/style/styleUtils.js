@@ -52,9 +52,10 @@ export function applyStylePatch(areaState, ranges, patch) {
                     newChunks.push(...after);
                 } 
                 else {
-                    // 비텍스트(이미지/비디오/테이블)는 통째로 스타일 적용
+                    // 비텍스트(이미지/비디오/테이블) 처리
                     const newStyle = { ...chunk.style, ...patch };
                     Object.keys(newStyle).forEach(k => {
+                        // patch에서 넘어온 값이 undefined이면 해당 스타일 키 삭제
                         if (newStyle[k] === undefined) delete newStyle[k];
                     });
                     newChunks.push({ ...chunk, style: newStyle });
@@ -75,6 +76,7 @@ export function applyStylePatch(areaState, ranges, patch) {
  */
 export function toggleInlineStyle(areaState, ranges, styleKey, styleValue) {
     let allApplied = true;
+    let hasCheckableContent = false; // 실제로 체크한 대상이 있는지 확인
 
     ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
         const line = areaState[lineIndex];
@@ -89,18 +91,26 @@ export function toggleInlineStyle(areaState, ranges, styleKey, styleValue) {
 
             // 선택 영역과 겹치는 청크 검사
             if (endIndex > chunkStart && startIndex < chunkEnd) {
-                // 하나라도 해당 스타일이 적용 안 되어 있다면 토글 On 모드로 결정
-                if (!(chunk.style && chunk.style[styleKey] === styleValue)) {
-                    allApplied = false;
+                // 💡 핵심 수정: 스타일 토글 여부는 'text' 청크를 기준으로 판단하는 것이 일반적입니다.
+                // 이미지나 동영상은 스타일Key가 없을 가능성이 높으므로 체크에서 제외하거나 스킵합니다.
+                if (chunk.type === 'text') {
+                    hasCheckableContent = true; 
+                    if (!(chunk.style && chunk.style[styleKey] === styleValue)) {
+                        allApplied = false;
+                    }
                 }
+                // 이미지/비디오에도 스타일 토글을 적용할 경우 아래 조건을 추가
+                // else if (chunk.type === 'image' || chunk.type === 'video') { ... }
             }
             acc += chunkLen;
         }
     });
 
-    const patch = allApplied
-        ? { [styleKey]: undefined } // 이미 다 적용됐으면 제거
-        : { [styleKey]: styleValue }; // 하나라도 안 됐으면 적용
+    // 만약 선택 영역에 텍스트가 하나도 없고 이미지만 있다면? 
+    // 기본적으로 적용(On) 모드로 작동하게 하거나 상황에 맞게 처리
+    const patch = (allApplied && hasCheckableContent)
+        ? { [styleKey]: undefined } // 모두 적용되어 있으면 제거
+        : { [styleKey]: styleValue }; // 하나라도 안 되어 있으면 적용
 
     return applyStylePatch(areaState, ranges, patch);
 }
