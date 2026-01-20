@@ -2,23 +2,194 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  
-  <title>스페로우 웹 에디터 샘플</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sparrow Editor | Lightweight & Powerful</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./sparrow-editor.css">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-soft: rgba(67, 97, 238, 0.1);
+      --danger: #ef4444;
+      --bg: #fdfdfd;
+      --text-main: #1a1c22;
+      --text-sub: #64748b;
+      --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      /* 배경 격자 패턴 */
+      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 24px 24px;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* 상단 헤더 영역 */
+    header {
+      width: 100%;
+      padding: 60px 20px;
+      text-align: center;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      background: linear-gradient(to right, #4361ee, #7209b7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-sub);
+      font-size: 1.1rem;
+      margin-top: 12px;
+    }
+
+    /* 메인 에디터 섹션 */
+    .main-wrapper {
+      width: 92%;
+      max-width: 1000px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px); /* 유리 효과 */
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: var(--card-shadow);
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    /* 에디터가 들어갈 공간 */
+    .editor-container {
+      min-height: 450px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      transition: border-color 0.2s ease;
+    }
+    
+    .editor-container:focus-within {
+      border-color: var(--primary);
+    }
+
+    /* 하단 버튼 및 상태창 */
+    .footer-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px;
+    }
+
+    .status-info {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+    }
+
+    button {
+      font-family: inherit;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #destroyBtn {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #fee2e2;
+    }
+
+    #destroyBtn:hover {
+      background: #fef2f2;
+      border-color: var(--danger);
+      transform: translateY(-1px);
+    }
+
+    /* 애니메이션 정의 */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      margin-top: 60px;
+      padding-bottom: 40px;
+      color: var(--text-sub);
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="editor-container" id="myEditor"></div>
 
-  <button id="destroyBtn">에디터 종료</button>
+  <header>
+    <span class="badge">v0.1.0 Alpha</span>
+    <h1>🐦 Sparrow Editor</h1>
+  </header>
+
+  <main class="main-wrapper">
+    <div class="editor-container" id="myEditor"></div>
+
+    <div class="footer-tools">
+      <div class="status-info">
+        Ready to write...
+      </div>
+      <div class="controls">
+        <button id="destroyBtn">에디터 종료</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Made by <strong>Veritasnow</strong> &bull; MIT Licensed
+  </footer>
 
   <script type="module">
     import { createEditor } from './sparrow-editor.js';
-    const editor = createEditor('myEditor');
+    
+    // 에디터 초기화
+    try {
+      const editor = createEditor('myEditor');
+      console.log('Sparrow Editor Initialized');
 
-    document.getElementById('destroyBtn').onclick = () => {
-      // 파괴가 인스턴스 및 관련 리소스 정리하는 로직 개선이 필요함
-      editor.destroy();
-    };  
+      document.getElementById('destroyBtn').onclick = () => {
+        if(confirm('에디터 세션을 종료하시겠습니까?')) {
+          editor.destroy();
+          const status = document.querySelector('.status-info');
+          status.textContent = 'Editor destroyed.';
+          status.style.color = '#ef4444';
+        }
+      };
+    } catch (e) {
+      console.error('Failed to load editor:', e);
+    }
   </script>
 </body>
 </html>
