@@ -12,10 +12,9 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
         if (targets.length === 0) return;
 
         const updates = [];
-        let lastNormalizedPos = null;
+        const allNormalizedPositions = []; // 💡 모든 커서 정보를 담을 배열
 
-        // 1. 먼저 모든 변경사항을 계산해서 모음
-        targets.forEach((activeKey, index) => {
+        targets.forEach((activeKey) => {
             const currentState = stateAPI.get(activeKey);
             if (!currentState) return;
 
@@ -29,54 +28,46 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
                 updates.push({ key: activeKey, newState, ranges });
             }
 
-            if (index === targets.length - 1) {
-                const currentPos = uiAPI.getDomSelection(activeKey);
-                if (currentPos) {
-                    console.log('currentPos111111111111111:', currentPos);
-                    const lineIndex = currentPos[0].lineIndex;
-                    const lineModel = currentState[lineIndex];                    
-                    const adjustedPos = adjustRangesByChunks(currentPos, lineModel);
-                    lastNormalizedPos = normalizeCursorData(adjustedPos, activeKey);
-
-                    //lastNormalizedPos = normalizeCursorData(currentPos, activeKey);
-                }
+            // 💡 각 target(셀/블록) 마다 현재 커서 위치를 계산해서 저장
+            const currentPos = uiAPI.getDomSelection(activeKey);
+            console.log();('currentPos11111111111111111111 : ', currentPos);
+            if (currentPos) {
+                const lineIndex = currentPos[0].lineIndex;
+                const lineModel = currentState[lineIndex];
+                const adjustedPos = adjustRangesByChunks(currentPos, lineModel);
+                const normalized = normalizeCursorData(adjustedPos, activeKey);
+                allNormalizedPositions.push(normalized);
             }
         });
 
-        // 2. 💡 단 한 번만 Store에 명령을 내림
+        // 2. 일괄 업데이트 실행
         if (updates.length > 0) {
-            // stateAPI에 새로 만든 batchSave를 호출 (saveHistory는 기본 true)
             stateAPI.saveBatch(updates, { saveHistory: true });
 
-            // 3. UI 렌더링 수행
             updates.forEach(update => {
-                // 해당 컨테이너 엘리먼트 확보
                 const container = document.getElementById(update.key);
                 if (!container) return;
-                
                 const lineElements = Array.from(container.querySelectorAll(':scope > .text-block'));
 
                 update.ranges.forEach(({ lineIndex }) => {
                     const lineData = update.newState[lineIndex];
                     const lineEl = lineElements[lineIndex];
-
-                    // 💡 [추가] 해당 라인에 테이블이 있는지 확인하고 있으면 Pool 생성
-                    // 인라인 스타일 적용 시 테이블 자체가 타겟은 아니더라도, 
-                    // 테이블이 포함된 라인 전체를 새로 그릴 때 테이블 DOM을 보존해야 합니다.
                     const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
-
-                    // 💡 세 번째 인자로 activeKey, 네 번째 인자로 tablePool 전달
                     uiAPI.renderLine(lineIndex, lineData, update.key, tablePool);
                 });
             });
         }
 
-        console.log('lastNormalizedPos:', lastNormalizedPos);
-        // 4. 커서 복원
-        if (lastNormalizedPos) {
-            console.log('applyInline lastNormalizedPos:', lastNormalizedPos);
-            if (options.saveCursor) stateAPI.saveCursor(lastNormalizedPos);
-            uiAPI.restoreBlockCursor(lastNormalizedPos);
+        console.log('allNormalizedPositions11111111111111111111 : ', allNormalizedPositions);
+
+        // 4. 다중 커서 복원 💡
+        if (allNormalizedPositions.length > 0 && options.saveCursor) {
+            // State에는 마지막 혹은 대표 커서 하나를 저장할 수 있지만, 
+            // UI 복원은 전체 배열을 전달하여 수행합니다.
+            if (options.saveCursor) {
+                stateAPI.saveCursor(allNormalizedPositions); 
+            }
+            uiAPI.restoreMultiBlockCursor(allNormalizedPositions); // 💡 새로 만들 함수
         }
     }
     return { applyInline };

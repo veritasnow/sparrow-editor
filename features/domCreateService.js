@@ -59,7 +59,7 @@ export function createDOMCreateService(rootId) {
         </button>
       </div>
 
-      <div id="${rootId}-content" contenteditable="true" class="sparrow-contents"></div>
+      <div id="${rootId}-content" contenteditable="true" data-editor-root="${rootId}" class="sparrow-contents"></div>
     `;
   }
 

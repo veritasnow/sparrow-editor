@@ -35,10 +35,11 @@ export const tableRenderer = {
                 // 2. 셀 고유 ID 설정 (재귀 에디터의 Key가 됨)
                 if (cellData && cellData.id) {
                     td.id = cellData.id;
+                    td.setAttribute("data-container-id", cellData.id);
                 }
                 
                 td.className = "se-table-cell";
-                td.setAttribute("contenteditable", "true"); 
+                //td.setAttribute("contenteditable", "true"); 
                 
                 // 3. 셀 기본 스타일 설정
                 Object.assign(td.style, {
