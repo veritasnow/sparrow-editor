@@ -185,33 +185,6 @@ export function createSelectionService({ root }) {
         };
     }
 
-
-    /*
-    function getSelectionContext() {
-        const sel = window.getSelection();
-        console.log('selection:', sel.rangeCount);
-        if (!sel || !sel.rangeCount) return null;
-
-        const range = sel.getRangeAt(0);
-        const activeContainer = getActiveContainer();
-
-        const container = range.startContainer;
-        let el = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
-        const parentP = el.closest('p');
-
-        // P태그가 현재 활성 컨테이너 내부에 있는지 검증
-        if (!parentP || !activeContainer.contains(parentP)) {
-            return null;            
-        }
-        
-        const lineIndex = Array.from(activeContainer.children).indexOf(parentP);
-        const activeNode = el.closest('[data-index]');
-        const dataIndex = activeNode ? parseInt(activeNode.dataset.index, 10) : null;
-
-        return { activeContainer, lineIndex, parentP, container, cursorOffset: range.startOffset, activeNode, dataIndex };
-    }
-    */
-
     /**
      * 6. 통합 모델 추출 (단일 지점 좌표)
      */
