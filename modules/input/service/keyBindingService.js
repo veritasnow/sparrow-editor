@@ -20,13 +20,54 @@ export function createKeyBindingService(editorEl) {
         }
     }
 
+    /**
+     * ✅ 텍스트 입력 전에
+     * 커서 앞/뒤에 table 이 있으면 엔터를 먼저 실행
+     */
+    function tryPreEnterBeforeTextInput(e, handlers) {
+        const { key, ctrlKey } = e;
+
+        // 1️⃣ 문자 입력만
+        if (key.length !== 1 || ctrlKey) return;
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        let node = sel.getRangeAt(0).startContainer;
+
+        // text → element
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentElement;
+        }
+        if (!node) return;
+
+        // 2️⃣ table 내부면 절대 개입하지 않음
+        if (node.closest("table")) {
+            return;
+        }
+
+        // 3️⃣ "최상위 line(text-block)" 찾기
+        const lineEl = node.closest(".text-block");
+        if (!lineEl) return;
+
+        // 4️⃣ 해당 line 안에 table chunk가 있는지
+        const hasTableInLine = !!lineEl.querySelector(":scope > table.se-table");
+
+        if (hasTableInLine) {
+            // ✅ table 앞/뒤 텍스트 입력 → 강제 개행
+            handlers.processEnter();
+        }
+    }
+
+
     return {
         /**
-         * @param {Object} handlers - { processEnter, processBackspace, processDelete, processPaste, undo, redo }
+         * @param {Object} handlers
+         * { processEnter, processBackspace, processDelete, processPaste, undo, redo, tryPreEnter }
          */
         bindEvents(handlers) {
             assertAlive();
-            if (bound) return; 
+            if (bound) return;
             bound = true;
 
             // 1. 키보드 입력 핸들러
@@ -40,15 +81,17 @@ export function createKeyBindingService(editorEl) {
                     return;
                 }
 
+                // ✅ [추가] 테이블 앞/뒤면 엔터 먼저 실행
+                tryPreEnterBeforeTextInput(e, handlers);
+
                 // BACKSPACE
                 if (key === "Backspace") {
-                    // 기본 동작을 막고 에디터 로직 실행
                     e.preventDefault();
                     handlers.processBackspace(e);
                     return;
                 }
 
-                // DELETE 🚀 추가
+                // DELETE
                 if (key === "Delete") {
                     e.preventDefault();
                     handlers.processDelete(e);
@@ -63,21 +106,23 @@ export function createKeyBindingService(editorEl) {
                 }
 
                 // REDO (Ctrl + Shift + Z 또는 Ctrl + Y)
-                if (ctrlKey && ( (key.toLowerCase() === "z" && shiftKey) || key.toLowerCase() === "y" )) {
+                if (
+                    ctrlKey &&
+                    ((key.toLowerCase() === "z" && shiftKey) || key.toLowerCase() === "y")
+                ) {
                     e.preventDefault();
                     handlers.redo();
                     return;
                 }
             };
 
-            // 2. 붙여넣기 핸들러 🚀 추가
+            // 2. 붙여넣기 핸들러
             onPaste = (e) => {
-                // 커스텀 붙여넣기 로직(HtmlDeserializer 활용 등)을 실행하기 위해 호출
                 handlers.processPaste(e);
             };
 
             editorEl.addEventListener("keydown", onKeydown);
-            editorEl.addEventListener("paste", onPaste); // 붙여넣기 이벤트 바인딩
+            editorEl.addEventListener("paste", onPaste);
         },
 
         /**
@@ -93,7 +138,7 @@ export function createKeyBindingService(editorEl) {
             if (onPaste) {
                 editorEl.removeEventListener("paste", onPaste);
             }
-            
+
             onKeydown = null;
             onPaste = null;
         }

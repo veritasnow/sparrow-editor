@@ -217,6 +217,98 @@ export function createSelectionService({ root }) {
         const range = document.createRange();
         const allLines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
 
+        // --- [Case 1] 다중 라인 드래그 선택 영역 복원 ---
+        if (cursorData.isSelection && cursorData.ranges && cursorData.ranges.length > 0) {
+            try {
+                const ranges = cursorData.ranges;
+                const startLine = allLines[ranges[0].lineIndex];
+                const endLine = allLines[ranges[ranges.length - 1].lineIndex];
+                
+                if (!startLine || !endLine) return;
+
+                const startPos = findNodeAndOffset(startLine, ranges[0].startIndex);
+                range.setStart(startPos.node, startPos.offset);
+
+                const endPos = findNodeAndOffset(endLine, ranges[ranges.length - 1].endIndex);
+                range.setEnd(endPos.node, endPos.offset);
+
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) { 
+                console.error('Block selection restore failed:', e); 
+            }
+            return;
+        }
+
+        // --- [Case 2] 단일 커서(Caret) 위치 복원 ---
+        if (cursorData.lineIndex === undefined) return;
+        const lineEl = allLines[cursorData.lineIndex];
+        if (!lineEl) return;
+
+        try {
+            const { anchor } = cursorData;
+            const chunkIndex = anchor.chunkIndex ?? 0;
+            
+            // 해당 인덱스의 청크 엘리먼트 찾기
+            const chunkEl = Array.from(lineEl.children).find(el => 
+                parseInt(el.dataset.index, 10) === chunkIndex
+            );
+
+            if (!chunkEl) {
+                // 청크를 못 찾으면 해당 라인의 맨 앞으로 fallback
+                const pos = findNodeAndOffset(lineEl, 0);
+                range.setStart(pos.node, pos.offset);
+            } 
+            // 1. 테이블 내부 셀로 진입해야 하는 경우 (detail 정보가 명시됨)
+            else if (anchor.type === 'table' && anchor.detail) {
+                const trs = chunkEl.querySelectorAll('tr');
+                const targetTr = trs[anchor.detail.rowIndex];
+                const targetTd = targetTr?.querySelectorAll('td')[anchor.detail.colIndex];
+                
+                if (targetTd) {
+                    // 셀 내부의 첫 번째 텍스트 노드를 찾거나 생성
+                    let node = findFirstTextNode(targetTd) || targetTd.appendChild(document.createTextNode('\u200B'));
+                    range.setStart(node, Math.min(anchor.detail.offset, node.length));
+                } else {
+                    // 셀을 못 찾으면 테이블 앞으로
+                    range.setStartBefore(chunkEl);
+                }
+            } 
+            // 2. Atomic 청크 (테이블, 비디오, 이미지)의 앞/뒤에 위치해야 하는 경우
+            // (detail이 없거나 타입이 명시적으로 Atomic인 경우)
+            else if (chunkEl.dataset.type === 'table' || anchor.type === 'video' || anchor.type === 'image') {
+                if (anchor.offset === 0) {
+                    range.setStartBefore(chunkEl);
+                } else {
+                    range.setStartAfter(chunkEl);
+                }
+            } 
+            // 3. 일반 텍스트 청크 또는 기타
+            else {
+                const pos = findNodeAndOffset(chunkEl, anchor.offset || 0);
+                range.setStart(pos.node, pos.offset);
+            }
+
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } catch (e) { 
+            console.warn('Block caret restore failed:', e); 
+        }
+    }    
+    /*
+    function restoreBlockCursor(cursorData) {
+        if (!cursorData) return;
+
+        const targetContainer = cursorData.containerId 
+            ? document.getElementById(cursorData.containerId) 
+            : root;
+        if (!targetContainer) return;
+
+        const sel = window.getSelection();
+        const range = document.createRange();
+        const allLines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
+
         if (cursorData.isSelection && cursorData.ranges && cursorData.ranges.length > 0) {
             try {
                 const ranges = cursorData.ranges;
@@ -262,6 +354,7 @@ export function createSelectionService({ root }) {
             sel.addRange(range);
         } catch (e) { console.warn('Cursor restore failed:', e); }
     }
+    */
 
     function findNodeAndOffset(lineEl, targetOffset) {
         const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
@@ -289,6 +382,59 @@ export function createSelectionService({ root }) {
     /**
      * 7-2. [수정] 일반 커서 복원 (.text-block 기준)
      */
+    function restoreCursor(cursorData) {
+        if (!cursorData) return;
+        const { containerId, ranges, anchor, lineIndex } = cursorData;
+        const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
+        if (!targetContainer) return;
+
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        const allLines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
+
+        if (lineIndex !== undefined && anchor) {
+            try {
+                const lineEl = allLines[lineIndex];
+                const chunkEl = Array.from(lineEl.children).find(el => parseInt(el.dataset.index, 10) === anchor.chunkIndex);
+                if (!chunkEl) return;
+
+                const range = document.createRange();
+
+                // 1. 테이블 타입이면서 상세 셀 정보가 있는 경우 (셀 내부로 진입)
+                if (anchor.type === 'table' && anchor.detail) {
+                    const td = chunkEl.querySelectorAll('tr')[anchor.detail.rowIndex]?.querySelectorAll('td')[anchor.detail.colIndex];
+                    if (td) {
+                        let node = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
+                        range.setStart(node, Math.min(anchor.detail.offset, node.length));
+                    }
+                } 
+                // 2. 테이블 청크이지만 상세 정보가 없는 경우 (테이블 앞/뒤에 커서 위치)
+                else if (chunkEl.getAttribute('data-type') === 'table') {
+                    // offset이 0이면 테이블 앞, 그외엔 테이블 뒤
+                    if (anchor.offset === 0) {
+                        range.setStartBefore(chunkEl);
+                    } else {
+                        range.setStartAfter(chunkEl);
+                    }
+                }
+                // 3. 비디오나 이미지 (기존 로직 유지)
+                else if (anchor.type === 'video' || anchor.type === 'image') {
+                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+                } 
+                // 4. 일반 텍스트 청크
+                else {
+                    let node = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
+                    range.setStart(node, Math.min(anchor.offset || 0, node.length));
+                }
+
+                range.collapse(true);
+                sel.addRange(range);
+            } catch (e) {
+                console.error("Cursor restoration error:", e);
+            }
+        }
+    }
+    /*
     function restoreCursor(cursorData) {
         if (!cursorData) return;
         const { containerId, ranges, anchor, lineIndex } = cursorData;
@@ -339,6 +485,7 @@ export function createSelectionService({ root }) {
             } catch (e) {}
         }
     }
+    */    
 
     function findFirstTextNode(el) {
         if (!el) return null;
