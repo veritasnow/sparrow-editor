@@ -1,5 +1,6 @@
 // extensions/table/model/TableChunkModel.js
 // model/tableModel.js 혹은 factory 내부
+
 export function TableChunkModel(rows, cols) {
     return {
         type: 'table',
