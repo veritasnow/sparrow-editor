@@ -3,9 +3,6 @@
  */
 export function createRenderService({ rootId, rendererRegistry }) { 
     
-    /**
-     * 💡 내부 유틸: targetKey가 있으면 해당 ID의 엘리먼트를, 없으면 기본 rootId 엘리먼트를 반환합니다.
-     */
     function getTargetElement(targetKey) {
         const id = targetKey || rootId;
         const el = document.getElementById(id);
@@ -16,30 +13,29 @@ export function createRenderService({ rootId, rendererRegistry }) {
     }
 
     /**
-     * 에디터의 State 배열 길이와 DOM의 P 태그 개수를 일치시켜 동기화합니다.
+     * 에디터의 State 배열 길이와 DOM의 .text-block 개수를 일치시켜 동기화합니다.
      */
     function syncParagraphCount(state, targetKey) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        const lines = Array.from(container.children);
+        // p 태그 대신 클래스명으로 라인을 선택합니다.
+        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+        
         if (state.length > lines.length) {
-            const newLines = state.slice(lines.length);
-            newLines.forEach(() => {
-                const p = document.createElement("p");
-                p.className = "text-block";
-                container.appendChild(p);
-            });
+            const diff = state.length - lines.length;
+            for (let i = 0; i < diff; i++) {
+                const div = document.createElement("div");
+                div.className = "text-block";
+                container.appendChild(div);
+            }
         } else if (state.length < lines.length) {
-            while (container.children.length > state.length) {
-                container.removeChild(container.lastChild);
+            for (let i = lines.length - 1; i >= state.length; i--) {
+                container.removeChild(lines[i]);
             }
         }
     }
 
-    /**
-     * 라인 내부의 청크들을 순회하며 렌더러를 통해 DOM을 생성합니다.
-     */
     function renderLineChunks(line, parentEl) {
         line.chunks.forEach((chunk, chunkIndex) => {
             const renderer = rendererRegistry[chunk.type];
@@ -53,22 +49,22 @@ export function createRenderService({ rootId, rendererRegistry }) {
     }
 
     // -----------------------------------------------------
-    // 💡 구조적 DOM 조작 함수 (targetKey 지원)
+    // 💡 구조적 DOM 조작 함수
     // -----------------------------------------------------
 
     function insertLine(lineIndex, align = "left", targetKey) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        const children = container.children;
-        const newP = document.createElement("p");
-        newP.className = "text-block";
-        newP.style.textAlign = align;
+        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+        const newDiv = document.createElement("div");
+        newDiv.className = "text-block";
+        newDiv.style.textAlign = align;
 
-        if (children[lineIndex]) {
-            container.insertBefore(newP, children[lineIndex]);
+        if (lines[lineIndex]) {
+            container.insertBefore(newDiv, lines[lineIndex]);
         } else {
-            container.appendChild(newP);
+            container.appendChild(newDiv);
         }
     }
 
@@ -76,79 +72,73 @@ export function createRenderService({ rootId, rendererRegistry }) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        const lineToRemove = container.children[lineIndex];
-        if (lineToRemove) {
-            container.removeChild(lineToRemove);
+        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+        if (lines[lineIndex]) {
+            container.removeChild(lines[lineIndex]);
         }
     }
 
-    // -----------------------------------------------------
-    // 💡 공개 API
-    // -----------------------------------------------------
-
     return {
-        /**
-         * 전체 상태 렌더링
-         */
         render(state, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
 
             syncParagraphCount(state, targetKey);
 
+            const updatedLines = Array.from(container.querySelectorAll(':scope > .text-block'));
             state.forEach((line, i) => {
-                const p = container.children[i];
-                if (!p) return;
-                p.innerHTML = "";
-                p.style.textAlign = line.align || "left";
-                renderLineChunks(line, p);
+                const lineEl = updatedLines[i];
+                if (!lineEl) return;
+                lineEl.innerHTML = "";
+                lineEl.style.textAlign = line.align || "left";
+                renderLineChunks(line, lineEl);
             });
         },
 
-        /**
-         * 최소 1개 라인 보장
-         */
         ensureFirstLineP(targetKey) {
             const container = getTargetElement(targetKey);
-            if (!container || container.children.length > 0) return;
+            if (!container) return;
+            
+            const lines = container.querySelectorAll(':scope > .text-block');
+            if (lines.length > 0) return;
 
-            const firstP = document.createElement("p");
-            firstP.className = "text-block";
-            container.appendChild(firstP);
+            const firstDiv = document.createElement("div");
+            firstDiv.className = "text-block";
+            container.appendChild(firstDiv);
         },
 
-        /**
-         * 특정 라인 업데이트
-         */
         renderLine(lineIndex, lineData, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
 
-            const existingP = container.children[lineIndex];
-            const p = existingP || document.createElement("p");
-            if (!existingP) container.appendChild(p);
+            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+            let lineEl = lines[lineIndex];
+            
+            if (!lineEl) {
+                lineEl = document.createElement("div");
+                lineEl.className = "text-block";
+                container.appendChild(lineEl);
+            }
 
-            p.className = "text-block";
-            p.style.textAlign = lineData.align || "left";
-            p.innerHTML = "";
+            lineEl.className = "text-block";
+            lineEl.style.textAlign = lineData.align || "left";
+            lineEl.innerHTML = "";
 
             if (!lineData.chunks || lineData.chunks.length === 0) {
                 const br = document.createElement("br");
                 br.dataset.marker = "empty";
-                p.appendChild(br);
+                lineEl.appendChild(br);
             } else {
-                renderLineChunks(lineData, p);
+                renderLineChunks(lineData, lineEl);
             }
         },
         
-        /**
-         * 특정 청크 부분 업데이트
-         */
         renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
 
-            const lineEl = container.children[lineIndex];
+            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+            const lineEl = lines[lineIndex];
             if (!lineEl) return;
 
             const chunkEl = Array.from(lineEl.children).find(
@@ -159,11 +149,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
             if (!renderer || typeof renderer.render !== "function") return;
 
             if (chunkEl) {
-                // 텍스트 업데이트
                 if (chunkEl.textContent !== chunkData.text) {
                     chunkEl.textContent = chunkData.text;
                 }
-                // 스타일 업데이트
                 Object.entries(chunkData.style || {}).forEach(([key, value]) => {
                     chunkEl.style[key] = value;
                 });
@@ -175,16 +163,13 @@ export function createRenderService({ rootId, rendererRegistry }) {
             }
         },
 
-        /**
-         * DOM 엘리먼트 순서 밀기 (기존 로직 유지)
-         */
         shiftLinesDown(fromIndex, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
 
-            const children = Array.from(container.children);
-            for (let i = children.length - 1; i >= fromIndex; i--) {
-                const line = children[i];
+            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+            for (let i = lines.length - 1; i >= fromIndex; i--) {
+                const line = lines[i];
                 const nextSibling = line.nextSibling;
                 if (nextSibling) {
                     container.insertBefore(line, nextSibling.nextSibling);
