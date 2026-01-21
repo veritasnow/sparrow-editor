@@ -461,3 +461,44 @@
       from { opacity: 0; transform: translateY(-3px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
+
+    
+
+
+    
+/* 1. 선택된 셀의 기본 레이아웃 및 배경색 */
+.se-table-cell.is-selected {
+    /* 배경색: 가독성을 위해 적절한 투명도의 파란색 설정 */
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    position: relative;
+    /* 테두리 강조: outline은 표의 border와 겹치지 않아 깔끔합니다. */
+    outline: 2px solid #007bff !important;
+    outline-offset: -2px; /* 테두리가 셀 안쪽으로 그려지도록 설정 */
+    z-index: 10;
+}
+
+/* 2. 브라우저 기본 텍스트 블록(파란색 반전) 숨기기 */
+/* 셀이 선택된 상태(is-selected)일 때만 내부의 텍스트 선택 영역을 투명하게 만듭니다. */
+.se-table-cell.is-selected *::selection {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+.se-table-cell.is-selected *::-moz-selection {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* 3. 가이드 라인 보강 (필요 시) */
+/* outline만으로 부족할 때 border 효과를 더 정밀하게 제어하고 싶다면 사용하세요. */
+.se-table-cell.is-selected::after {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    border: 1px solid rgba(0, 123, 255, 0.5);
+    pointer-events: none; /* 마우스 클릭이나 드래그를 방해하지 않음 */
+    z-index: 11;
+}

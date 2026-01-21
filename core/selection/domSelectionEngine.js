@@ -12,56 +12,53 @@ export function createSelectionService({ root }) {
         if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
         const range = sel.getRangeAt(0);
+        const searchRoot = root || document.body;
 
-        if (!sel.isCollapsed) {
-            const searchRoot = root || document.body;
+        // 1. [시각적 셀 선택] is-selected 클래스가 붙은 셀 ID 수집
+        const visualSelectedIds = Array.from(document.querySelectorAll('.se-table-cell.is-selected'))
+            .map(td => td.getAttribute('data-container-id'));
+
+        // 2. [기존 영역 분석] 실제 드래그 영역에 걸쳐 있는 컨테이너 분석
+        const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
+        if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
+
+        const intersecting = allPossibleContainers.filter(container => 
+            sel.containsNode(container, true)
+        );
+
+        // 계층적 필터링을 통해 실제 콘텐츠가 포함된 ID 추출
+        const logicalActiveIds = intersecting.filter(c1 => {
+            const subContainers = intersecting.filter(c2 => c1 !== c2 && c1.contains(c2));
+            if (subContainers.length === 0) return true;
+
+            const isStartInSelf = c1.contains(range.startContainer) && 
+                !subContainers.some(sub => sub.contains(range.startContainer));
             
-            // 모든 후보 컨테이너 수집
-            const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
-            if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
+            const isEndInSelf = c1.contains(range.endContainer) && 
+                !subContainers.some(sub => sub.contains(range.endContainer));
 
-            // 1. 선택 영역에 조금이라도 걸쳐 있는 컨테이너만 1차 필터링
-            const intersecting = allPossibleContainers.filter(container => 
-                sel.containsNode(container, true)
-            );
+            if (isStartInSelf || isEndInSelf) return true;
 
-            // 2. 계층적 필터링 (부모-자식 관계 정리)
-            const activeIds = intersecting.filter(c1 => {
-                // 하위 컨테이너 존재 여부 확인
-                const subContainers = intersecting.filter(c2 => c1 !== c2 && c1.contains(c2));
-                
-                // 최하위 노드라면 무조건 포함
-                if (subContainers.length === 0) return true;
-
-                // 부모 컨테이너(c1)의 직계 영역 선택 여부 판단
-                const isStartInSelf = c1.contains(range.startContainer) && 
-                    !subContainers.some(sub => sub.contains(range.startContainer));
-                
-                const isEndInSelf = c1.contains(range.endContainer) && 
-                    !subContainers.some(sub => sub.contains(range.endContainer));
-
-                if (isStartInSelf || isEndInSelf) return true;
-
-                // 직계 텍스트 노드 검사
-                const walker = document.createTreeWalker(c1, NodeFilter.SHOW_TEXT);
-                let node;
-                while (node = walker.nextNode()) {
-                    const isDirectText = !subContainers.some(sub => sub.contains(node));
-                    if (isDirectText && sel.containsNode(node, true)) {
-                        return true;
-                    }
+            const walker = document.createTreeWalker(c1, NodeFilter.SHOW_TEXT);
+            let node;
+            while (node = walker.nextNode()) {
+                const isDirectText = !subContainers.some(sub => sub.contains(node));
+                if (isDirectText && sel.containsNode(node, true)) {
+                    return true;
                 }
-
-                return false;
-            }).map(container => container.getAttribute('data-container-id')); // 여기서 실제 ID 사용
-
-            if (activeIds.length > 0) {
-                lastActiveKey = activeIds[activeIds.length - 1];
-                return activeIds;
             }
+            return false;
+        }).map(container => container.getAttribute('data-container-id'));
+
+        // 3. [합치기] 시각적 선택 ID와 논리적 드래그 ID를 합치고 중복 제거
+        const combinedIds = Array.from(new Set([...visualSelectedIds, ...logicalActiveIds]));
+
+        if (combinedIds.length > 0) {
+            lastActiveKey = combinedIds[combinedIds.length - 1];
+            return combinedIds;
         }
 
-        // 커서 상태 (Collapsed) 처리
+        // 4. 커서(Collapsed) 처리 (기존과 동일)
         let node = range.startContainer;
         if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
         const container = node.closest('[data-container-id]');
@@ -70,6 +67,7 @@ export function createSelectionService({ root }) {
             lastActiveKey = id;
             return [id];
         }
+        
         return [lastActiveKey].filter(Boolean);
     }
 
@@ -91,19 +89,36 @@ export function createSelectionService({ root }) {
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return null;
 
-        // [핵심] 역방향 드래그 여부 확인
+        const domRange = sel.getRangeAt(0);
+        const finalKey = targetKey || getActiveKey();
+        const targetContainer = document.getElementById(finalKey) || root;
+        if (!targetContainer) return null;
+
+        // [핵심 1] 역방향 드래그 여부 확인
         const isBackwards = sel.anchorNode && sel.focusNode && 
             (sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_PRECEDING ||
             (sel.anchorNode === sel.focusNode && sel.anchorOffset > sel.focusOffset));
 
-        const domRange = sel.getRangeAt(0);
-        const finalKey = targetKey || getActiveKey();
-        const targetContainer = document.getElementById(finalKey) || root;
-        
+        // [핵심 2] 해당 컨테이너가 'is-selected'인지 확인 (셀 단위 전체 선택 여부)
+        const isFullCellSelected = targetContainer.classList.contains('is-selected');
+
         const lines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
         const ranges = [];
 
         lines.forEach((lineEl, idx) => {
+            // [핵심 3] 전체 선택된 셀이라면 계산 없이 해당 라인의 전체 길이를 반환
+            if (isFullCellSelected) {
+                // 해당 라인의 전체 텍스트 길이를 구함
+                const lineTotalLength = lineEl.textContent.length;
+                ranges.push({
+                    lineIndex: idx,
+                    startIndex: 0,
+                    endIndex: lineTotalLength
+                });
+                return; // 다음 라인으로
+            }
+
+            // --- 여기서부터는 기존의 일반 텍스트 드래그 분석 로직 ---
             const isStartInP = lineEl.contains(domRange.startContainer);
             const isEndInP = lineEl.contains(domRange.endContainer);
             
@@ -134,7 +149,8 @@ export function createSelectionService({ root }) {
                             endOffset = total + rel;
                         }
                     }
-                    total += (node.nodeType === Node.TEXT_NODE || node.classList?.contains('chunk-text')) 
+                    // 텍스트 노드 또는 chunk-text인 경우 길이를 더함
+                    total += (node.nodeType === Node.TEXT_NODE || (node.classList && node.classList.contains('chunk-text'))) 
                             ? node.textContent.length : 1;
                 });
 
@@ -150,7 +166,6 @@ export function createSelectionService({ root }) {
         });
 
         if (ranges.length > 0) {
-            // [수정] 배열 자체에 속성을 부여하여 기존 forEach 루프 등을 깨뜨리지 않음
             ranges.isBackwards = isBackwards;
             return ranges;
         }
