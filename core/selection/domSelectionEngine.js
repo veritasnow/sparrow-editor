@@ -223,90 +223,135 @@ export function createSelectionService({ root }) {
      * - block selection은 DOM Range 기반 유지
      * - table cell은 시각적 선택만
      */
-function restoreMultiBlockCursor(positions) {
-    if (!positions?.length) return;
+    function restoreMultiBlockCursor(positions) {
+        if (!positions?.length) return;
 
-    const sel = window.getSelection();
-    sel.removeAllRanges();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
 
-    // 1. 시각적 하이라이트 초기화
-    document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
-    
-    try {
-        // 2. 단일 컨테이너 내에서의 선택인지 확인 (JSON 예시처럼 셀 하나 내부만 선택한 경우)
-        const isSingleContainer = positions.length === 1;
+        // 1. 시각적 하이라이트 초기화
+        document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
+        
+        try {
+            // 2. 단일 컨테이너 내에서의 선택인지 확인 (JSON 예시처럼 셀 하나 내부만 선택한 경우)
+            const isSingleContainer = positions.length === 1;
 
-        if (isSingleContainer) {
-            const pos = positions[0];
-            const container = document.getElementById(pos.containerId);
-            if (!container || !pos.ranges?.length) return;
-
-            // 셀 내부의 특정 위치 찾기
-            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
-            const targetLines = lines.length > 0 ? lines : [container];
-
-            const firstR = pos.ranges[0];
-            const lastR = pos.ranges[pos.ranges.length - 1];
-
-            const sPos = findNodeAndOffset(targetLines[firstR.lineIndex] || container, firstR.startIndex);
-            const ePos = findNodeAndOffset(targetLines[lastR.lineIndex] || container, lastR.endIndex);
-
-            const range = document.createRange();
-            range.setStart(sPos.node, sPos.offset);
-            range.setEnd(ePos.node, ePos.offset);
-            sel.addRange(range);
-            
-            container.focus();
-        } 
-        else {
-            // 3. 여러 컨테이너(셀+바깥 등)에 걸친 다중 선택인 경우
-            let globalStart = null;
-            let globalEnd = null;
-
-            positions.forEach((pos) => {
+            if (isSingleContainer) {
+                const pos = positions[0];
                 const container = document.getElementById(pos.containerId);
-                if (!container) return;
+                if (!container || !pos.ranges?.length) return;
 
-                // 여러 셀을 넘나들 때는 시각적 클래스 부여 (통째로 선택된 느낌을 줌)
-                container.classList.add('is-selected-range');
+                // 셀 내부의 특정 위치 찾기
+                const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+                const targetLines = lines.length > 0 ? lines : [container];
 
-                const isMainEditor = pos.containerId.endsWith('-content');
-                const lines = isMainEditor 
-                    ? Array.from(container.children).filter(el => el.classList.contains('text-block') || el.tagName === 'TABLE')
-                    : [container]; // 다중 셀 선택시엔 셀 단위를 한 줄로 취급
+                const firstR = pos.ranges[0];
+                const lastR = pos.ranges[pos.ranges.length - 1];
 
-                if (pos.ranges?.length > 0) {
-                    const sPos = findNodeAndOffset(lines[pos.ranges[0].lineIndex] || container, pos.ranges[0].startIndex);
-                    const ePos = findNodeAndOffset(lines[pos.ranges[pos.ranges.length - 1].lineIndex] || container, pos.ranges[pos.ranges.length - 1].endIndex);
+                const sPos = findNodeAndOffset(targetLines[firstR.lineIndex] || container, firstR.startIndex);
+                const ePos = findNodeAndOffset(targetLines[lastR.lineIndex] || container, lastR.endIndex);
 
-                    if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-                        globalStart = sPos;
-                    }
-                    if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
-                        globalEnd = ePos;
-                    }
-                }
-            });
-
-            if (globalStart && globalEnd) {
                 const range = document.createRange();
-                range.setStart(globalStart.node, globalStart.offset);
-                range.setEnd(globalEnd.node, globalEnd.offset);
+                range.setStart(sPos.node, sPos.offset);
+                range.setEnd(ePos.node, ePos.offset);
                 sel.addRange(range);
-            }
-            
-            const lastId = positions[positions.length - 1].containerId;
-            document.getElementById(lastId)?.focus();
-        }
+                
+                container.focus();
+            } 
+            else {
+                // 3. 여러 컨테이너(셀+바깥 등)에 걸친 다중 선택인 경우
+                let globalStart = null;
+                let globalEnd = null;
 
-    } catch (e) {
-        console.error('영역 복구 중 오류:', e);
+                positions.forEach((pos) => {
+                    const container = document.getElementById(pos.containerId);
+                    if (!container) return;
+
+                    // 여러 셀을 넘나들 때는 시각적 클래스 부여 (통째로 선택된 느낌을 줌)
+                    container.classList.add('is-selected-range');
+
+                    const isMainEditor = pos.containerId.endsWith('-content');
+                    const lines = isMainEditor 
+                        ? Array.from(container.children).filter(el => el.classList.contains('text-block') || el.tagName === 'TABLE')
+                        : [container]; // 다중 셀 선택시엔 셀 단위를 한 줄로 취급
+
+                    if (pos.ranges?.length > 0) {
+                        const sPos = findNodeAndOffset(lines[pos.ranges[0].lineIndex] || container, pos.ranges[0].startIndex);
+                        const ePos = findNodeAndOffset(lines[pos.ranges[pos.ranges.length - 1].lineIndex] || container, pos.ranges[pos.ranges.length - 1].endIndex);
+
+                        if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                            globalStart = sPos;
+                        }
+                        if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
+                            globalEnd = ePos;
+                        }
+                    }
+                });
+
+                if (globalStart && globalEnd) {
+                    const range = document.createRange();
+                    range.setStart(globalStart.node, globalStart.offset);
+                    range.setEnd(globalEnd.node, globalEnd.offset);
+                    sel.addRange(range);
+                }
+                
+                const lastId = positions[positions.length - 1].containerId;
+                document.getElementById(lastId)?.focus();
+            }
+
+        } catch (e) {
+            console.error('영역 복구 중 오류:', e);
+        }
     }
-}
 
     /**
      * 특정 라인 내에서 절대 오프셋을 기준으로 정확한 TextNode와 Offset을 찾아냄
      */
+    function findNodeAndOffset(lineEl, targetOffset) {
+        if (!lineEl) return { node: document.body, offset: 0 };
+
+        // TreeWalker를 사용하되, 텍스트 노드뿐만 아니라 엘리먼트(IMG 등)도 위치 계산에 포함
+        const walker = document.createTreeWalker(
+            lineEl, 
+            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, 
+            {
+                acceptNode: (node) => {
+                    // 텍스트 노드이거나, 자식이 없는 단독 엘리먼트(IMG, BR 등)만 카운트
+                    if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+                    if (node.nodeName === 'IMG' || node.nodeName === 'BR') return NodeFilter.FILTER_ACCEPT;
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+
+        let cumulative = 0;
+        let lastNode = lineEl;
+
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const len = (node.nodeType === Node.TEXT_NODE) ? node.textContent.length : 1;
+
+            if (targetOffset <= cumulative + len) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return { node, offset: Math.max(0, targetOffset - cumulative) };
+                } else {
+                    // 이미지나 BR인 경우 해당 노드의 앞 또는 뒤
+                    const offset = (targetOffset > cumulative) ? 1 : 0;
+                    return { node: node.parentNode, offset: Array.from(node.parentNode.childNodes).indexOf(node) + offset };
+                }
+            }
+            cumulative += len;
+            lastNode = node;
+        }
+
+        // 오프셋을 못 찾은 경우 (마지막 지점)
+        if (lastNode.nodeType === Node.TEXT_NODE) {
+            return { node: lastNode, offset: lastNode.textContent.length };
+        }
+        return { node: lineEl, offset: lineEl.childNodes.length };
+    }
+
+    /*
     function findNodeAndOffset(lineEl, targetOffset) {
         // 1. .chunk-text 내부의 텍스트 노드들을 우선 탐색
         const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
@@ -334,7 +379,8 @@ function restoreMultiBlockCursor(positions) {
         // 3. 최후의 수단: lineEl 자체의 첫번째 자식
         const fallbackNode = lineEl.firstChild || lineEl.appendChild(document.createTextNode(''));
         return { node: fallbackNode, offset: 0 };
-    } 
+    }
+    */
 
     /**
      * 7-2. [수정] 일반 커서 복원 (.text-block 기준)
@@ -418,151 +464,6 @@ function restoreMultiBlockCursor(positions) {
         }
         return { lineIndex, absoluteOffset };
     }
-
-    /*
-    function restoreMultiBlockCursor(positions) {
-        if (!positions?.length) return;
-
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-
-        // 기존 시각적 선택 초기화
-        document
-            .querySelectorAll('.is-selected-range')
-            .forEach(el => el.classList.remove('is-selected-range'));
-
-        let globalStart = null;
-        let globalEnd = null;
-
-        try {
-            positions.forEach(pos => {
-                const container = document.getElementById(pos.containerId);
-                if (!container || !pos.ranges?.length) return;
-
-                // 🔴 table cell은 Range 계산에서 제외
-                if (pos.containerId.startsWith('cell-')) {
-                    container.classList.add('is-selected-range');
-                    return;
-                }
-
-                container.classList.add('is-selected-range');
-
-                // ✅ lineIndex 기준은 "직계 text-block"
-                const lines = Array.from(container.children)
-                    .filter(el => el.classList.contains('text-block'));
-
-                const firstR = pos.ranges[0];
-                const lastR  = pos.ranges[pos.ranges.length - 1];
-
-                const startLine = lines[firstR.lineIndex];
-                const endLine   = lines[lastR.lineIndex];
-
-                if (!startLine || !endLine) return;
-
-                const sPos = findNodeAndOffset(startLine, firstR.startIndex);
-                const ePos = findNodeAndOffset(endLine, lastR.endIndex);
-
-                // DOM 순서 기준으로 global start / end 계산
-                if (
-                    !globalStart ||
-                    (sPos.node.compareDocumentPosition(globalStart.node) &
-                        Node.DOCUMENT_POSITION_FOLLOWING)
-                ) {
-                    globalStart = sPos;
-                }
-
-                if (
-                    !globalEnd ||
-                    (ePos.node.compareDocumentPosition(globalEnd.node) &
-                        Node.DOCUMENT_POSITION_PRECEDING)
-                ) {
-                    globalEnd = ePos;
-                }
-            });
-
-            // ✅ 반드시 하나의 Range 생성
-            if (globalStart && globalEnd) {
-                const range = document.createRange();
-                range.setStart(globalStart.node, globalStart.offset);
-                range.setEnd(globalEnd.node, globalEnd.offset);
-                sel.addRange(range);
-
-                // 마지막 컨테이너에 포커스
-                const lastId = positions[positions.length - 1].containerId;
-                document.getElementById(lastId)?.focus();
-            }
-
-        } catch (e) {
-            console.error('블록 복구 중 오류:', e);
-        }
-    }
-   */
-
-    /*
-    function restoreMultiBlockCursor(positions) {
-        if (!positions || positions.length === 0) return;
-
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-
-        // 1. 모든 선택 대상 컨테이너에 시각적 하이라이트 적용
-        document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
-        positions.forEach(p => {
-            const el = document.getElementById(p.containerId);
-            if (el) el.classList.add('is-selected-range');
-        });
-
-        try {
-            let globalStart = null;
-            let globalEnd = null;
-
-            // 2. 모든 positions를 돌며 절대적인 시작점과 끝점 후보를 찾음
-            positions.forEach((pos) => {
-                const container = document.getElementById(pos.containerId);
-                if (!container) return;
-
-                const lines = Array.from(container.querySelectorAll(':scope > .text-block, td, th'));
-                if (pos.ranges && pos.ranges.length > 0) {
-                    // 이 컨테이너의 첫 번째 라인 정보
-                    const firstR = pos.ranges[0];
-                    const startLine = lines[firstR.lineIndex] || container;
-                    const sPos = findNodeAndOffset(startLine, firstR.startIndex);
-
-                    // 이 컨테이너의 마지막 라인 정보
-                    const lastR = pos.ranges[pos.ranges.length - 1];
-                    const endLine = lines[lastR.lineIndex] || container;
-                    const ePos = findNodeAndOffset(endLine, lastR.endIndex);
-
-                    // DOM 순서상 가장 앞선 것을 globalStart로, 가장 뒤처진 것을 globalEnd로
-                    if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
-                        globalStart = sPos;
-                    }
-                    if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
-                        globalEnd = ePos;
-                    }
-                }
-            });
-
-            // 3. 찾은 절대 시작/끝 지점을 단 하나의 Range로 연결
-            if (globalStart && globalEnd) {
-                const finalRange = document.createRange();
-                finalRange.setStart(globalStart.node, globalStart.offset);
-                finalRange.setEnd(globalEnd.node, globalEnd.offset);
-                sel.addRange(finalRange);
-
-                // 포커스는 데이터의 마지막 지점에 줌
-                const lastId = positions[positions.length - 1].containerId;
-                document.getElementById(lastId)?.focus();
-            }
-
-        } catch (e) {
-            console.error("블록 복구 도중 치명적 오류:", e);
-        }
-    }
-    */
-
-
-
 
     return { 
         getSelectionPosition, 
