@@ -24,7 +24,7 @@ export function createSelectionService({ root }) {
 
             // 2. [data-container-id] 속성을 가진 모든 엘리먼트 수집
             const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
-            // 자기 자신 -> root도 data-container-id를 가질 수 있으므로 보정작업
+            // 부모도 data-container-id를 가질 수 있으므로 보정작업
             if (searchRoot.hasAttribute('data-container-id')) {
                 allPossibleContainers.push(searchRoot);
             }
@@ -38,12 +38,14 @@ export function createSelectionService({ root }) {
             const activeIds = intersectingContainers.filter(c1 => {
                 // 1. 만약 다른 컨테이너를 포함하지 않는 최하위(Leaf)라면 무조건 유지
                 const hasSubContainer = intersectingContainers.some(c2 => c1 !== c2 && c1.contains(c2));
-                if (!hasSubContainer) return true;
+                if (!hasSubContainer) {
+                    return true;
+                }
 
                 // 2. 만약 부모(root)라면, 자식(cell)들 외에 본인 영역에 선택된 '직계 텍스트'가 있는지 확인
                 // Range의 시작점이나 끝점이 c1(부모)의 직계 자식 노드에 걸려있다면 c1은 "직접 선택된 영역"이 있는 것임
                 const startInSelf = c1.contains(range.startContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.startContainer));
-                const endInSelf = c1.contains(range.endContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.endContainer));
+                const endInSelf   = c1.contains(range.endContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.endContainer));
 
                 return startInSelf || endInSelf;
             }).map(container => container.getAttribute('data-container-id'));
@@ -54,13 +56,18 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 2. 단일 커서(Caret) 처리 (기존과 동일)
+        // 선택된 범위의 시작점(커서 위치) 노드를 가져옴
         let node = range.startContainer;
-        if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+        // 노드가 텍스트면 부모 엘리먼트로 변경
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentElement;
+        }
+        // 가장 가까운 [data-container-id]를 찾음
         const container = node.closest('[data-container-id]');
         if (container) {
+            // 해당 id를 마지막으로 선택한 키로 저장하고 배열 반환
             const id = container.getAttribute('data-container-id');
-            lastActiveKey = id;
+            lastActiveKey = id; // ActiveKey는 팝업시 마지막 선택영역 복구하기 위함
             return [id];
         }
 
