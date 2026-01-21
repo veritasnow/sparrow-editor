@@ -40,28 +40,3 @@ export function normalizeCursorData(restoreData, defaultContainerId) {
         }
     };
 }
-
-export function adjustRangesByChunks(domRanges, lineModel) {
-    return domRanges.map(r => {
-        let start = r.startIndex;
-        let end = r.endIndex;
-
-        let acc = 0;
-
-        lineModel.chunks.forEach(chunk => {
-            if (chunk.type === 'text') {
-                acc += chunk.text.length;
-            } else {
-                // image / video : DOM에서는 1칸, state에서는 0칸
-                if (acc < r.startIndex) start--;
-                if (acc < r.endIndex) end--;
-            }
-        });
-
-        return {
-            ...r,
-            startIndex: Math.max(0, start),
-            endIndex: Math.max(0, end)
-        };
-    });
-}

@@ -351,37 +351,6 @@ export function createSelectionService({ root }) {
         return { node: lineEl, offset: lineEl.childNodes.length };
     }
 
-    /*
-    function findNodeAndOffset(lineEl, targetOffset) {
-        // 1. .chunk-text 내부의 텍스트 노드들을 우선 탐색
-        const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT, null, false);
-        let cumulative = 0;
-        let lastNode = null;
-
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            const len = node.textContent.length;
-            if (targetOffset <= cumulative + len) {
-                return { node, offset: Math.max(0, targetOffset - cumulative) };
-            }
-            cumulative += len;
-            lastNode = node;
-        }
-
-        // 2. 만약 텍스트 노드를 찾지 못했다면 (빈 줄인 경우)
-        // .chunk-text 엘리먼트 자체라도 찾아서 그 안의 첫번째 자식으로 지정
-        const chunkText = lineEl.querySelector('.chunk-text');
-        if (chunkText) {
-            const textNode = chunkText.firstChild || chunkText.appendChild(document.createTextNode(''));
-            return { node: textNode, offset: 0 };
-        }
-
-        // 3. 최후의 수단: lineEl 자체의 첫번째 자식
-        const fallbackNode = lineEl.firstChild || lineEl.appendChild(document.createTextNode(''));
-        return { node: fallbackNode, offset: 0 };
-    }
-    */
-
     /**
      * 7-2. [수정] 일반 커서 복원 (.text-block 기준)
      */
