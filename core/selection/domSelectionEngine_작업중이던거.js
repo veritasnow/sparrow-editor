@@ -15,45 +15,56 @@ export function createSelectionService({ root }) {
 
         if (!sel.isCollapsed) {
             const searchRoot = root || document.body;
+            const rootId = searchRoot.getAttribute('data-container-id');
             
-            // 모든 후보 컨테이너 수집
             const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
             if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
 
-            // 1. 선택 영역에 조금이라도 걸쳐 있는 컨테이너만 1차 필터링
+            // 1. 선택 영역에 조금이라도 걸쳐 있는 모든 컨테이너
             const intersecting = allPossibleContainers.filter(container => 
                 sel.containsNode(container, true)
             );
 
-            // 2. 계층적 필터링 (부모-자식 관계 정리)
+            // 2. 계층적 필터링 로직 개선
             const activeIds = intersecting.filter(c1 => {
-                // 하위 컨테이너 존재 여부 확인
+                const c1Id = c1.getAttribute('data-container-id');
+                
+                // 나(c1)를 포함하는 하위 컨테이너들이 있는지 찾음
                 const subContainers = intersecting.filter(c2 => c1 !== c2 && c1.contains(c2));
                 
-                // 최하위 노드라면 무조건 포함
+                // 만약 하위 컨테이너가 없다면 (최하위 Leaf 노드), 무조건 포함
                 if (subContainers.length === 0) return true;
 
-                // 부모 컨테이너(c1)의 직계 영역 선택 여부 판단
+                /**
+                 * [핵심] 부모 컨테이너(c1)를 포함시킬지 결정하는 조건:
+                 * 하위 컨테이너(subContainers)들 외에 c1 본인만의 "직계 콘텐츠"가 선택 영역에 포함되었는가?
+                 */
+                
+                // 시작점이나 끝점이 c1 내부에 있으면서, 동시에 어떤 자식 컨테이너 내부에도 있지 않다면 c1의 직계 영역임
                 const isStartInSelf = c1.contains(range.startContainer) && 
                     !subContainers.some(sub => sub.contains(range.startContainer));
                 
                 const isEndInSelf = c1.contains(range.endContainer) && 
                     !subContainers.some(sub => sub.contains(range.endContainer));
 
+                // 만약 시작이나 끝이 부모 직계 영역이라면 부모는 무조건 포함
                 if (isStartInSelf || isEndInSelf) return true;
 
-                // 직계 텍스트 노드 검사
+                // 시작/끝은 자식 안에 있지만, 부모의 텍스트 노드가 중간에 걸쳐 있는 경우 (복잡한 드래그)
+                // c1의 직계 텍스트 노드 중 하나라도 선택 영역에 포함되어 있는지 확인
                 const walker = document.createTreeWalker(c1, NodeFilter.SHOW_TEXT);
                 let node;
                 while (node = walker.nextNode()) {
+                    // 이 텍스트 노드가 자식 컨테이너에 속하지 않는 c1의 직계 노드인지 확인
                     const isDirectText = !subContainers.some(sub => sub.contains(node));
                     if (isDirectText && sel.containsNode(node, true)) {
                         return true;
                     }
                 }
 
+                // 위 조건에 해당하지 않으면 이 부모는 "자식들을 감싸고만 있을 뿐" 직접적인 선택 대상이 아님
                 return false;
-            }).map(container => container.getAttribute('data-container-id')); // 여기서 실제 ID 사용
+            }).map(container => container.getAttribute('data-container-id'));
 
             if (activeIds.length > 0) {
                 lastActiveKey = activeIds[activeIds.length - 1];
@@ -61,7 +72,7 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 커서 상태 (Collapsed) 처리
+        // 커서 상태 (Collapsed) 로직은 동일
         let node = range.startContainer;
         if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
         const container = node.closest('[data-container-id]');
@@ -87,75 +98,75 @@ export function createSelectionService({ root }) {
     /**
      * 4. [수정] .text-block 클래스를 기준으로 드래그 범위 추출
      */
-    function getDomSelection(targetKey) {
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return null;
+function getDomSelection(targetKey) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
 
-        // [핵심] 역방향 드래그 여부 확인
-        const isBackwards = sel.anchorNode && sel.focusNode && 
-            (sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_PRECEDING ||
-            (sel.anchorNode === sel.focusNode && sel.anchorOffset > sel.focusOffset));
+    // [핵심] 역방향 드래그 여부 확인
+    const isBackwards = sel.anchorNode && sel.focusNode && 
+        (sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_PRECEDING ||
+        (sel.anchorNode === sel.focusNode && sel.anchorOffset > sel.focusOffset));
 
-        const domRange = sel.getRangeAt(0);
-        const finalKey = targetKey || getActiveKey();
-        const targetContainer = document.getElementById(finalKey) || root;
+    const domRange = sel.getRangeAt(0);
+    const finalKey = targetKey || getActiveKey();
+    const targetContainer = document.getElementById(finalKey) || root;
+    
+    const lines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
+    const ranges = [];
+
+    lines.forEach((lineEl, idx) => {
+        const isStartInP = lineEl.contains(domRange.startContainer);
+        const isEndInP = lineEl.contains(domRange.endContainer);
         
-        const lines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
-        const ranges = [];
-
-        lines.forEach((lineEl, idx) => {
-            const isStartInP = lineEl.contains(domRange.startContainer);
-            const isEndInP = lineEl.contains(domRange.endContainer);
-            
-            let isIntersecting = isStartInP || isEndInP;
-            if (!isIntersecting) {
-                const pRange = document.createRange();
-                pRange.selectNodeContents(lineEl);
-                isIntersecting = (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) <= 0 &&
-                                domRange.compareBoundaryPoints(Range.START_TO_END, pRange) >= 0);
-            }
-
-            if (isIntersecting) {
-                let total = 0, startOffset = -1, endOffset = -1;
-                const chunks = Array.from(lineEl.childNodes);
-
-                chunks.forEach((node, nodeIdx) => {
-                    if (startOffset === -1) {
-                        if (domRange.startContainer === lineEl && domRange.startOffset === nodeIdx) startOffset = total;
-                        else if (domRange.startContainer === node || node.contains(domRange.startContainer)) {
-                            const rel = domRange.startContainer.nodeType === Node.TEXT_NODE ? domRange.startOffset : 0;
-                            startOffset = total + rel;
-                        }
-                    }
-                    if (endOffset === -1) {
-                        if (domRange.endContainer === lineEl && domRange.endOffset === nodeIdx) endOffset = total;
-                        else if (domRange.endContainer === node || node.contains(domRange.endContainer)) {
-                            const rel = domRange.endContainer.nodeType === Node.TEXT_NODE ? domRange.endOffset : 0;
-                            endOffset = total + rel;
-                        }
-                    }
-                    total += (node.nodeType === Node.TEXT_NODE || node.classList?.contains('chunk-text')) 
-                            ? node.textContent.length : 1;
-                });
-
-                if (startOffset === -1) startOffset = isStartInP ? total : 0;
-                if (endOffset === -1) endOffset = isEndInP ? total : total;
-
-                ranges.push({ 
-                    lineIndex: idx, 
-                    startIndex: Math.min(startOffset, endOffset), 
-                    endIndex: Math.max(startOffset, endOffset) 
-                });
-            }
-        });
-
-        if (ranges.length > 0) {
-            // [수정] 배열 자체에 속성을 부여하여 기존 forEach 루프 등을 깨뜨리지 않음
-            ranges.isBackwards = isBackwards;
-            return ranges;
+        let isIntersecting = isStartInP || isEndInP;
+        if (!isIntersecting) {
+            const pRange = document.createRange();
+            pRange.selectNodeContents(lineEl);
+            isIntersecting = (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) <= 0 &&
+                             domRange.compareBoundaryPoints(Range.START_TO_END, pRange) >= 0);
         }
-        return null;
+
+        if (isIntersecting) {
+            let total = 0, startOffset = -1, endOffset = -1;
+            const chunks = Array.from(lineEl.childNodes);
+
+            chunks.forEach((node, nodeIdx) => {
+                if (startOffset === -1) {
+                    if (domRange.startContainer === lineEl && domRange.startOffset === nodeIdx) startOffset = total;
+                    else if (domRange.startContainer === node || node.contains(domRange.startContainer)) {
+                        const rel = domRange.startContainer.nodeType === Node.TEXT_NODE ? domRange.startOffset : 0;
+                        startOffset = total + rel;
+                    }
+                }
+                if (endOffset === -1) {
+                    if (domRange.endContainer === lineEl && domRange.endOffset === nodeIdx) endOffset = total;
+                    else if (domRange.endContainer === node || node.contains(domRange.endContainer)) {
+                        const rel = domRange.endContainer.nodeType === Node.TEXT_NODE ? domRange.endOffset : 0;
+                        endOffset = total + rel;
+                    }
+                }
+                total += (node.nodeType === Node.TEXT_NODE || node.classList?.contains('chunk-text')) 
+                        ? node.textContent.length : 1;
+            });
+
+            if (startOffset === -1) startOffset = isStartInP ? total : 0;
+            if (endOffset === -1) endOffset = isEndInP ? total : total;
+
+            ranges.push({ 
+                lineIndex: idx, 
+                startIndex: Math.min(startOffset, endOffset), 
+                endIndex: Math.max(startOffset, endOffset) 
+            });
+        }
+    });
+
+    if (ranges.length > 0) {
+        // [수정] 배열 자체에 속성을 부여하여 기존 forEach 루프 등을 깨뜨리지 않음
+        ranges.isBackwards = isBackwards;
+        return ranges;
     }
+    return null;
+}
 
     /**
      * 5. [수정] 기초 컨텍스트 추출 (.text-block 기준)
@@ -242,61 +253,80 @@ export function createSelectionService({ root }) {
 
 
     /**
-     * 모든 포인트를 수집하여 문서 순서대로 정렬한 뒤, 
-     * 사용자의 드래그 방향(isBackwards)을 살려 복원하는 가장 안정적인 방식
+     * 다중 블록/셀 커서 및 시각적 선택 상태 복원
+     * - block selection은 DOM Range 기반 유지
+     * - table cell은 시각적 선택만
      */
-    function restoreMultiBlockCursor(positions) {
-        if (!positions?.length) return;
+/**
+ * 다중 블록 및 중첩 구조를 고려한 선택 영역 복원
+ */
+function restoreMultiBlockCursor(positions) {
+    if (!positions?.length) return;
 
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        
-        const isBackwards = positions.isBackwards || positions[0]?.isBackwards;
-        let allPoints = [];
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    
+    const isBackwards = positions.isBackwards || positions[0]?.isBackwards;
+    let allExtractedPoints = [];
 
-        positions.forEach((pos) => {
-            const container = document.getElementById(pos.containerId);
-            if (!container || !pos.ranges) return;
+    positions.forEach((pos) => {
+        const container = document.getElementById(pos.containerId);
+        if (!container || !pos.ranges) return;
 
-            const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
 
-            pos.ranges.forEach(rangeInfo => {
-                const lineEl = lines[rangeInfo.lineIndex];
-                if (!lineEl) return;
+        pos.ranges.forEach(rangeInfo => {
+            const lineEl = lines[rangeInfo.lineIndex];
+            if (!lineEl) return;
 
-                // 부모-자식 간 중복 데이터 방지 (자식 컨테이너가 있다면 부모 데이터는 스킵)
-                const hasSub = lineEl.querySelector('[data-container-id]');
-                if (hasSub && rangeInfo.startIndex === 0 && rangeInfo.endIndex === 1) return;
+            // [수정 핵심] 중복 선택 방지 로직
+            const hasSubContainer = lineEl.querySelector('[data-container-id]');
+            
+            if (hasSubContainer) {
+                /**
+                 * 케이스 1: 라인 전체가 자식 컨테이너인 경우 (예: 테이블만 있는 줄)
+                 * 이 라인의 startIndex/endIndex가 자식 컨테이너 전체를 감싸는 0~1 이라면
+                 * 부모의 좌표로서 추가하지 않습니다. (자식 데이터에서 이미 처리됨)
+                 */
+                const isOnlyContainer = lineEl.children.length === 1 && lineEl.firstElementChild.hasAttribute('data-container-id');
+                if (isOnlyContainer && rangeInfo.startIndex === 0 && rangeInfo.endIndex === 1) {
+                    return; // 부모 단계에서는 이 좌표를 버립니다.
+                }
 
-                const sPos = findNodeAndOffset(lineEl, rangeInfo.startIndex);
-                const ePos = findNodeAndOffset(lineEl, rangeInfo.endIndex);
-                
-                if (sPos) allPoints.push(sPos);
-                if (ePos) allPoints.push(ePos);
-            });
+                /**
+                 * 케이스 2: 내용 [테이블] 내용 인 경우
+                 * findNodeAndOffset이 테이블(자식) 내부의 노드를 가리키지 않도록 보호해야 합니다.
+                 * 여기서는 일단 좌표를 수집하되, 나중에 정렬로 해결합니다.
+                 */
+            }
+
+            const sPos = findNodeAndOffset(lineEl, rangeInfo.startIndex);
+            const ePos = findNodeAndOffset(lineEl, rangeInfo.endIndex);
+            
+            if (sPos) allExtractedPoints.push(sPos);
+            if (ePos) allExtractedPoints.push(ePos);
+        });
+    });
+
+    if (allExtractedPoints.length >= 2) {
+        // 물리적인 DOM 순서로 정렬 (이게 핵심)
+        allExtractedPoints.sort((a, b) => {
+            if (a.node === b.node) return a.offset - b.offset;
+            // a가 b보다 앞에 있으면 -1
+            return (a.node.compareDocumentPosition(b.node) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
         });
 
-        if (allPoints.length >= 2) {
-            // 1. 실제 DOM 위치 순서로 모든 포인트를 정렬
-            allPoints.sort((a, b) => {
-                if (a.node === b.node) return a.offset - b.offset;
-                return (a.node.compareDocumentPosition(b.node) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
-            });
+        // 가장 첫 지점과 가장 끝 지점만 연결
+        const startPoint = allExtractedPoints[0];
+        const endPoint = allExtractedPoints[allExtractedPoints.length - 1];
 
-            // 2. 최상단과 최하단 포인트 추출
-            const start = allPoints[0];
-            const end = allPoints[allPoints.length - 1];
-
-            // 3. setBaseAndExtent를 사용하여 드래그 방향성까지 완벽 복원
-            if (isBackwards) {
-                // 역방향: Focus를 Start에, Anchor를 End에
-                sel.setBaseAndExtent(end.node, end.offset, start.node, start.offset);
-            } else {
-                // 순방향: Anchor를 Start에, Focus를 End에
-                sel.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
-            }
+        if (isBackwards) {
+            sel.setBaseAndExtent(endPoint.node, endPoint.offset, startPoint.node, startPoint.offset);
+        } else {
+            sel.setBaseAndExtent(startPoint.node, startPoint.offset, endPoint.node, endPoint.offset);
         }
     }
+}
 
     /**
      * 특정 라인 내에서 절대 오프셋을 기준으로 정확한 TextNode와 Offset을 찾아냄

@@ -56,8 +56,8 @@ export const tableRenderer = {
                  * 본문 에디터의 초기 상태인 <p><span data-index="0"></span></p> 구조를 
                  * 미리 생성하여 getSelectionContext가 activeNode를 즉시 잡을 수 있게 합니다.
                  */
-                const p = document.createElement("p");
-                p.className = "text-block"; // 본문 클래스와 통일
+                const div = document.createElement("div");
+                div.className = "text-block"; // 본문 클래스와 통일
 
                 const span = document.createElement("span");
                 span.className = "chunk-text";
@@ -69,8 +69,8 @@ export const tableRenderer = {
                 // 기본 스타일 (필요시 cellData의 폰트 정보 반영)
                 span.style.fontSize = "14px";
 
-                p.appendChild(span);
-                td.appendChild(p);
+                div.appendChild(span);
+                td.appendChild(div);
 
                 tr.appendChild(td);
             }
