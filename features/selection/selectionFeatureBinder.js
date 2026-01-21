@@ -3,7 +3,7 @@ import { createSelectionUIService } from './selectionUiService.js';
 
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
   const selectionService = createSelectionAnalyzeService(stateAPI, uiAPI);
-  const uiService        = createSelectionUIService(toolbarElements);
+  const uiService         = createSelectionUIService(toolbarElements);
 
   let isDragging = false;
   let startTD = null;
@@ -32,12 +32,10 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     sel.addRange(range);
   }
 
-  // 1. 전역 마우스 다운 (에디터 밖이나 툴바 클릭 대응)
+  // 1. 전역 마우스 다운
   document.addEventListener('mousedown', (e) => {
     const isInsideEditor = editorEl.contains(e.target);
     const isInsideToolbar = e.target.closest('.sparrow-toolbar');
-
-    // 에디터 밖을 클릭했고, 툴바를 클릭한 것도 아니라면 셀 선택 해제
     if (!isInsideEditor && !isInsideToolbar) {
       clearCellSelection();
     }
@@ -46,46 +44,35 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
   // 2. 에디터 내부 마우스 다운
   editorEl.addEventListener('mousedown', (e) => {
     const td = e.target.closest('.se-table-cell');
-    
-    // 클릭한 곳이 TD가 아니거나, Shift 없이 클릭했다면 일단 기존 선택 초기화
     if (!td || !e.shiftKey) {
       clearCellSelection();
     }
-
     if (td) {
       isDragging = true;
       startTD = td;
     }
   });
 
-  // 3. 드래그 중 (이동)
+  // 3. 드래그 중
   editorEl.addEventListener('mousemove', (e) => {
     if (!isDragging || !startTD) return;
-
     const currentTD = e.target.closest('.se-table-cell');
     const startTable = startTD.closest('.se-table');
-    
     if (!startTable) return;
 
-    const isOverTable = startTable.contains(e.target);
-
-    if (isOverTable) {
+    if (startTable.contains(e.target)) {
       if (currentTD && currentTD !== startTD) {
-        // 다중 셀 범위 선택
         const cells = Array.from(startTable.querySelectorAll('.se-table-cell'));
         const startIndex = cells.indexOf(startTD);
         const endIndex = cells.indexOf(currentTD);
         const rangeIndices = [startIndex, endIndex].sort((a, b) => a - b);
-        
         const selectedCells = cells.slice(rangeIndices[0], rangeIndices[1] + 1);
         applyVisualAndRangeSelection(selectedCells);
       } else if (!currentTD) {
-        // 테이블 내부 여백/경계 드래그 시 테이블 전체 선택
         const allCells = Array.from(startTable.querySelectorAll('.se-table-cell'));
         applyVisualAndRangeSelection(allCells);
       }
     } else {
-      // 테이블 영역 밖으로 나갈 시 테이블 전체 선택 유지
       const allCells = Array.from(startTable.querySelectorAll('.se-table-cell'));
       applyVisualAndRangeSelection(allCells);
     }
@@ -101,13 +88,10 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     startTD = null;
   });
 
-  // ---------------------------------------------------------
-  // 🚫 브라우저 기본 동작 차단 및 감지
-  // ---------------------------------------------------------
-  
   editorEl.addEventListener('dragstart', (e) => e.preventDefault());
   editorEl.addEventListener('drop', (e) => e.preventDefault());
 
+  // 5. 선택 변경 감지 (스타일 유지 + 메인 드래그 지원)
   document.addEventListener('selectionchange', () => {
     if (isDragging) return;
 
@@ -115,11 +99,36 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     if (!sel || !sel.rangeCount) return;
 
     const range = sel.getRangeAt(0);
+
     if (editorEl.contains(range.startContainer)) {
+      // [개선 핵심]
+      // 1. 현재 텍스트 선택이 셀 하나 내부에서만 일어나는지 확인
+      const containerCell = range.commonAncestorContainer.nodeType === 3 
+        ? range.commonAncestorContainer.parentElement.closest('.se-table-cell')
+        : range.commonAncestorContainer.closest?.('.se-table-cell');
+
+      if (containerCell) {
+        // 셀 내부 텍스트 선택 중이라면 클래스를 건드리지 않음 (스타일 변경 시 클래스 보존)
+        // 단, 이미 선택된 다른 셀이 있다면 그건 유지함
+      } else {
+        // 2. 메인 영역 드래그 중인 경우 (셀 덩어리가 선택 범위에 들어왔을 때만 클래스 입힘)
+        const frag = range.cloneContents();
+        if (frag.querySelector('.se-table-cell')) {
+          const allTDs = editorEl.querySelectorAll('.se-table-cell');
+          allTDs.forEach(td => {
+            if (sel.containsNode(td, true)) {
+              td.classList.add('is-selected');
+            } else {
+              td.classList.remove('is-selected');
+            }
+          });
+        }
+      }
+
+      // 공통: 툴바 UI 업데이트
       const result = selectionService.analyzeSelection();
       uiService.updateUI(result);
     } else {
-      // 에디터 외부를 클릭했을 때 UI 초기화 (셀 선택이 해제된 경우)
       if (document.querySelectorAll('.se-table-cell.is-selected').length === 0) {
         uiService.clearAll();
       }
