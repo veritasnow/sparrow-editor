@@ -9,17 +9,27 @@ export function createSelectionService({ root }) {
      */ 
     function getActiveKeys() {
         const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
+
+        // 에디터 외 영역을 선택한 경우[팝업 혹은 에디터 외부 클릭]
+        if (!sel || sel.rangeCount === 0) {
+            return [lastActiveKey].filter(Boolean);
+        }
 
         const range = sel.getRangeAt(0);
 
+        // 드래그인 경우
         if (!sel.isCollapsed) {
+            // 1. 찾을 범위 설정 (부모 root 혹은 바디 전체)
             const searchRoot = root || document.body;
+
+            // 2. [data-container-id] 속성을 가진 모든 엘리먼트 수집
             const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
+            // 자기 자신 -> root도 data-container-id를 가질 수 있으므로 보정작업
             if (searchRoot.hasAttribute('data-container-id')) {
                 allPossibleContainers.push(searchRoot);
             }
 
+            // 3. [data-container-id]들 중 현재 드래그 영역(sel)에 걸치고 있는 값들 필터링
             const intersectingContainers = allPossibleContainers.filter(container => 
                 sel.containsNode(container, true)
             );
