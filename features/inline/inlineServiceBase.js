@@ -53,6 +53,8 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             });
         }
 
+        console.log('allNormalizedPositions: ', allNormalizedPositions);
+
         // 4. 다중 커서 복원 (이제 데이터와 DOM의 오차가 없음)
         if (allNormalizedPositions.length > 0 && options.saveCursor) {
             stateAPI.saveCursor(allNormalizedPositions); 

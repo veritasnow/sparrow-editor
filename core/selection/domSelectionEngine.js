@@ -9,45 +9,61 @@ export function createSelectionService({ root }) {
      */ 
     function getActiveKeys() {
         const sel = window.getSelection();
-
-        // 에디터 외 영역을 선택한 경우[팝업 혹은 에디터 외부 클릭]
-        if (!sel || sel.rangeCount === 0) {
-            return [lastActiveKey].filter(Boolean);
-        }
+        if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
         const range = sel.getRangeAt(0);
 
-        // 드래그인 경우
         if (!sel.isCollapsed) {
-            // 1. 찾을 범위 설정 (부모 root 혹은 바디 전체)
             const searchRoot = root || document.body;
-
-            // 2. [data-container-id] 속성을 가진 모든 엘리먼트 수집
+            const rootId = searchRoot.getAttribute('data-container-id');
+            
             const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
-            // 부모도 data-container-id를 가질 수 있으므로 보정작업
-            if (searchRoot.hasAttribute('data-container-id')) {
-                allPossibleContainers.push(searchRoot);
-            }
+            if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
 
-            // 3. [data-container-id]들 중 현재 드래그 영역(sel)에 걸치고 있는 값들 필터링
-            const intersectingContainers = allPossibleContainers.filter(container => 
+            // 1. 선택 영역에 조금이라도 걸쳐 있는 모든 컨테이너
+            const intersecting = allPossibleContainers.filter(container => 
                 sel.containsNode(container, true)
             );
 
-            // 💡 필터링 로직 수정
-            const activeIds = intersectingContainers.filter(c1 => {
-                // 1. 만약 다른 컨테이너를 포함하지 않는 최하위(Leaf)라면 무조건 유지
-                const hasSubContainer = intersectingContainers.some(c2 => c1 !== c2 && c1.contains(c2));
-                if (!hasSubContainer) {
-                    return true;
+            // 2. 계층적 필터링 로직 개선
+            const activeIds = intersecting.filter(c1 => {
+                const c1Id = c1.getAttribute('data-container-id');
+                
+                // 나(c1)를 포함하는 하위 컨테이너들이 있는지 찾음
+                const subContainers = intersecting.filter(c2 => c1 !== c2 && c1.contains(c2));
+                
+                // 만약 하위 컨테이너가 없다면 (최하위 Leaf 노드), 무조건 포함
+                if (subContainers.length === 0) return true;
+
+                /**
+                 * [핵심] 부모 컨테이너(c1)를 포함시킬지 결정하는 조건:
+                 * 하위 컨테이너(subContainers)들 외에 c1 본인만의 "직계 콘텐츠"가 선택 영역에 포함되었는가?
+                 */
+                
+                // 시작점이나 끝점이 c1 내부에 있으면서, 동시에 어떤 자식 컨테이너 내부에도 있지 않다면 c1의 직계 영역임
+                const isStartInSelf = c1.contains(range.startContainer) && 
+                    !subContainers.some(sub => sub.contains(range.startContainer));
+                
+                const isEndInSelf = c1.contains(range.endContainer) && 
+                    !subContainers.some(sub => sub.contains(range.endContainer));
+
+                // 만약 시작이나 끝이 부모 직계 영역이라면 부모는 무조건 포함
+                if (isStartInSelf || isEndInSelf) return true;
+
+                // 시작/끝은 자식 안에 있지만, 부모의 텍스트 노드가 중간에 걸쳐 있는 경우 (복잡한 드래그)
+                // c1의 직계 텍스트 노드 중 하나라도 선택 영역에 포함되어 있는지 확인
+                const walker = document.createTreeWalker(c1, NodeFilter.SHOW_TEXT);
+                let node;
+                while (node = walker.nextNode()) {
+                    // 이 텍스트 노드가 자식 컨테이너에 속하지 않는 c1의 직계 노드인지 확인
+                    const isDirectText = !subContainers.some(sub => sub.contains(node));
+                    if (isDirectText && sel.containsNode(node, true)) {
+                        return true;
+                    }
                 }
 
-                // 2. 만약 부모(root)라면, 자식(cell)들 외에 본인 영역에 선택된 '직계 텍스트'가 있는지 확인
-                // Range의 시작점이나 끝점이 c1(부모)의 직계 자식 노드에 걸려있다면 c1은 "직접 선택된 영역"이 있는 것임
-                const startInSelf = c1.contains(range.startContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.startContainer));
-                const endInSelf   = c1.contains(range.endContainer) && !intersectingContainers.some(c2 => c1 !== c2 && c2.contains(range.endContainer));
-
-                return startInSelf || endInSelf;
+                // 위 조건에 해당하지 않으면 이 부모는 "자식들을 감싸고만 있을 뿐" 직접적인 선택 대상이 아님
+                return false;
             }).map(container => container.getAttribute('data-container-id'));
 
             if (activeIds.length > 0) {
@@ -56,21 +72,15 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 선택된 범위의 시작점(커서 위치) 노드를 가져옴
+        // 커서 상태 (Collapsed) 로직은 동일
         let node = range.startContainer;
-        // 노드가 텍스트면 부모 엘리먼트로 변경
-        if (node.nodeType === Node.TEXT_NODE) {
-            node = node.parentElement;
-        }
-        // 가장 가까운 [data-container-id]를 찾음
+        if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
         const container = node.closest('[data-container-id]');
         if (container) {
-            // 해당 id를 마지막으로 선택한 키로 저장하고 배열 반환
             const id = container.getAttribute('data-container-id');
-            lastActiveKey = id; // ActiveKey는 팝업시 마지막 선택영역 복구하기 위함
+            lastActiveKey = id;
             return [id];
         }
-
         return [lastActiveKey].filter(Boolean);
     }
 
@@ -250,6 +260,76 @@ export function createSelectionService({ root }) {
         document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
         
         try {
+            let globalStart = null;
+            let globalEnd = null;
+
+            positions.forEach((pos) => {
+                const container = document.getElementById(pos.containerId);
+                if (!container) return;
+
+                // 시각적 강조 클래스 추가
+                container.classList.add('is-selected-range');
+
+                if (!pos.ranges || pos.ranges.length === 0) return;
+
+                /**
+                 * 핵심 로직: 
+                 * 해당 컨테이너 내에서 '직계'로 관리되는 라인들(.text-block)을 찾습니다.
+                 * 만약 .text-block이 없다면 컨테이너 자체를 단일 라인으로 취급합니다.
+                 */
+                const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+                const targetLines = lines.length > 0 ? lines : [container];
+
+                // 현재 컨테이너의 선택 범위 추출
+                const firstR = pos.ranges[0];
+                const lastR = pos.ranges[pos.ranges.length - 1];
+
+                const sPos = findNodeAndOffset(targetLines[firstR.lineIndex] || targetLines[0], firstR.startIndex);
+                const ePos = findNodeAndOffset(targetLines[lastR.lineIndex] || targetLines[targetLines.length - 1], lastR.endIndex);
+
+                // 3. 전체 문서상에서 가장 앞쪽/뒤쪽 포인트를 갱신 (Stitching)
+                // compareDocumentPosition을 이용하여 물리적 순서를 비교합니다.
+                if (!globalStart || (sPos.node.compareDocumentPosition(globalStart.node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+                    globalStart = sPos;
+                }
+                // ePos가 현재의 globalEnd보다 뒤에 있다면 갱신
+                if (!globalEnd || (ePos.node.compareDocumentPosition(globalEnd.node) & Node.DOCUMENT_POSITION_PRECEDING)) {
+                    globalEnd = ePos;
+                }
+            });
+
+            // 4. 최종적으로 단일 Range 생성 및 적용
+            if (globalStart && globalEnd) {
+                const range = document.createRange();
+                range.setStart(globalStart.node, globalStart.offset);
+                range.setEnd(globalEnd.node, globalEnd.offset);
+                sel.addRange(range);
+            }
+            
+            // 마지막으로 포커스 처리
+            const lastId = positions[positions.length - 1].containerId;
+            const lastEl = document.getElementById(lastId);
+            if (lastEl) {
+                // 포커스 시 스크롤 이동 방지 옵션을 줄 수 있음
+                lastEl.focus({ preventScroll: true });
+            }
+
+        } catch (e) {
+            console.error('영역 복구 중 오류:', e);
+        }
+    }
+
+    /*
+    function restoreMultiBlockCursor(positions) {
+        if (!positions?.length) return;
+
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+
+        // 1. 시각적 하이라이트 초기화
+        document.querySelectorAll('.is-selected-range').forEach(el => el.classList.remove('is-selected-range'));
+        
+        try {
             // 2. 단일 컨테이너 내에서의 선택인지 확인 (JSON 예시처럼 셀 하나 내부만 선택한 경우)
             const isSingleContainer = positions.length === 1;
 
@@ -320,6 +400,8 @@ export function createSelectionService({ root }) {
             console.error('영역 복구 중 오류:', e);
         }
     }
+    */
+
 
     /**
      * 특정 라인 내에서 절대 오프셋을 기준으로 정확한 TextNode와 Offset을 찾아냄
