@@ -98,7 +98,7 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     // ───────── DOM → Model 파싱 ─────────
     
     parseLineDOM(
-      parentP,
+      parentDom,
       currentLineChunks,
       selectionContainer,
       cursorOffset,
@@ -106,7 +106,7 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     ) {
       assertAlive();
       return domParserService.parseLineDOM(
-        parentP,
+        parentDom,
         currentLineChunks,
         selectionContainer,
         cursorOffset,

@@ -1,33 +1,41 @@
-/**
- * 에디터의 상태(State)를 DOM에 렌더링하고 DOM 구조를 관리하는 서비스 팩토리입니다.
- */
 export function createRenderService({ rootId, rendererRegistry }) { 
     
-    function getTargetElement(targetKey) {
-        const id = targetKey || rootId;
-        const el = document.getElementById(id);
-        if (!el) {
-            console.warn(`[RenderService] Target element with ID '${id}' not found.`);
-        }
+    // 1. [신규/개선] 데이터에 따라 태그를 결정하는 로직
+    function getTagNameForLine(lineData) {
+        if (!lineData || !lineData.chunks) return "p";
+        const hasTable = lineData.chunks.some(chunk => chunk.type === 'table');
+        return hasTable ? "div" : "p";
+    }
+
+    // 2. [신규/개선] 공통 엘리먼트 생성 로직
+    function createLineElement(lineData) {
+        const tagName = getTagNameForLine(lineData);
+        const el = document.createElement(tagName);
+        el.className = "text-block"; // 공통 클래스
         return el;
     }
 
+    function getTargetElement(targetKey) {
+        const id = targetKey || rootId;
+        return document.getElementById(id);
+    }
+
     /**
-     * 에디터의 State 배열 길이와 DOM의 .text-block 개수를 일치시켜 동기화합니다.
+     * 3. [기존 유지/개선] State와 DOM 개수 동기화
      */
     function syncParagraphCount(state, targetKey) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        // p 태그 대신 클래스명으로 라인을 선택합니다.
         const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
         
         if (state.length > lines.length) {
             const diff = state.length - lines.length;
+            const startIdx = lines.length;
             for (let i = 0; i < diff; i++) {
-                const div = document.createElement("div");
-                div.className = "text-block";
-                container.appendChild(div);
+                // 추가될 라인의 데이터를 보고 p 또는 div 생성
+                const newLine = createLineElement(state[startIdx + i]);
+                container.appendChild(newLine);
             }
         } else if (state.length < lines.length) {
             for (let i = lines.length - 1; i >= state.length; i--) {
@@ -36,185 +44,143 @@ export function createRenderService({ rootId, rendererRegistry }) {
         }
     }
 
-    //function renderLineChunks(line, parentEl) {
-    function renderLineChunks(line, lineIndex, parentEl) {
+    /**
+     * 4. [기존 유지/개선] 개별 라인 렌더링 (태그 교체 로직 포함)
+     */
+    function renderLine(lineIndex, lineData, targetKey, externalPool = null) {
+        const container = getTargetElement(targetKey);
+        if (!container) return;
+
+        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
+        let lineEl = lines[lineIndex];
+        
+        const requiredTagName = getTagNameForLine(lineData).toUpperCase();
+
+        if (!lineEl) {
+            lineEl = createLineElement(lineData);
+            container.appendChild(lineEl);
+        } 
+        // 💡 기존 DOM의 태그가 데이터 형식과 맞지 않으면 교체
+        else if (lineEl.tagName !== requiredTagName) {
+            const newLineEl = createLineElement(lineData);
+            container.replaceChild(newLineEl, lineEl);
+            lineEl = newLineEl;
+        }
+
+        // 💡 기존의 테이블 재사용 로직 유지
+        const tablePool = externalPool || Array.from(lineEl.querySelectorAll('.chunk-table'));
+        lineEl.style.textAlign = lineData.align || "left";
+        lineEl.innerHTML = ""; 
+
+        if (!lineData.chunks || lineData.chunks.length === 0) {
+            const br = document.createElement("br");
+            br.dataset.marker = "empty";
+            lineEl.appendChild(br);
+        } else {
+            this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
+        }
+    }
+
+    /**
+     * 5. [기존 유지] 청크 렌더링 및 테이블 재사용
+     */
+    function renderLineChunksWithReuse(line, lineIndex, parentEl, tablePool) {
         line.chunks.forEach((chunk, chunkIndex) => {
+            if (chunk.type === 'table') {
+                const oldTable = tablePool.shift();
+                if (oldTable) {
+                    oldTable.dataset.lineIndex = lineIndex;
+                    oldTable.dataset.chunkIndex = chunkIndex;
+                    oldTable.dataset.index = chunkIndex;
+                    parentEl.appendChild(oldTable);
+                    return; 
+                }
+            }
+
             const renderer = rendererRegistry[chunk.type];
-            if (!renderer || typeof renderer.render !== "function") return;
+            if (!renderer) return;
 
             const el = renderer.render(chunk, lineIndex, chunkIndex);
-            //const el = renderer.render(chunk);
             el.dataset.index = chunkIndex;
             el.classList.add(`chunk-${chunk.type}`);
             parentEl.appendChild(el);
         });
     }
 
-    // -----------------------------------------------------
-    // 💡 구조적 DOM 조작 함수
-    // -----------------------------------------------------
-
-    function insertLine(lineIndex, align = "left", targetKey) {
+    /**
+     * 6. [기존 유지] 단순 텍스트 업데이트용 (최적화용)
+     */
+    function renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
         const container = getTargetElement(targetKey);
-        if (!container) return;
+        const lineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
+        if (!lineEl) return;
 
-        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
-        const newDiv = document.createElement("div");
-        newDiv.className = "text-block";
-        newDiv.style.textAlign = align;
+        const chunkEl = Array.from(lineEl.children).find(
+            (el) => parseInt(el.dataset.index, 10) === chunkIndex
+        );
 
-        if (lines[lineIndex]) {
-            container.insertBefore(newDiv, lines[lineIndex]);
+        const renderer = rendererRegistry[chunkData.type];
+        if (!renderer || typeof renderer.render !== "function") return;
+
+        if (chunkEl && chunkData.type === 'text') {
+            if (chunkEl.textContent !== chunkData.text) {
+                chunkEl.textContent = chunkData.text;
+            }
+            Object.entries(chunkData.style || {}).forEach(([key, value]) => {
+                chunkEl.style[key] = value;
+            });
         } else {
-            container.appendChild(newDiv);
-        }
-    }
-
-    function removeLine(lineIndex, targetKey) {
-        const container = getTargetElement(targetKey);
-        if (!container) return;
-
-        const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
-        if (lines[lineIndex]) {
-            container.removeChild(lines[lineIndex]);
+            // 텍스트가 아니거나 청크가 없으면 해당 라인 전체 리렌더링 (안정성)
+            this.renderLine(lineIndex, state.getState(targetKey)[lineIndex], targetKey);
         }
     }
 
     return {
+        // 기존 인터페이스 유지
         render(state, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
-
             syncParagraphCount(state, targetKey);
-
-            const updatedLines = Array.from(container.querySelectorAll(':scope > .text-block'));
-            state.forEach((line, i) => {
-                const lineEl = updatedLines[i];
-                if (!lineEl) return;
-                lineEl.innerHTML = "";
-                lineEl.style.textAlign = line.align || "left";
-                //renderLineChunks(line, lineEl);
-                renderLineChunks(line, i, lineEl);
-            });
+            state.forEach((line, i) => this.renderLine(i, line, targetKey));
         },
 
         ensureFirstLine(targetKey) {
             const container = getTargetElement(targetKey);
-            if (!container) return;
-            
-            const lines = container.querySelectorAll(':scope > .text-block');
-            if (lines.length > 0) return;
-
-            const firstDiv = document.createElement("div");
-            firstDiv.className = "text-block";
-            container.appendChild(firstDiv);
+            if (!container || container.querySelectorAll(':scope > .text-block').length > 0) return;
+            const firstLine = document.createElement("p"); // 기본은 p
+            firstLine.className = "text-block";
+            container.appendChild(firstLine);
         },
 
-        renderLine(lineIndex, lineData, targetKey, externalPool = null) {
+        insertLine(lineIndex, align = "left", targetKey, lineData = null) {
             const container = getTargetElement(targetKey);
             if (!container) return;
-
             const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
-            let lineEl = lines[lineIndex];
-            
-            if (!lineEl) {
-                lineEl = document.createElement("div");
-                lineEl.className = "text-block";
-                container.appendChild(lineEl);
-            }
-
-            // 💡 핵심: 외부에서 준 Pool이 있으면 그걸 쓰고, 없으면 현재 내 라인에서 찾음
-            const tablePool = externalPool || Array.from(lineEl.querySelectorAll('.chunk-table'));
-
-            lineEl.style.textAlign = lineData.align || "left";
-            lineEl.innerHTML = ""; // 내부를 비워도 tablePool 변수가 참조를 들고 있어 안전함
-
-            if (!lineData.chunks || lineData.chunks.length === 0) {
-                const br = document.createElement("br");
-                br.dataset.marker = "empty";
-                lineEl.appendChild(br);
-            } else {
-                this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
-            }
+            const newEl = createLineElement(lineData);
+            newEl.style.textAlign = align;
+            if (lines[lineIndex]) container.insertBefore(newEl, lines[lineIndex]);
+            else container.appendChild(newEl);
         },
 
-        renderLineChunksWithReuse(line, lineIndex, parentEl, tablePool) {
-            line.chunks.forEach((chunk, chunkIndex) => {
-                // 💡 테이블 타입을 만났을 때
-                if (chunk.type === 'table') {
-                    // 💡 Pool에서 가장 앞에 있는 테이블 DOM을 하나 꺼냄 (Shift)
-                    const oldTable = tablePool.shift();
-                    
-                    if (oldTable) {
-                        // 💡 위치(인덱스) 정보만 최신 데이터로 업데이트
-                        oldTable.dataset.lineIndex = lineIndex;
-                        oldTable.dataset.chunkIndex = chunkIndex;
-                        oldTable.dataset.index = chunkIndex;
-                        
-                        parentEl.appendChild(oldTable);
-                        console.log(`[Reuse] 테이블 DOM 재사용 성공 (ChunkIndex: ${chunkIndex})`);
-                        return; 
-                    }
-                }
-
-                // 일반 텍스트나 새로 추가된 테이블(백업본이 없는 경우)은 새로 렌더링
-                const renderer = rendererRegistry[chunk.type];
-                if (!renderer) return;
-
-                const el = renderer.render(chunk, lineIndex, chunkIndex);
-                el.dataset.index = chunkIndex;
-                el.classList.add(`chunk-${chunk.type}`);
-                parentEl.appendChild(el);
-            });
-        },    
-        
-        renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
+        removeLine(lineIndex, targetKey) {
             const container = getTargetElement(targetKey);
-            if (!container) return;
-
             const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
-            const lineEl = lines[lineIndex];
-            if (!lineEl) return;
-
-            const chunkEl = Array.from(lineEl.children).find(
-                (el) => parseInt(el.dataset.index, 10) === chunkIndex
-            );
-
-            const renderer = rendererRegistry[chunkData.type];
-            if (!renderer || typeof renderer.render !== "function") return;
-
-            if (chunkEl) {
-                if (chunkEl.textContent !== chunkData.text) {
-                    chunkEl.textContent = chunkData.text;
-                }
-                Object.entries(chunkData.style || {}).forEach(([key, value]) => {
-                    chunkEl.style[key] = value;
-                });
-            } else {
-                const newEl = renderer.render(chunkData);
-                newEl.dataset.index = chunkIndex;
-                newEl.classList.add(`chunk-${chunkData.type}`);
-                lineEl.appendChild(newEl);
-            }
+            if (lines[lineIndex]) container.removeChild(lines[lineIndex]);
         },
 
         shiftLinesDown(fromIndex, targetKey) {
             const container = getTargetElement(targetKey);
             if (!container) return;
-
             const lines = Array.from(container.querySelectorAll(':scope > .text-block'));
             for (let i = lines.length - 1; i >= fromIndex; i--) {
                 const line = lines[i];
-                const nextSibling = line.nextSibling;
-                if (nextSibling) {
-                    container.insertBefore(line, nextSibling.nextSibling);
-                } else {
-                    container.appendChild(line);
-                }
+                if (line.nextSibling) container.insertBefore(line, line.nextSibling.nextSibling);
+                else container.appendChild(line);
             }
         },
 
-        insertLine,
-        removeLine,
+        renderLine,
+        renderLineChunksWithReuse,
+        renderChunk
     };
 }

@@ -183,12 +183,12 @@ function getDomSelection(targetKey) {
         if (!activeContainer) return null;
 
         // p 태그 대신 .text-block 클래스를 찾습니다.
-        const parentP = el.closest('.text-block');
-        if (!parentP || !activeContainer.contains(parentP)) return null;
+        const parentDom = el.closest('.text-block');
+        if (!parentDom || !activeContainer.contains(parentDom)) return null;
 
         // activeContainer 직계 자식들 중 .text-block들만 추려서 인덱스를 찾습니다.
         const lines = Array.from(activeContainer.querySelectorAll(':scope > .text-block'));
-        const lineIndex = lines.indexOf(parentP);
+        const lineIndex = lines.indexOf(parentDom);
         if (lineIndex < 0) return null;
 
         const rawActiveNode = el.closest('[data-index]');
@@ -199,7 +199,7 @@ function getDomSelection(targetKey) {
             activeContainer,
             containerId: activeContainer.id,
             lineIndex,
-            parentP,
+            parentDom,
             container,
             cursorOffset: range.startOffset,
             activeNode,
@@ -444,9 +444,9 @@ function restoreMultiBlockCursor(positions) {
     function getInsertionAbsolutePosition() {
         const context = getSelectionContext();
         if (!context) return null;
-        const { lineIndex, container, cursorOffset, parentP } = context;
+        const { lineIndex, container, cursorOffset, parentDom } = context;
         let absoluteOffset = 0;
-        const walker = document.createTreeWalker(parentP, NodeFilter.SHOW_TEXT, null, false);
+        const walker = document.createTreeWalker(parentDom, NodeFilter.SHOW_TEXT, null, false);
         while (walker.nextNode()) {
             const node = walker.currentNode;
             if (node === container) {

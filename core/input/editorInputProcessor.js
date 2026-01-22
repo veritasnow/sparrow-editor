@@ -77,7 +77,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         // --- Case 2: DOM Rebuild ---
         if (!result) {
             const rebuild = ui.parseLineDOM(
-                selection.parentP,
+                selection.parentDom,
                 currentLine.chunks,
                 container,
                 cursorOffset,
