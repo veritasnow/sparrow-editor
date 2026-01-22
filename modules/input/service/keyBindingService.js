@@ -82,7 +82,7 @@ export function createKeyBindingService(editorEl) {
                 }
 
                 // ✅ [추가] 테이블 앞/뒤면 엔터 먼저 실행
-                tryPreEnterBeforeTextInput(e, handlers);
+                //tryPreEnterBeforeTextInput(e, handlers);
 
                 // BACKSPACE
                 if (key === "Backspace") {

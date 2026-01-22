@@ -48,6 +48,8 @@
     }
 
     .sparrow-contents .text-block {
+      margin-top: 0px;
+      margin-bottom: 0px;
       min-height: 24px;
       white-space: pre-wrap;
       word-wrap: break-word;
