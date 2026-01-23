@@ -99,6 +99,19 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             // 💡 테이블 분리가 감지된 경우 (shouldSplit)
             if (rebuild.shouldSplit) {
                 const separatedLines = splitChunksByTable(rebuild.newChunks, currentLine.align);
+                
+                // 1. 테이블 청크의 위치를 가져옴
+                const tableIndex = rebuild.newChunks.findIndex(chunk => chunk.type === 'table');
+                const cursorChunkIndex = rebuild.restoreData.chunkIndex;
+
+                // 2. 테이블 뒤에서 입력한 경우에만 lineIndex를 +1
+                // separatedLines가 [테이블, 텍스트] 순서로 쪼개졌을 것이므로 텍스트는 다음 라인(Index+1)
+                if (tableIndex !== -1 && cursorChunkIndex > tableIndex) {
+                    rebuild.restoreData.lineIndex = rebuild.restoreData.lineIndex + 1;
+                    // 테이블 뒤에 생긴 새 라인은 [텍스트]만 가지므로 chunkIndex는 0
+                    rebuild.restoreData.chunkIndex = 0;
+                } 
+
                 return {
                     isSplit: true,
                     separatedLines,
@@ -115,6 +128,8 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
                 flags.isNewChunk = true;
             }
         }
+
+        console.log("calculateUpdate result:", result);
 
         if (!result) return { flags: { hasChange: false } };
         return { ...result, flags: { ...flags, hasChange: true } };

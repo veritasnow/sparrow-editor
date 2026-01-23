@@ -183,7 +183,8 @@ export function createEditorFactory() {
       getLastActiveKey            : () => domSelection.getLastActiveKey(),
       // DOM -> Model 파싱 브릿지
       parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
-      extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl)
+      extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
+      getSelectionContext         : () => domSelection.getSelectionContext(),
     };
 
     const editorAPI = {
