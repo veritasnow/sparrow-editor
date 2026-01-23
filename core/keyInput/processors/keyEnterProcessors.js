@@ -117,35 +117,37 @@ function calculateEnterState(currentState, lineIndex, offset) {
 
 
 /**
- * [Step 3] 상태 저장 및 UI 업데이트 반영
+ * [Step 3] 상태 저장 및 UI 업데이트 반영 (최적화 버전)
  */
-// keyEnterProcessors.js
-
 function applyEnterResult(activeKey, result, { state, ui, domSelection }) {
     const { newState, newPos, newLineData, lineIndex } = result;
 
     // 1. 상태 저장
     state.save(activeKey, newState);
 
-    // 2. [매우 중요] 현재 DOM(분할 전)에서 테이블들을 미리 꺼내둡니다.
-    // 이 테이블들은 잠시 후 newLineData(lineIndex + 1)를 그릴 때 재사용됩니다.
     const container = document.getElementById(activeKey);
-    const currentLineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
+    if (!container) return;
+
+    // 2. 🔥 [최적화] 인덱스 직접 접근 및 빠른 테이블 추출
+    // 분할 전 현재 라인 엘리먼트를 찾습니다.
+    const currentLineEl = container.children[lineIndex];
     
-    // 현재 라인에 있던 테이블 DOM들을 미리 배열에 담아둡니다.
+    // 현재 줄에서 뒷줄로 넘어갈 테이블들을 담을 풀입니다.
+    // getElementsByClassName은 querySelectorAll보다 월등히 빠릅니다.
     const movingTablePool = currentLineEl 
-        ? Array.from(currentLineEl.querySelectorAll('.chunk-table')) 
+        ? Array.from(currentLineEl.getElementsByClassName('chunk-table')) 
         : [];
 
-    // 3. UI 반영: 줄 삽입 (이 순간 lineIndex + 1 자리에 빈 div가 생기고 기존 줄들은 뒤로 밀림)
-    ui.insertLine(lineIndex + 1, newLineData.align, activeKey); 
+    // 3. UI 반영: 새 줄 삽입
+    // insertLine 내부에서 이미 children[lineIndex+1] 위치에 새 엘리먼트를 insertBefore 합니다.
+    ui.insertLine(lineIndex + 1, newLineData.align, activeKey, newLineData); 
 
     // 4. 기존 줄(lineIndex) 업데이트 
-    // (이제 분할되어 남은 데이터만 그려짐. tablePool은 null이므로 함수가 알아서 추출)
+    // 분할되고 남은 텍스트/테이블만 다시 그립니다.
     ui.renderLine(lineIndex, newState[lineIndex], activeKey);
 
-    // 5. 새 줄(lineIndex + 1) 업데이트
-    // 💡 여기서 아까 추출한 movingTablePool을 직접 주입합니다!
+    // 5. 🔥 [최적화] 새 줄(lineIndex + 1)에 테이블 풀 주입
+    // 아까 추출한 물리적 테이블 DOM들을 그대로 새 위치에 꽂아 넣습니다.
     ui.renderLine(lineIndex + 1, newState[lineIndex + 1], activeKey, movingTablePool);
     
     // 6. 커서 복원
@@ -154,84 +156,7 @@ function applyEnterResult(activeKey, result, { state, ui, domSelection }) {
         state.saveCursor(finalPos);
         domSelection.restoreCursor(finalPos);
     }
+
+    // 메모리 참조 해제
+    movingTablePool.length = 0;
 }
-
-
-
-
-
-
-
-
-/*
-function calculateEnterState(currentState, lineIndex, offset) {
-    const currentLine = currentState[lineIndex];
-    const beforeChunks = [];
-    const afterChunks = [];
-    let acc = 0;
-
-    // 청크 순회하며 분할 지점 계산
-    currentLine.chunks.forEach(chunk => {
-        const handler = chunkRegistry.get(chunk.type);
-        const chunkLen = handler ? handler.getLength(chunk) : (chunk.text?.length || 0);
-        
-        if (handler && !handler.canSplit) {
-            // 분할 불가능한 노드 (Atomic)
-            if (acc + chunkLen <= offset) {
-                beforeChunks.push(cloneChunk(chunk));
-            } else {
-                afterChunks.push(cloneChunk(chunk));
-            }
-        } else {
-            // 분할 가능한 노드 (Text 등)
-            const start = acc;
-            const end = acc + chunkLen;
-
-            if (offset <= start) {
-                afterChunks.push(cloneChunk(chunk));
-            } else if (offset >= end) {
-                beforeChunks.push(cloneChunk(chunk));
-            } else {
-                const cut = offset - start;
-                const beforeText = chunk.text.slice(0, cut);
-                const afterText = chunk.text.slice(cut);
-                
-                if (beforeText) {
-                    beforeChunks.push(handler ? handler.create(beforeText, chunk.style) : { type: 'text', text: beforeText, style: chunk.style });
-                }
-                if (afterText) {
-                    afterChunks.push(handler ? handler.create(afterText, chunk.style) : { type: 'text', text: afterText, style: chunk.style });
-                }
-            }
-        }
-        acc += chunkLen;
-    });
-
-    const finalBeforeChunks = normalizeLineChunks(beforeChunks);
-    const finalAfterChunks = normalizeLineChunks(afterChunks);
-
-    const nextState = [...currentState];
-    nextState[lineIndex] = EditorLineModel(currentLine.align, finalBeforeChunks);
-    
-    const newLineData = EditorLineModel(currentLine.align, finalAfterChunks);
-    nextState.splice(lineIndex + 1, 0, newLineData);
-
-    // 커서 위치 계산 (Type Fallback 적용)
-    const firstChunkOfNextLine = finalAfterChunks[0];
-    const inferredType = firstChunkOfNextLine?.type || 'text';
-
-    const newPos = {
-        lineIndex: lineIndex + 1,
-        anchor: {
-            chunkIndex: 0,
-            type: inferredType,
-            offset: 0,
-            ...(inferredType === 'table' && { 
-                detail: { rowIndex: 0, colIndex: 0, offset: 0 } 
-            })
-        }
-    };
-
-    return { newState: nextState, newPos, newLineData, lineIndex };
-}
-*/

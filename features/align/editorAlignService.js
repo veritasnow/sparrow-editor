@@ -1,76 +1,65 @@
-// sparrow-editor\service\align\editorAlignService.js
 import { EditorLineModel } from '../../model/editorLineModel.js'; 
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-/**
- * 📐 정렬 서비스
- * 현재 선택된 라인들의 정렬(Left, Center, Right)을 변경하는 비즈니스 로직 담당
- */
 export function createEditorAlignService(stateAPI, uiAPI) {
 
-    /**
-     * @param {string} alignType - 'left' | 'center' | 'right' | 'justify'
-     */
     function applyAlign(alignType) {
-        // 1. 현재 활성화된 영역 확보 (팝업/버튼 클릭 대비 LastActiveKey 포함)
         const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
         if (!activeKey) return;
 
-        // 2. 현재 선택된 범위(DOM Selection) 가져오기
         const domRanges = uiAPI.getDomSelection(activeKey);
         if (!domRanges || domRanges.length === 0) return;
 
-        // 3. 해당 영역의 상태 데이터 가져오기
         const currentState = stateAPI.get(activeKey); 
         if (!currentState) return;
 
-        // 4. 새로운 상태 맵 생성
         const newState = [...currentState];
 
-        // 5. 선택된 시작 라인과 끝 라인 계산
+        // 1. 선택된 라인 인덱스 추출 최적화
         const lineIndices = domRanges.map(r => r.lineIndex);
-        const startLineIndex = Math.min(...lineIndices);
-        const endLineIndex   = Math.max(...lineIndices);
+        const startIdx = Math.min(...lineIndices);
+        const endIdx = Math.max(...lineIndices);
 
-        // 6. 모델 업데이트 (정렬 값 변경)
-        for (let i = startLineIndex; i <= endLineIndex; i++) {
+        const container = document.getElementById(activeKey);
+
+        // 2. 루프 내부 최적화
+        for (let i = startIdx; i <= endIdx; i++) {
             if (!newState[i]) continue;
-            // 기존 청크는 유지하고 align 값만 교체하여 새로운 Line 모델 생성
+
+            // 모델 업데이트
             newState[i] = EditorLineModel(alignType, newState[i].chunks);
+            
+            // UI 업데이트 최적화
+            const lineEl = container?.children[i]; // O(1) 접근
+            if (!lineEl) continue;
+
+            // 💡 [최적화 핵심] 태그 교체가 필요한지 확인
+            // 테이블 유무에 따라 P <-> DIV 전환이 필요한 경우에만 renderLine 호출
+            const hasTable = newState[i].chunks.some(c => c.type === 'table');
+            const requiredTagName = hasTable ? "DIV" : "P";
+
+            if (lineEl.tagName === requiredTagName) {
+                // 태그가 같다면 innerHTML을 건드리지 않고 스타일만 수정 (최고 속도)
+                lineEl.style.textAlign = alignType;
+            } else {
+                // 태그가 달라져야 한다면 테이블 풀을 뽑아서 교체 렌더링
+                const tablePool = Array.from(lineEl.getElementsByClassName('chunk-table'));
+                uiAPI.renderLine(i, newState[i], activeKey, tablePool);
+            }
         }
 
-        // 7. 변경된 상태 저장
+        // 3. 상태 저장
         stateAPI.save(activeKey, newState);
 
-        // 8. 커서 위치 정규화 및 저장
+        // 4. 커서 복원
         const pos = uiAPI.getSelectionPosition();
-        let normalizedPos = null;
-
         if (pos) {
-            normalizedPos = normalizeCursorData({
+            const normalizedPos = normalizeCursorData({
                 ...pos,
                 containerId: activeKey
             }, activeKey);
             
             stateAPI.saveCursor(normalizedPos);
-        }
-
-        // 9. UI 렌더링 (activeKey를 전달하여 해당 셀/본문만 타겟팅)
-        const container = document.getElementById(activeKey);
-
-        for (let i = startLineIndex; i <= endLineIndex; i++) {
-            const lineData = newState[i];
-            const lineEl = container?.querySelectorAll(':scope > .text-block')[i];
-
-            // 💡 [추가] 정렬 변경 전, 기존 라인 엘리먼트에서 테이블 DOM들을 백업합니다.
-            const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
-
-            // 💡 네 번째 인자로 tablePool을 전달하여 테이블 DOM이 새로 생성되지 않게 합니다.
-            uiAPI.renderLine(i, lineData, activeKey, tablePool);
-        }
-
-        // 10. 커서 복원
-        if (normalizedPos) {
             uiAPI.restoreCursor(normalizedPos);
         }
     }

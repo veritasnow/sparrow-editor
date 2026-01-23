@@ -1,59 +1,75 @@
-// extensions/image/service/imageInsertService.js
 import { applyImageBlock } from '../utils/imageBlockUtil.js';
 
-/**
- * 이미지 삽입 서비스
- * 특정 컨테이너(본문/셀) 내에 이미지를 삽입하고 UI를 동기화합니다.
- */
 export function createImageInsertService(stateAPI, uiAPI) {
     
-    /**
-     * @param {string} src - 이미지 소스 URL
-     * @param {string|object} targetKeyOrPos - 삽입할 위치의 Key 혹은 구체적인 포지션 객체
-     */
     function insertImage(src, targetKeyOrPos) {
         if (!src) return false;
 
-        // 1. 타겟 영역(activeKey) 확보
-        // targetKeyOrPos가 문자열(ID)일 수도 있고, 포지션 객체일 수도 있음을 고려
+        // 1. 타겟 영역 확보
         const activeKey = (typeof targetKeyOrPos === 'string' ? targetKeyOrPos : null) 
                          || uiAPI.getActiveKey() 
                          || uiAPI.getLastActiveKey();
         
         if (!activeKey) return false;
 
-        // 2. 해당 영역의 현재 상태 가져오기
+        // 2. 상태 가져오기
         const areaState = stateAPI.get(activeKey);
         if (!areaState) return false;
         
-        // 3. 삽입 위치(Pos) 결정
+        // 3. 삽입 위치 결정
         let pos = (typeof targetKeyOrPos === 'object' ? targetKeyOrPos : null) 
                   || uiAPI.getLastValidPosition();
 
-        // 위치 정보가 없는 경우 해당 컨테이너의 맨 마지막 라인으로 설정
         if (!pos) {
             const lastLineIdx = Math.max(0, areaState.length - 1);
-            const lastLine = areaState[lastLineIdx];
             pos = {
                 lineIndex: lastLineIdx,
-                // 마지막 청크의 끝 지점을 offset으로 계산
-                absoluteOffset: lastLine.chunks.reduce((s, c) => s + (c.text?.length || 0), 0)
+                absoluteOffset: areaState[lastLineIdx].chunks.reduce((s, c) => s + (c.text?.length || 0), 0)
             };
         }
 
-        const { lineIndex, absoluteOffset } = pos;
+        const { lineIndex } = pos;
 
-        // 4. 비즈니스 로직 실행 (이미지 블록 생성 및 상태 분리/병합)
-        // applyImageBlock은 이미지를 삽입하고 그 뒤에 빈 텍스트 라인을 생성하는 등의 로직을 처리합니다.
+        // 4. 비즈니스 로직 실행 (이미지 블록 생성)
         const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset } =
-            applyImageBlock(areaState, src, lineIndex, absoluteOffset);
+            applyImageBlock(areaState, src, lineIndex, pos.absoluteOffset);
 
-        // 5. 변경된 상태 저장 (해당 영역 Key에 귀속)
+        // 5. 변경된 상태 저장
         stateAPI.save(activeKey, newState);
 
-        // 6. 복원할 커서 위치 객체 생성
+        // 6. UI 업데이트 최적화 시작
+        const container = document.getElementById(activeKey);
+        if (!container) return false;
+
+        // 🔥 [최적화] 7. DOM 개수 동기화 (이미지 삽입으로 늘어난 라인만큼 미리 DIV/P 생성)
+        // uiAPI.render 내부의 syncParagraphCount를 직접 활용하거나 호출합니다.
+        uiAPI.syncParagraphCount?.(newState, activeKey);
+
+        // 8. 라인별 증분 렌더링 (테이블 보호 포함)
+        // 이미지가 들어간 줄부터 커서가 복원될 줄까지 루프를 돌며 업데이트
+        const startUpdateIdx = Math.min(lineIndex, restoreLineIndex);
+        const endUpdateIdx = Math.max(lineIndex, restoreLineIndex);
+
+        for (let i = startUpdateIdx; i < newState.length; i++) {
+            const lineEl = container.children[i];
+            
+            // 💡 현재 라인의 테이블 DOM을 미리 확보 (재사용)
+            // getElementsByClassName이 querySelectorAll보다 빠름
+            const tablePool = lineEl ? Array.from(lineEl.getElementsByClassName('chunk-table')) : [];
+            
+            // 만약 새로 생성된 라인이면 renderLine이 알아서 새 태그를 만듦
+            uiAPI.renderLine(i, newState[i], activeKey, tablePool);
+            
+            // endUpdateIdx까지만 필수 렌더링하고, 이후 라인은 데이터가 변했을 때만 렌더링하도록 
+            // 렌더링 엔진 내부 로직에 맡기거나 여기서 중단 가능
+            if (i > endUpdateIdx && i < areaState.length) {
+                 // 줄 번호(index)만 바뀌고 데이터는 같은 경우 렌더링 스킵 로직이 있으면 좋음
+            }
+        }
+
+        // 9. 커서 위치 복원
         const nextCursorPos = {
-            containerId: activeKey, // 💡 어느 셀/본문인지 명시
+            containerId: activeKey,
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
@@ -62,25 +78,7 @@ export function createImageInsertService(stateAPI, uiAPI) {
             }
         };
 
-        // 7. 커서 상태 저장 (Undo용)
         stateAPI.saveCursor(nextCursorPos);
-        
-        // 8. UI 업데이트 (activeKey 전달 및 테이블 보호!)
-        const container = document.getElementById(activeKey);
-
-        // A. 이미지가 삽입된 라인 처리
-        if (newState[lineIndex]) {
-            const lineEl = container?.querySelectorAll(':scope > .text-block')[lineIndex];
-            // 💡 렌더링 전 테이블 DOM 미리 확보
-            const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
-            uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey, tablePool);
-        }
-
-        // B. 이미지가 삽입되면서 새로 생성되거나 변경된 라인이 있는 경우
-        if (restoreLineIndex !== lineIndex && newState[restoreLineIndex]) {
-            uiAPI.render(newState, activeKey); 
-        }
-        // 9. 최종 커서 복원
         uiAPI.restoreCursor(nextCursorPos);
         
         return true;

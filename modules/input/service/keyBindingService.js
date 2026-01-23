@@ -20,46 +20,6 @@ export function createKeyBindingService(editorEl) {
         }
     }
 
-    /**
-     * ✅ 텍스트 입력 전에
-     * 커서 앞/뒤에 table 이 있으면 엔터를 먼저 실행
-     */
-    function tryPreEnterBeforeTextInput(e, handlers) {
-        const { key, ctrlKey } = e;
-
-        // 1️⃣ 문자 입력만
-        if (key.length !== 1 || ctrlKey) return;
-
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0) return;
-
-        let node = sel.getRangeAt(0).startContainer;
-
-        // text → element
-        if (node.nodeType === Node.TEXT_NODE) {
-            node = node.parentElement;
-        }
-        if (!node) return;
-
-        // 2️⃣ table 내부면 절대 개입하지 않음
-        if (node.closest("table")) {
-            return;
-        }
-
-        // 3️⃣ "최상위 line(text-block)" 찾기
-        const lineEl = node.closest(".text-block");
-        if (!lineEl) return;
-
-        // 4️⃣ 해당 line 안에 table chunk가 있는지
-        const hasTableInLine = !!lineEl.querySelector(":scope > table.se-table");
-
-        if (hasTableInLine) {
-            // ✅ table 앞/뒤 텍스트 입력 → 강제 개행
-            handlers.processEnter();
-        }
-    }
-
-
     return {
         /**
          * @param {Object} handlers
@@ -80,9 +40,6 @@ export function createKeyBindingService(editorEl) {
                     handlers.processEnter();
                     return;
                 }
-
-                // ✅ [추가] 테이블 앞/뒤면 엔터 먼저 실행
-                //tryPreEnterBeforeTextInput(e, handlers);
 
                 // BACKSPACE
                 if (key === "Backspace") {

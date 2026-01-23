@@ -1,9 +1,8 @@
-// features/inline/inlineServiceBase.js
 import { getRanges } from "../../utils/rangeUtils.js";
 import { normalizeCursorData } from "../../utils/cursorUtils.js";
 
 /**
- * 인라인 스타일(Bold, Italic 등)을 적용하는 공통 서비스 베이스
+ * 인라인 스타일(Bold, Italic 등) 적용 서비스 베이스 (최적화 버전)
  */
 export function createInlineServiceBase(stateAPI, uiAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
@@ -21,15 +20,15 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             const domRanges = uiAPI.getDomSelection(activeKey);
             if (!domRanges || domRanges.length === 0) return;
 
-            // 1. DOM의 오프셋을 그대로 State 인덱스로 사용 (1:1 매핑)
             const ranges = getRanges(currentState, domRanges);
             const newState = updateFn(currentState, ranges);
 
             if (newState && newState !== currentState) {
-                updates.push({ key: activeKey, newState, ranges });
+                // 🔥 [최적화] 중복 줄 번호 제거 (한 줄에 여러 선택 영역이 있을 경우 대비)
+                const affectedLineIndices = Array.from(new Set(ranges.map(r => r.lineIndex)));
+                updates.push({ key: activeKey, newState, affectedLineIndices });
             }
 
-            // 2. 커서 위치 저장 
             const normalized = normalizeCursorData(domRanges, activeKey); 
             allNormalizedPositions.push(normalized);
         });
@@ -41,21 +40,24 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             updates.forEach(update => {
                 const container = document.getElementById(update.key);
                 if (!container) return;
-                const lineElements = Array.from(container.querySelectorAll(':scope > .text-block'));
 
-                update.ranges.forEach(({ lineIndex }) => {
+                // 🔥 [최적화] 전체 DOM 스캔 제거. 인덱스로 즉시 접근
+                update.affectedLineIndices.forEach((lineIndex) => {
                     const lineData = update.newState[lineIndex];
-                    const lineEl = lineElements[lineIndex];
-                    // 테이블 유지 로직
-                    const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+                    const lineEl = container.children[lineIndex]; // O(1) 접근
+                    
+                    if (!lineEl) return;
+
+                    // 💡 테이블 유지 로직 최적화 (getElementsByClassName 사용)
+                    const tablePool = Array.from(lineEl.getElementsByClassName('chunk-table'));
+                    
+                    // 해당 라인만 정밀 렌더링
                     uiAPI.renderLine(lineIndex, lineData, update.key, tablePool);
                 });
             });
         }
 
-        console.log('allNormalizedPositions: ', allNormalizedPositions);
-
-        // 4. 다중 커서 복원 (이제 데이터와 DOM의 오차가 없음)
+        // 4. 다중 커서 복원
         if (allNormalizedPositions.length > 0 && options.saveCursor) {
             stateAPI.saveCursor(allNormalizedPositions); 
             uiAPI.restoreMultiBlockCursor(allNormalizedPositions);

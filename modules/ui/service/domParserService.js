@@ -1,8 +1,10 @@
 export function createDOMParseService() {
     
     /**
-     * DOM 구조(lineEl)를 읽어 청크 배열을 생성합니다.
-     * @param {HTMLElement} lineEl - 현재 라인의 <div> (text-block) 엘리먼트
+     * [최적화 포인트]
+     * 1. Array.from 제거: childNodes를 직접 for-loop로 순회하여 메모리 할당 방지
+     * 2. textBuffer 최적화: 텍스트 노드가 연속될 때만 결합
+     * 3. dataset 직접 참조: parseInt와 dataset 접근 속도 개선
      */
     function parseLineDOM(lineEl, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
         const newChunks = [];
@@ -10,81 +12,104 @@ export function createDOMParseService() {
         let restoreData = null;
         let hasTable = false;
 
-        Array.from(lineEl.childNodes).forEach((node) => {
-            if (node.nodeType === Node.TEXT_NODE) {
+        const children = lineEl.childNodes;
+        const len = children.length;
+
+        for (let i = 0; i < len; i++) {
+            const node = children[i];
+
+            if (node.nodeType === 3) { // Node.TEXT_NODE
                 textBuffer += node.textContent;
                 
                 if (node === selectionContainer) {
                     restoreData = { 
                         lineIndex, 
-                        chunkIndex: newChunks.length, // 현재까지 쌓인 청크 개수가 인덱스가 됨
+                        chunkIndex: newChunks.length, 
                         offset: cursorOffset 
                     };
                 }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                // 텍스트 버퍼 비우기
+            } else if (node.nodeType === 1) { // Node.ELEMENT_NODE
                 if (textBuffer.length > 0) {
                     newChunks.push({ type: 'text', text: textBuffer, style: {} });
                     textBuffer = '';
                 }
 
-                // 테이블 요소인 경우
-                if (node.classList.contains('chunk-table') || node.tagName === 'TABLE') {
-                    hasTable = true;
-                    const oldIndex = parseInt(node.dataset.index, 10);
+                // 테이블 및 기타 청크 판단 로직 통합
+                const oldIndexStr = node.getAttribute('data-index');
+                if (oldIndexStr !== null) {
+                    const oldIndex = Number(oldIndexStr);
                     const existingChunk = currentLineChunks[oldIndex];
-                    
                     if (existingChunk) {
+                        if (existingChunk.type === 'table') hasTable = true;
                         newChunks.push(existingChunk);
                     }
-                } 
-                // 기타 다른 청크 처리
-                else if (node.hasAttribute('data-index')) {
-                    const oldIndex = parseInt(node.dataset.index, 10);
-                    const existingChunk = currentLineChunks[oldIndex];
-                    if (existingChunk) newChunks.push(existingChunk);
+                } else if (node.tagName === 'TABLE') {
+                    // data-index가 없는 신규 테이블 대응
+                    hasTable = true;
+                    // 신규 테이블 파싱 로직 호출 (필요 시)
                 }
             }
-        });
+        }
 
-        // 마지막 남은 텍스트 처리
         if (textBuffer.length > 0) {
             newChunks.push({ type: 'text', text: textBuffer, style: {} });
         }
 
-        // 💡 [핵심] 텍스트와 테이블이 공존한다면 분리가 필요함
         const shouldSplit = hasTable && newChunks.length > 1;
 
-        // 커서 복구 데이터 보정
         if (!restoreData) {
-            const lastIdx = Math.max(0, newChunks.length - 1);
-            restoreData = { lineIndex, chunkIndex: lastIdx, offset: 0 };
+            restoreData = { 
+                lineIndex, 
+                chunkIndex: Math.max(0, newChunks.length - 1), 
+                offset: 0 
+            };
         }
 
         return { newChunks, restoreData, shouldSplit };
     }
 
+    /**
+     * [최적화 포인트]
+     * 1. querySelectorAll 대신 native rows/cells 컬렉션 사용 (압도적 속도 차이)
+     * 2. 불필요한 객체 생성 및 배열 메서드(map) 최소화
+     */
     function extractTableDataFromDOM(tableEl) {
         if (!tableEl || tableEl.tagName !== 'TABLE') {
             return { rows: 0, cols: 0, data: [] };
         }
 
-        const trList = Array.from(tableEl.querySelectorAll('tr'));
-        const data = trList.map(tr => {
-            return Array.from(tr.querySelectorAll('td, th')).map(cell => {
-                let text = cell.textContent ?? '';
-                if (text === '') text = '\u00A0';
+        const rows = tableEl.rows;
+        const rowCount = rows.length;
+        const tableData = new Array(rowCount);
+
+        for (let i = 0; i < rowCount; i++) {
+            const row = rows[i];
+            const cells = row.cells;
+            const cellCount = cells.length;
+            const rowData = new Array(cellCount);
+
+            for (let j = 0; j < cellCount; j++) {
+                const cell = cells[j];
+                let text = cell.textContent || '\u00A0';
+                
+                // 스타일 추출 최적화 (존재하는 값만 할당)
                 const style = {};
-                if (cell.style.fontWeight) style.fontWeight = cell.style.fontWeight;
-                if (cell.style.fontSize) style.fontSize = cell.style.fontSize;
-                if (cell.style.color) style.color = cell.style.color;
-                if (cell.style.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
+                const s = cell.style;
+                if (s.fontWeight) style.fontWeight = s.fontWeight;
+                if (s.fontSize) style.fontSize = s.fontSize;
+                if (s.color) style.color = s.color;
+                if (s.backgroundColor) style.backgroundColor = s.backgroundColor;
 
-                return { text, style };
-            });
-        });
+                rowData[j] = { text, style };
+            }
+            tableData[i] = rowData;
+        }
 
-        return { rows: data.length, cols: data[0]?.length || 0, data };
+        return { 
+            rows: rowCount, 
+            cols: rowCount > 0 ? tableData[0].length : 0, 
+            data: tableData 
+        };
     }
 
     return { parseLineDOM, extractTableDataFromDOM };

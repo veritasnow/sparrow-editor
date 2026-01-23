@@ -1,15 +1,8 @@
 // extensions/video/service/videoInsertService.js
 import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
 
-/**
- * 유튜브 비디오 삽입 서비스
- */
 export function createVideoInsertService(stateAPI, uiAPI) {
     
-    /**
-     * @param {string} url - 유튜브 URL
-     * @param {object} cursorPos - 삽입할 구체적 위치 (선택 사항)
-     */
     function insertVideo(url, cursorPos) {
         if (!url) {
             alert('유튜브 URL을 입력하세요.');
@@ -22,29 +15,30 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             return false;
         }
 
-        // 1. 활성화된 영역(본문 또는 TD)의 Key 확보
-        // 💡 포커스가 빠졌을 상황을 대비해 LastActiveKey까지 체크
         const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
         if (!activeKey) return false;
 
-        // 2. 해당 영역 데이터 가져오기
         const areaState = stateAPI.get(activeKey);
         if (!areaState) return false;
 
-        // 3. 위치 결정
+        // 1. 위치 결정 최적화 (reduce 제거)
         let pos = cursorPos || uiAPI.getLastValidPosition();
-        
         if (!pos) {
             const lastIdx = Math.max(0, areaState.length - 1);
-            pos = {
-                lineIndex: lastIdx,
-                absoluteOffset: areaState[lastIdx]?.chunks.reduce((s, c) => s + (c.text?.length || 0), 0) || 0
-            };
+            const lastLine = areaState[lastIdx];
+            let offset = 0;
+            if (lastLine) {
+                const chunks = lastLine.chunks;
+                for (let i = 0; i < chunks.length; i++) {
+                    offset += (chunks[i].text?.length || 0);
+                }
+            }
+            pos = { lineIndex: lastIdx, absoluteOffset: offset };
         }
 
         const { lineIndex, absoluteOffset } = pos;
 
-        // 4. 상태 변경 (비즈니스 로직 실행)
+        // 2. 상태 변경 실행
         const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset } = applyVideoBlock(
             areaState,
             videoId,
@@ -52,12 +46,11 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             absoluteOffset
         );
 
-        // 5. 상태 저장 (Key 기반)
+        // 3. 상태 저장
         stateAPI.save(activeKey, newState);
 
-        // 6. 복원할 커서 정보 생성
         const nextCursorPos = {
-            containerId: activeKey, // 💡 컨테이너 정보 주입
+            containerId: activeKey,
             lineIndex: restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
@@ -66,15 +59,17 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             }
         };
 
-        // 7. 커서 정보 저장 (History 관리용)
         stateAPI.saveCursor(nextCursorPos);
         
-        // 8. UI 반영 (activeKey 타겟팅)
-        // 💡 비디오 블록은 새로운 라인을 생성하거나 구조를 바꾸므로 전체 render가 안전합니다.
-        uiAPI.render(newState, activeKey);
+        // 4. 🔥 [핵심 최적화] 전체 렌더링 대신 라인 렌더링 사용
+        // 비디오(iframe)는 전체 렌더링 시 기존에 재생 중이던 다른 비디오들이 
+        // 모두 새로고침되는 치명적인 문제가 있습니다. renderLine으로 해당 줄만 교체합니다.
+        uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey);
         
-        // 9. 커서 최종 복원 (해당 셀 내부로 복귀)
-        uiAPI.restoreCursor(nextCursorPos);
+        // 5. 커서 복원 (브라우저 레이아웃 계산 후 실행되도록 rAF 적용)
+        requestAnimationFrame(() => {
+            uiAPI.restoreCursor(nextCursorPos);
+        });
 
         return true;
     }

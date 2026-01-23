@@ -2,115 +2,120 @@
 import { EditorLineModel } from '../../model/editorLineModel.js';
 import { chunkRegistry } from '../../core/chunk/chunkRegistry.js';
 import { splitChunkByOffset, normalizeLineChunks } from "../../utils/mergeUtils.js";
+
 /**
- * 에디터 상태(특정 영역의 line 배열)의 특정 범위에 스타일을 적용합니다.
+ * [최적화 포인트]
+ * 1. map/forEach 대신 for-loop 사용 (대용량 청크 처리 속도 향상)
+ * 2. 스타일 패치 시 불필요한 Object.keys 순회 제거
+ * 3. 변경이 없는 라인은 기존 객체를 그대로 반환 (Referential Integrity)
  */
 export function applyStylePatch(areaState, ranges, patch) {
-    // areaState는 이제 전체가 아닌 본문 혹은 TD의 [Line, Line...] 배열입니다.
+    let hasGlobalChange = false;
     const newState = [...areaState];
 
-    ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
-        const line = areaState[lineIndex];
-        if (!line) return;
+    // 1. 패치 객체 정규화 (undefined 미리 필터링)
+    const patchKeys = Object.keys(patch);
+    const cleanPatch = {};
+    const removeKeys = [];
+    
+    for (const k of patchKeys) {
+        if (patch[k] === undefined) removeKeys.push(k);
+        else cleanPatch[k] = patch[k];
+    }
 
-        let acc = 0; 
+    // 2. 범위 순회
+    for (const range of ranges) {
+        const { lineIndex, startIndex, endIndex } = range;
+        const line = areaState[lineIndex];
+        if (!line) continue;
+
+        let acc = 0;
+        let lineChanged = false;
         const newChunks = [];
 
-        line.chunks.forEach(chunk => {
+        for (let i = 0; i < line.chunks.length; i++) {
+            const chunk = line.chunks[i];
             const handler = chunkRegistry.get(chunk.type);
-            const chunkLen = handler.getLength(chunk); 
-            
-            const chunkStart = acc;
-            const chunkEnd   = acc + chunkLen;
+            const chunkLen = handler.getLength(chunk);
+            const chunkEnd = acc + chunkLen;
 
-            // 1. 선택 영역 밖: 그대로 유지
-            if (endIndex <= chunkStart || startIndex >= chunkEnd) {
+            // 선택 영역 밖: 참조 유지
+            if (endIndex <= acc || startIndex >= chunkEnd) {
                 newChunks.push(chunk);
             } 
-            // 2. 선택 영역 안 (또는 걸쳐 있음)
+            // 선택 영역 안 또는 걸침
             else {
-                const relativeStart = Math.max(0, startIndex - chunkStart);
-                const relativeEnd = Math.min(chunkLen, endIndex - chunkStart);
+                lineChanged = true;
+                const relativeStart = Math.max(0, startIndex - acc);
+                const relativeEnd = Math.min(chunkLen, endIndex - acc);
 
                 if (chunk.type === 'text') {
-                    // 텍스트는 필요한 부분만 쪼개서 스타일 적용
-                    const { before, target, after } = splitChunkByOffset(
-                        chunk,
-                        relativeStart,
-                        relativeEnd
-                    );
-
+                    const { before, target, after } = splitChunkByOffset(chunk, relativeStart, relativeEnd);
+                    
                     newChunks.push(...before);
-                    target.forEach(t => {
-                        const newStyle = { ...t.style, ...patch };
-                        // undefined 필드 제거 (토글 시 스타일 삭제 대응)
-                        Object.keys(newStyle).forEach(k => {
-                            if (newStyle[k] === undefined) delete newStyle[k];
-                        });
+                    for (const t of target) {
+                        // 스타일 병합 최적화
+                        const newStyle = { ...t.style, ...cleanPatch };
+                        for (const rk of removeKeys) delete newStyle[rk];
+                        
                         newChunks.push(handler.create(t.text, newStyle));
-                    });
+                    }
                     newChunks.push(...after);
-                } 
-                else {
-                    // 비텍스트(이미지/비디오/테이블) 처리
-                    const newStyle = { ...chunk.style, ...patch };
-                    Object.keys(newStyle).forEach(k => {
-                        // patch에서 넘어온 값이 undefined이면 해당 스타일 키 삭제
-                        if (newStyle[k] === undefined) delete newStyle[k];
-                    });
+                } else {
+                    const newStyle = { ...chunk.style, ...cleanPatch };
+                    for (const rk of removeKeys) delete newStyle[rk];
                     newChunks.push({ ...chunk, style: newStyle });
                 }
             }
-            acc += chunkLen;
-        });
+            acc = chunkEnd;
+        }
 
-        // 같은 스타일을 가진 텍스트 청크끼리 다시 합쳐서 최적화
-        newState[lineIndex] = EditorLineModel(line.align, normalizeLineChunks(newChunks));
-    });
+        if (lineChanged) {
+            newState[lineIndex] = EditorLineModel(line.align, normalizeLineChunks(newChunks));
+            hasGlobalChange = true;
+        }
+    }
 
-    return newState;
+    return hasGlobalChange ? newState : areaState;
 }
 
 /**
- * 선택 영역에 스타일이 모두 적용되어 있으면 제거(토글 Off), 아니면 적용(토글 On)
+ * [최적화 포인트]
+ * 1. Early Exit: 루프 도중 '모두 적용되지 않음'이 판명되면 즉시 중단
  */
 export function toggleInlineStyle(areaState, ranges, styleKey, styleValue) {
     let allApplied = true;
-    let hasCheckableContent = false; // 실제로 체크한 대상이 있는지 확인
+    let hasCheckableContent = false;
 
-    ranges.forEach(({ lineIndex, startIndex, endIndex }) => {
-        const line = areaState[lineIndex];
-        if (!line) return;
+    // 분석 단계: 통일성 확인 (Early Exit 적용)
+    checkLoop: for (const range of ranges) {
+        const line = areaState[range.lineIndex];
+        if (!line) continue;
 
         let acc = 0;
         for (const chunk of line.chunks) {
             const handler = chunkRegistry.get(chunk.type);
             const chunkLen = handler.getLength(chunk);
-            const chunkStart = acc;
             const chunkEnd = acc + chunkLen;
 
-            // 선택 영역과 겹치는 청크 검사
-            if (endIndex > chunkStart && startIndex < chunkEnd) {
-                // 💡 핵심 수정: 스타일 토글 여부는 'text' 청크를 기준으로 판단하는 것이 일반적입니다.
-                // 이미지나 동영상은 스타일Key가 없을 가능성이 높으므로 체크에서 제외하거나 스킵합니다.
+            if (range.endIndex > acc && range.startIndex < chunkEnd) {
                 if (chunk.type === 'text') {
-                    hasCheckableContent = true; 
+                    hasCheckableContent = true;
+                    // 하나라도 스타일이 다르면 즉시 전체 루프 종료 (성능 핵심)
                     if (!(chunk.style && chunk.style[styleKey] === styleValue)) {
                         allApplied = false;
+                        break checkLoop; 
                     }
                 }
-                // 이미지/비디오에도 스타일 토글을 적용할 경우 아래 조건을 추가
-                // else if (chunk.type === 'image' || chunk.type === 'video') { ... }
             }
-            acc += chunkLen;
+            acc = chunkEnd;
+            if (acc >= range.endIndex) break;
         }
-    });
+    }
 
-    // 만약 선택 영역에 텍스트가 하나도 없고 이미지만 있다면? 
-    // 기본적으로 적용(On) 모드로 작동하게 하거나 상황에 맞게 처리
     const patch = (allApplied && hasCheckableContent)
-        ? { [styleKey]: undefined } // 모두 적용되어 있으면 제거
-        : { [styleKey]: styleValue }; // 하나라도 안 되어 있으면 적용
+        ? { [styleKey]: undefined }
+        : { [styleKey]: styleValue };
 
     return applyStylePatch(areaState, ranges, patch);
 }

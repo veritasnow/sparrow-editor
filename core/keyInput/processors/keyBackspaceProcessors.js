@@ -204,32 +204,60 @@ function getFallbackAnchor(chunks, i) {
 }
 
 /**
- * [Step 4] UI 및 에디터 상태 반영
+ * [Step 4] UI 및 에디터 상태 반영 (최적화 버전)
  */
 function applyBackspaceResult(activeKey, result, { state, ui, domSelection }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
+    // 1. 상태 저장
     state.save(activeKey, newState);
-    const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
 
-    if (finalPos) {
-        state.saveCursor(finalPos);
+    const container = document.getElementById(activeKey);
+    if (!container) return;
 
-        // 라인 삭제 DOM 반영
-        if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
-            const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
-            const count = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
-            for (let i = 0; i < count; i++) {
+    // 2. 🔥 [핵심 최적화] 삭제될 라인들에서 재사용할 테이블 Pool 미리 확보
+    // 줄이 합쳐질 때 아래 줄에 있던 테이블 DOM을 추출하여 메모리에 잠시 보관합니다.
+    let movingTablePool = [];
+    
+    if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
+        const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
+        const count = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
+        
+        for (let i = 0; i < count; i++) {
+            // querySelectorAll 대신 children index로 접근 (O(1))
+            const lineEl = container.children[startIdx]; 
+            if (lineEl) {
+                // 삭제 전, 이 라인에 포함된 테이블 DOM들을 풀에 담음
+                const tables = Array.from(lineEl.getElementsByClassName('chunk-table'));
+                if (tables.length > 0) movingTablePool.push(...tables);
+                
+                // DOM에서 라인 삭제
                 ui.removeLine(startIdx, activeKey);
             }
         }
+    }
 
-        // 라인 렌더링 DOM 반영
-        if (updatedLineIndex !== null && newState[updatedLineIndex]) {
-            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey);
+    // 3. 🔥 [핵심 최적화] 업데이트된 라인에 테이블 풀 주입
+    // 병합된 윗줄을 다시 그릴 때, 아까 확보한 movingTablePool을 전달합니다.
+    if (updatedLineIndex !== null && newState[updatedLineIndex]) {
+        // 만약 단순 텍스트 삭제(isSimpleTextUpdate) 플래그가 있다면 renderChunk를 쓰고, 
+        // 줄 병합 등 구조 변경이 있다면 renderLine을 호출합니다.
+        if (result.isSimpleTextUpdate && result.chunkIndex !== undefined) {
+            ui.renderChunk(updatedLineIndex, result.chunkIndex, newState[updatedLineIndex].chunks[result.chunkIndex], activeKey);
+        } else {
+            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey, movingTablePool);
         }
+    }
 
-        ui.ensureFirstLine(activeKey);
+    // 4. 공통 마무리 (비어있는 에디터 방지 및 커서 복구)
+    ui.ensureFirstLine(activeKey);
+    
+    const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
+    if (finalPos) {
+        state.saveCursor(finalPos);
         domSelection.restoreCursor(finalPos);
     }
+
+    // 5. 메모리 참조 해제 (GC 지원)
+    movingTablePool.length = 0;
 }

@@ -1,126 +1,125 @@
-// /features/selection/selectionAnalyzeService.js
-import {
-  DEFAULT_TEXT_STYLE,
-  DEFAULT_LINE_STYLE
-} from '../../constants/styleConstants.js';
+import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../constants/styleConstants.js';
 
 export function createSelectionAnalyzeService(stateAPI, uiAPI) {
-
+  
   /**
-   * [Main] 현재 선택 영역의 스타일을 통합 분석하여 반환
+   * [Main] 분석 로직 최적화
+   * 루프를 최소화하고 "통일성 확인"과 "데이터 수집"을 한 번의 패스로 처리합니다.
    */
   function analyzeSelection() {
-    // 1. 현재 선택된 모든 컨테이너(셀들 또는 본문) ID 확보
     const activeKeys = uiAPI.getActiveKeys(); 
-    
-    // 선택 영역이 아예 없거나 에디터 외부인 경우
-    if (!activeKeys || activeKeys.length === 0) {
-      return getEmptyResult();
+    if (!activeKeys?.length) return getEmptyResult();
+
+    // 분석을 위한 상태 변수
+    let unifiedText = null;   // 첫 번째 텍스트 스타일 기준
+    let unifiedLine = null;   // 첫 번째 라인 스타일 기준
+    let textUniformMap = {};  // 각 속성별 통일성 여부
+    let lineUniformMap = {};
+    let isFirstText = true;
+    let isFirstLine = true;
+    let hasValidData = false;
+
+    // 1. 활성 컨테이너 순회
+    for (const key of activeKeys) {
+      const ranges = uiAPI.getDomSelection(key);
+      const state = stateAPI.get(key);
+      if (!state) continue;
+
+      // [Case A] 드래그 선택 영역이 있는 경우
+      if (ranges?.length) {
+        for (const r of ranges) {
+          const line = state[r.lineIndex];
+          if (!line) continue;
+
+          // 라인 스타일 분석 (중복 계산 방지)
+          const currentLineStyle = { align: line.align || DEFAULT_LINE_STYLE.align };
+          [unifiedLine, lineUniformMap, isFirstLine] = updateUniformStatus(
+            unifiedLine, currentLineStyle, lineUniformMap, isFirstLine
+          );
+
+          // 텍스트 스타일 분석 (교집합 청크만 정밀 탐색)
+          let acc = 0;
+          for (const chunk of line.chunks) {
+            const len = (chunk.type === 'text' || !chunk.type) ? (chunk.text?.length || 0) : 1;
+            const chunkEnd = acc + len;
+
+            // 수학적 교집합: 선택 범위 내에 있는 청크만 처리
+            if (Math.max(acc, r.startIndex) < Math.min(chunkEnd, r.endIndex)) {
+              const currentTextStyle = { ...DEFAULT_TEXT_STYLE, ...(chunk.style || {}) };
+              [unifiedText, textUniformMap, isFirstText] = updateUniformStatus(
+                unifiedText, currentTextStyle, textUniformMap, isFirstText
+              );
+              hasValidData = true;
+            }
+            acc = chunkEnd;
+            if (acc >= r.endIndex) break; // 성능 최적화: 범위를 벗어나면 즉시 중단
+          }
+        }
+      } 
+      // [Case B] 커서만 있는 경우
+      else {
+        const context = uiAPI.getSelectionContext();
+        if (context?.containerId === key) {
+          const line = state[context.lineIndex];
+          if (line) {
+            const chunk = line.chunks[context.dataIndex ?? 0] || line.chunks[0];
+            unifiedText = { ...DEFAULT_TEXT_STYLE, ...(chunk?.style || {}) };
+            unifiedLine = { align: line.align || DEFAULT_LINE_STYLE.align };
+            // 커서 상태는 무조건 Uniform함
+            return {
+              text: { isUniform: true, style: unifiedText },
+              line: { isUniform: true, style: unifiedLine }
+            };
+          }
+        }
+      }
     }
 
-    const allCollectedTextStyles = [];
-    const allCollectedLineStyles = [];
+    if (!hasValidData && isFirstLine) return getEmptyResult();
 
-    // 2. 각 활성 컨테이너를 순회하며 스타일 수집
-    activeKeys.forEach(key => {
-      const ranges = uiAPI.getDomSelection(key); 
-      if (!ranges || ranges.length === 0) return;
-
-      const currentState = stateAPI.get(key);
-      if (!currentState) return;
-
-      // 해당 컨테이너 내부의 상세 스타일 추출
-      const { textStyles, lineStyles } = collectStylesFromContainer(currentState, ranges);
-      
-      allCollectedTextStyles.push(...textStyles);
-      allCollectedLineStyles.push(...lineStyles);
-    });
-
-    // 3. 수집된 데이터가 없으면 기본값 반환
-    if (allCollectedTextStyles.length === 0 && allCollectedLineStyles.length === 0) {
-      return getEmptyResult();
-    }
-
-    // 4. 수집된 모든 스타일의 균일성(Uniform) 판단
     return {
-      text: checkUniform(allCollectedTextStyles, DEFAULT_TEXT_STYLE),
-      line: checkUniform(allCollectedLineStyles, DEFAULT_LINE_STYLE)
+      text: finalizeResult(unifiedText, textUniformMap, DEFAULT_TEXT_STYLE),
+      line: finalizeResult(unifiedLine, lineUniformMap, DEFAULT_LINE_STYLE)
     };
   }
 
   /**
-   * 컨테이너 내부 수집 로직 (가독성을 위해 분리)
+   * [성능 핵심] 스타일 비교 및 상태 업데이트 루프 최적화
+   * 매번 배열을 만들지 않고 현재까지의 통일성 상태만 유지합니다.
    */
-  function collectStylesFromContainer(state, ranges) {
-    const textStyles = [];
-    const lineStyles = [];
-    const seenLines = new Set();
+  function updateUniformStatus(unified, current, map, isFirst) {
+    if (isFirst) {
+      // 첫 데이터인 경우 맵 초기화
+      Object.keys(current).forEach(k => map[k] = true);
+      return [current, map, false];
+    }
 
-    ranges.forEach(r => {
-      const line = state[r.lineIndex];
-      if (!line) return;
-
-      // 텍스트 스타일 추출 (getChunksInRange 활용)
-      const chunksInRange = getChunksInRange(line, r.startIndex, r.endIndex);
-      chunksInRange.forEach(info => {
-        textStyles.push(info.chunk.style || DEFAULT_TEXT_STYLE);
-      });
-
-      // 라인 스타일 추출 (중복 라인 방지)
-      if (!seenLines.has(r.lineIndex)) {
-        lineStyles.push({ align: line.align || DEFAULT_LINE_STYLE.align });
-        seenLines.add(r.lineIndex);
+    // 기존 속성들을 순회하며 통일성이 깨졌는지 확인
+    for (const key in map) {
+      if (map[key] && unified[key] !== current[key]) {
+        map[key] = false; // 한 번 깨진 통일성은 다시 복구되지 않음
       }
-    });
-
-    return { textStyles, lineStyles };
+    }
+    return [unified, map, false];
   }
 
   /**
-   * 스타일 목록이 모두 동일한지 비교
+   * 통일성이 깨진 속성은 null로 처리하여 최종 결과 반환
    */
-  function checkUniform(styleList, defaultStyle) {
-    if (styleList.length === 0) return { isUniform: true, style: defaultStyle };
+  function finalizeResult(style, map, defaultStyle) {
+    if (!style) return { isUniform: true, style: defaultStyle };
     
-    const firstStyle = styleList[0];
-    const isUniform = styleList.every(style => isShallowEqual(firstStyle, style));
-    
-    // 하나라도 다르면 style은 null을 반환하여 툴바 버튼을 끕니다.
-    return { 
-      isUniform, 
-      style: isUniform ? firstStyle : null 
-    };
-  }
+    const resultStyle = { ...style };
+    let isAllUniform = true;
 
-  /**
-   * 객체 비교 최적화 (Shallow Equal)
-   */
-  function isShallowEqual(objA, objB) {
-    if (objA === objB) return true;
-    if (!objA || !objB) return false;
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
-    if (keysA.length !== keysB.length) return false;
-    for (let key of keysA) {
-      if (objA[key] !== objB[key]) return false;
-    }
-    return true;
-  }
-
-  function getChunksInRange(line, startIndex, endIndex) {
-    const result = [];
-    let acc = 0;
-    for (let i = 0; i < line.chunks.length; i++) {
-      const chunk = line.chunks[i];
-      const len = chunk.type === 'text' ? (chunk.text?.length || 0) : 1;
-      const chunkEnd = acc + len;
-      if (chunkEnd > startIndex && acc < endIndex) {
-        result.push({ chunkIndex: i, chunk });
+    for (const key in map) {
+      if (!map[key]) {
+        resultStyle[key] = null;
+        isAllUniform = false;
       }
-      acc = chunkEnd;
-      if (acc >= endIndex) break;
     }
-    return result;
+
+    return { isUniform: isAllUniform, style: resultStyle };
   }
 
   function getEmptyResult() {

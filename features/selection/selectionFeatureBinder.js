@@ -3,31 +3,36 @@ import { createSelectionUIService } from './selectionUiService.js';
 
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
   const selectionService = createSelectionAnalyzeService(stateAPI, uiAPI);
-  const uiService         = createSelectionUIService(toolbarElements);
+  const uiService = createSelectionUIService(toolbarElements);
 
   let isDragging = false;
   let startTD = null;
+  let rafId = null; // 성능 최적화용
 
-  // [도우미] 모든 셀 선택 해제
+  // [성능 보완] 분석 로직을 브라우저 프레임에 맞춰 조절
+  const scheduleUpdate = () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      const result = selectionService.analyzeSelection();
+      uiService.updateUI(result);
+    });
+  };
+
   const clearCellSelection = () => {
     editorEl.querySelectorAll('.se-table-cell.is-selected').forEach(td => {
       td.classList.remove('is-selected');
     });
   };
 
-  // [도우미] 시각적 클래스 부여 및 브라우저 Range 강제 설정
   function applyVisualAndRangeSelection(selectedCells) {
     if (selectedCells.length === 0) return;
-    
     clearCellSelection();
     selectedCells.forEach(td => td.classList.add('is-selected'));
 
     const sel = window.getSelection();
     const range = document.createRange();
-    
     range.setStartBefore(selectedCells[0]);
     range.setEndAfter(selectedCells[selectedCells.length - 1]);
-    
     sel.removeAllRanges();
     sel.addRange(range);
   }
@@ -81,8 +86,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
   // 4. 드래그 종료
   window.addEventListener('mouseup', () => {
     if (isDragging) {
-      const result = selectionService.analyzeSelection();
-      uiService.updateUI(result);
+      scheduleUpdate();
     }
     isDragging = false;
     startTD = null;
@@ -91,7 +95,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
   editorEl.addEventListener('dragstart', (e) => e.preventDefault());
   editorEl.addEventListener('drop', (e) => e.preventDefault());
 
-  // 5. 선택 변경 감지 (스타일 유지 + 메인 드래그 지원)
+  // 5. 선택 변경 감지 (기존 정확도 로직 유지 + 성능 보완)
   document.addEventListener('selectionchange', () => {
     if (isDragging) return;
 
@@ -101,20 +105,27 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     const range = sel.getRangeAt(0);
 
     if (editorEl.contains(range.startContainer)) {
-      // [개선 핵심]
-      // 1. 현재 텍스트 선택이 셀 하나 내부에서만 일어나는지 확인
+      // [작성하신 정확도 로직 그대로 유지]
       const containerCell = range.commonAncestorContainer.nodeType === 3 
         ? range.commonAncestorContainer.parentElement.closest('.se-table-cell')
         : range.commonAncestorContainer.closest?.('.se-table-cell');
 
-      if (containerCell) {
-        // 셀 내부 텍스트 선택 중이라면 클래스를 건드리지 않음 (스타일 변경 시 클래스 보존)
-        // 단, 이미 선택된 다른 셀이 있다면 그건 유지함
-      } else {
-        // 2. 메인 영역 드래그 중인 경우 (셀 덩어리가 선택 범위에 들어왔을 때만 클래스 입힘)
-        const frag = range.cloneContents();
-        if (frag.querySelector('.se-table-cell')) {
-          const allTDs = editorEl.querySelectorAll('.se-table-cell');
+      if (!containerCell) {
+        // [성능 보완] cloneContents() 대신 containsNode를 사용하여 
+        // 하위 셀이 선택 영역에 포함되었는지 훨씬 가볍게 체크합니다.
+        const allTDs = editorEl.querySelectorAll('.se-table-cell');
+        let hasCellInRange = false;
+
+        // 먼저 전체 영역에 셀이 하나라도 걸쳐있는지 빠르게 확인
+        for(let td of allTDs) {
+          if (sel.containsNode(td, true)) {
+            hasCellInRange = true;
+            break;
+          }
+        }
+
+        // 셀이 걸쳐있다면 클래스 부여/해제 로직 실행
+        if (hasCellInRange) {
           allTDs.forEach(td => {
             if (sel.containsNode(td, true)) {
               td.classList.add('is-selected');
@@ -125,9 +136,8 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
         }
       }
 
-      // 공통: 툴바 UI 업데이트
-      const result = selectionService.analyzeSelection();
-      uiService.updateUI(result);
+      // [성능 보완] 분석 실행 시 RAF 적용
+      scheduleUpdate();
     } else {
       if (document.querySelectorAll('.se-table-cell.is-selected').length === 0) {
         uiService.clearAll();
