@@ -1,40 +1,24 @@
-// /module/inputModule/service/inputBindingService.js
-
 export function createInputBindingService(editorEl) {
-    if (!editorEl) {
-        throw new Error("Editor element is required for input binding service.");
-    }
+    if (!editorEl) throw new Error("Editor element required.");
     
-    let composing          = false;
+    let composing = false;
     let lastCompositionEnd = 0;
-    let destroyed          = false;
-    let bound              = false;
+    let destroyed = false;
+    let bound = false;
 
-    let onCompositionStart;
-    let onCompositionEnd;
-    let onInput;
-
-    function assertAlive() {
-        if (destroyed) {
-            throw new Error("❌ InputBindingService has been destroyed");
-        }
-    }
+    let onCompositionStart, onCompositionEnd, onInput;
 
     return {
         bindEvents(processInputCallback) {
-            assertAlive();
             if (bound) return;
             bound = true;
 
-            onCompositionStart = () => {
-                composing = true;
-            };
+            onCompositionStart = () => { composing = true; };
 
             onCompositionEnd = () => {
                 composing = false;
                 lastCompositionEnd = Date.now();
-                // 💡 중요: 조합 종료 시에도 skipRender를 true로 보내어 
-                // 브라우저가 이미 그려놓은 DOM을 에디터가 덮어쓰지 않게 합니다.
+                // 💡 IME 종료 시에도 skipRender: true를 전달하여 불필요한 재렌더링 방지
                 processInputCallback(true); 
             };
 
@@ -43,15 +27,13 @@ export function createInputBindingService(editorEl) {
 
                 const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
                 const inputData = e.data || '';
-                
                 const PUNCTUATION_MARKS = ['.', ' ', '?', '!', ',', ':', ';', '"', "'"];
                 const isPunctuationOrSpace = e.inputType === 'insertText' && PUNCTUATION_MARKS.includes(inputData);
 
-                if (!isPunctuationOrSpace && timeSinceCompositionEnd < 50) {
-                    return;
-                }
+                if (!isPunctuationOrSpace && timeSinceCompositionEnd < 50) return;
 
-                // 조합 중(composing: true)일 때는 모델만 업데이트(skipRender: true)
+                // 💡 조합 중(composing)일 때도 모델 업데이트를 위해 콜백 호출
+                // skipRender 인자로 composing 값을 넘겨서 텍스트 렌더링만 제어함
                 processInputCallback(composing);
             };
 
@@ -66,9 +48,6 @@ export function createInputBindingService(editorEl) {
             editorEl.removeEventListener('compositionstart', onCompositionStart);
             editorEl.removeEventListener('compositionend', onCompositionEnd);
             editorEl.removeEventListener('input', onInput);
-            onCompositionStart = null;
-            onCompositionEnd = null;
-            onInput = null;
         }
     };
 }
