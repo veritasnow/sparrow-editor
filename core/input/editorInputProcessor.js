@@ -85,6 +85,14 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         let result = null;
         let flags = { isNewChunk: false, isChunkRendering: false };
 
+        // 현재 포커스된 노드가 텍스트 노드일 때
+        if (activeNode && activeNode.nodeType === Node.TEXT_NODE) {
+            // [최적화] 모델의 텍스트와 실제 DOM의 텍스트가 완벽히 같다면 아무것도 안 함 - 한번 더 검증할 것...!!
+            if (currentLine.chunks[dataIndex]?.text === activeNode.textContent) {
+                return { flags: { hasChange: false } }; 
+            }
+        }
+
         // Case 1: 단순 텍스트 업데이트
         if (dataIndex !== null && activeNode && currentLine.chunks[dataIndex]?.type === 'text') {
             const safeText = getSafeTextFromRange(range);
