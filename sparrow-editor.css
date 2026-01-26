@@ -470,6 +470,10 @@
 
     
 /* 1. 선택된 셀 디자인 */
+.se-table-cell {
+  background-color: white;
+}
+
 .se-table-cell.is-selected {
     background-color: rgba(35, 131, 226, 0.12) !important; /* 부드러운 파스텔 블루 */
     position: relative;

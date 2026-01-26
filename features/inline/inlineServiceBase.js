@@ -7,10 +7,11 @@ import { normalizeCursorData } from "../../utils/cursorUtils.js";
 export function createInlineServiceBase(stateAPI, uiAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
         const activeKeys = uiAPI.getActiveKeys();
-        const targets = activeKeys.length > 0 ? activeKeys : [uiAPI.getLastActiveKey()].filter(Boolean);
+        console.log("activeKeys:", activeKeys);
+        const targets    = activeKeys.length > 0 ? activeKeys : [uiAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
 
-        const updates = [];
+        const updates                = [];
         const allNormalizedPositions = [];
 
         targets.forEach((activeKey) => {
@@ -56,6 +57,8 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
                 });
             });
         }
+
+        console.log('allNormalizedPositions:', allNormalizedPositions);
 
         // 4. 다중 커서 복원
         if (allNormalizedPositions.length > 0 && options.saveCursor) {
