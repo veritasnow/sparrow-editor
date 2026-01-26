@@ -37,6 +37,13 @@ export function createKeyBindingService(editorEl) {
                 // ENTER
                 if (key === "Enter") {
                     e.preventDefault();
+
+                    // ✨ [수정] 개행 로직 실행 전, 현재 DOM 내용을 모델에 강제 동기화
+                    // 이 과정에서 테이블 분리 로직(isSplit)도 함께 실행됨
+                    if (typeof handlers.syncInput === 'function') {
+                        handlers.syncInput();
+                    }
+
                     handlers.processEnter();
                     return;
                 }

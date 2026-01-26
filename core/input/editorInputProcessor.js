@@ -197,5 +197,9 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         }
     }
 
-    return { processInput };
+    return { 
+        processInput,
+        // ✨ [수정] 외부(Enter 키 처리)에서 강제 동기화를 위해 노출
+        syncInput: () => processInput(true) 
+    };
 }

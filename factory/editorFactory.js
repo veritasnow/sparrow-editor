@@ -234,6 +234,7 @@ export function createEditorFactory() {
         });
 
         inputApp.bindKeydown({
+          syncInput        : inputProcessor.syncInput,
           processEnter     : keyProcessor.processEnter,
           processBackspace : keyProcessor.processBackspace,
           processDelete    : keyProcessor.processDelete,
