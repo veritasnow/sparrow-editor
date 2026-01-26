@@ -11,7 +11,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     function processInput(skipRender = false) {
         const activeKey = domSelection.getActiveKey() || defaultKey;
         const selection = domSelection.getSelectionContext();
-        
         if (!selection || selection.lineIndex < 0) return;
 
         ui.ensureFirstLine(activeKey); 
@@ -19,23 +18,19 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         const currentState = state.getState(activeKey); 
         const currentLine = currentState[selection.lineIndex] || EditorLineModel();
 
-        // 1. 모델 업데이트 계산 (DOM 분석 포함)
         const result = calculateUpdate(currentLine, selection, activeKey);
+        if (!result || !result.flags?.hasChange) return;
 
-        if (!result || !result.flags?.hasChange || result.updatedLine === currentLine) return;
-
-        // 2. 라인 분리 처리 (Table Split Case)
-        // 💡 중요: Split이 발생했다면 skipRender 여부와 상관없이 무조건 렌더링하여 DOM을 분리함
+        // 🔥 [수정] 테이블 분리는 skipRender 여부와 상관없이 무조건 DOM을 쪼갭니다.
+        // 그래야 글자 입력 시 즉시 라인이 나뉩니다.
         if (result.isSplit) {
-            handleSplitUpdate(activeKey, selection.lineIndex, result, currentState);
+            handleSplitUpdate(activeKey, selection.lineIndex, result, currentState); 
             return;
         }
 
-        // 3. 일반 상태 저장 (텍스트 입력 중에도 데이터 모델은 최신화)
         saveFinalState(activeKey, selection.lineIndex, result.updatedLine, result.restoreData);
         
-        // 4. 렌더링 실행 결정
-        // 한글 조합 중이거나 skipRender가 true라면 브라우저의 자연스러운 입력을 위해 렌더링 스킵
+        // 일반 텍스트 입력(분리X)인 경우에만 한글 조합 등을 고려해 렌더링 스킵
         if (skipRender) return;
 
         const finalRestoreData = normalizeCursorData(result.restoreData, activeKey);
@@ -48,22 +43,24 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     function handleSplitUpdate(activeKey, lineIndex, result, currentState) {
         const { separatedLines, restoreData } = result;
 
+        // 1. 모델 상태 업데이트
         const nextState = [...currentState];
         nextState.splice(lineIndex, 1, ...separatedLines);
         state.saveEditorState(activeKey, nextState);
 
+        // 2. 물리적 DOM 분리 실행 (보내주신 HTML 구조를 만드는 핵심)
         const container = document.getElementById(activeKey);
         const originalLineEl = container?.children[lineIndex];
         
-        // 테이블 소실 방지를 위한 Pool 생성
+        // 테이블 소실 방지를 위한 Pool
         const movingTablePool = originalLineEl 
             ? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
             : [];
 
-        // 첫 번째 라인 업데이트
+        // 첫 번째 라인 업데이트 (예: '냠' 또는 'ㅁ'이 들어있는 라인)
         ui.renderLine(lineIndex, separatedLines[0], activeKey);
 
-        // 분리된 나머지 라인들 삽입 및 렌더링
+        // 분리된 나머지 라인들 (예: 테이블 라인, 그 뒤의 빈 라인 등) 삽입 및 렌더링
         for (let i = 1; i < separatedLines.length; i++) {
             const targetIdx = lineIndex + i;
             const lineData = separatedLines[i];
@@ -74,9 +71,13 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         movingTablePool.length = 0; 
 
+        // 3. 커서 복구
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);
         if (finalRestoreData) {
-            domSelection.restoreCursor(finalRestoreData);
+            // RAF를 사용하여 브라우저가 새로 생성된 DOM 노드들을 완전히 인식한 후 커서를 잡게 함
+            requestAnimationFrame(() => {
+                domSelection.restoreCursor(finalRestoreData);
+            });
         }
     }
 
