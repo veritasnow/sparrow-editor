@@ -253,7 +253,11 @@ export function createSelectionService({ root }) {
         };
     }
 
+    /**
+     * 4. 멀티 블록 커서 복원 최적화
+     */
     function restoreMultiBlockCursor(positions) {
+
         if (!positions?.length) return;
         const sel = window.getSelection();
         sel.removeAllRanges();
@@ -261,7 +265,6 @@ export function createSelectionService({ root }) {
         const isBackwards = positions.isBackwards || positions[0]?.isBackwards;
         let allPoints = [];
 
-        // 1. 물리적 좌표 수집 (기존 로직 유지)
         for (let i = 0; i < positions.length; i++) {
             const pos = positions[i];
             const container = document.getElementById(pos.containerId);
@@ -281,7 +284,6 @@ export function createSelectionService({ root }) {
             }
         }
 
-        // 2. 블록 지정 복원 실행
         if (allPoints.length >= 2) {
             allPoints.sort((a, b) => {
                 if (a.node === b.node) return a.offset - b.offset;
@@ -290,48 +292,9 @@ export function createSelectionService({ root }) {
 
             const start = allPoints[0];
             const end = allPoints[allPoints.length - 1];
-            
             isBackwards 
                 ? sel.setBaseAndExtent(end.node, end.offset, start.node, start.offset)
                 : sel.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
-        }
-
-        // --- 여기서부터 보정 로직 ---
-        
-        // 3. 실제 액티브된 키들을 가져와서 positions에 없는 놈들 숙청
-        const activeTargetIds = new Set(positions.map(p => p.containerId));
-        const currentActiveKeys = getActiveKeys(); // 복원 직후 브라우저가 인식한 키들
-
-        currentActiveKeys.forEach(id => {
-            if (!activeTargetIds.has(id)) {
-                const ghostEl = document.getElementById(id);
-                if (ghostEl) {
-                    // 1. 시각적 클래스 제거
-                    ghostEl.classList.remove('is-selected');
-
-                    // 2. [물리적 제거] 실제 마우스 블록(Selection) 영역에서 제외
-                    const sel = window.getSelection();
-                    if (sel.rangeCount > 0) {
-                        const range = sel.getRangeAt(0);
-                        
-                        // 유령 블록(d)이 선택 영역의 '끝'에 걸려 있다면,
-                        // 선택 영역의 끝 지점을 유령 블록 바로 앞(Before)으로 당깁니다.
-                        // 이것이 사실상 "이 엘리먼트의 블록 지정을 제거"하는 가장 확실한 방법입니다.
-                        range.setEndBefore(ghostEl);
-                        
-                        // 변경된 범위를 브라우저에 즉시 적용 (파란 하이라이트가 d에서 사라짐)
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    }
-                    
-                    console.log(`[물리적 보정] 유령 블록 영역 제거 완료: ${id}`);
-                }
-            }
-        });
-
-        // 4. 마지막 액티브 키가 유령이면 정상적인 마지막 키로 복구
-        if (lastActiveKey && !activeTargetIds.has(lastActiveKey)) {
-            lastActiveKey = positions[positions.length - 1].containerId;
         }
     }
 
