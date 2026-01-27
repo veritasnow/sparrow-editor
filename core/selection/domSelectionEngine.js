@@ -26,14 +26,15 @@ export function createSelectionService({ root }) {
         const range = sel.getRangeAt(0);
         const searchRoot = root || document.body;
 
-        // [시각적 셀 선택] getElementsByClassName은 querySelectorAll보다 훨씬 빠름
+        // 1. 시각적으로 선택된(is-selected) 아이디 수집
         const visualSelectedNodes = document.getElementsByClassName('se-table-cell is-selected');
         const visualSelectedIds = [];
         for (let i = 0; i < visualSelectedNodes.length; i++) {
-            visualSelectedIds.push(visualSelectedNodes[i].getAttribute('data-container-id'));
+            const id = visualSelectedNodes[i].getAttribute('data-container-id');
+            if (id) visualSelectedIds.push(id);
         }
 
-        // [기존 영역 분석] searchRoot 내의 컨테이너들만 필터링
+        // 2. 전체 컨테이너 중 선택 영역에 걸쳐 있는 것들 수집
         const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
         if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
 
@@ -41,10 +42,17 @@ export function createSelectionService({ root }) {
             sel.containsNode(container, true)
         );
 
+        // 3. 중첩 구조 분석 및 'is-not-selected' 필터링
         const logicalActiveIds = intersecting.filter(c1 => {
+            // 🔥 [핵심] 제외 클래스가 붙어 있다면 시스템은 이를 무시함
+            if (c1.classList.contains('is-not-selected')) return false;
+
             const subContainers = intersecting.filter(c2 => c1 !== c2 && c1.contains(c2));
+            
+            // 하위 컨테이너가 없다면 (Leaf 노드) 선택된 것으로 간주
             if (subContainers.length === 0) return true;
 
+            // 하위 컨테이너가 있다면, '순수하게 c1에만 속한 텍스트'가 선택되었는지 검사
             const isStartInSelf = c1.contains(range.startContainer) && 
                 !subContainers.some(sub => sub.contains(range.startContainer));
             
@@ -53,6 +61,7 @@ export function createSelectionService({ root }) {
 
             if (isStartInSelf || isEndInSelf) return true;
 
+            // TreeWalker를 이용해 하위 컨테이너에 속하지 않은 직접 텍스트 노드가 선택되었는지 확인
             const walker = document.createTreeWalker(c1, NodeFilter.SHOW_TEXT);
             let node;
             while (node = walker.nextNode()) {
@@ -62,22 +71,15 @@ export function createSelectionService({ root }) {
             return false;
         }).map(container => container.getAttribute('data-container-id'));
 
+        // 4. 결과 병합 (중복 제거)
         const combinedIds = Array.from(new Set([...visualSelectedIds, ...logicalActiveIds]));
 
         if (combinedIds.length > 0) {
             lastActiveKey = combinedIds[combinedIds.length - 1];
             return combinedIds;
         }
-
-        let node = range.startContainer;
-        if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-        const container = node.closest('[data-container-id]');
-        if (container) {
-            const id = container.getAttribute('data-container-id');
-            lastActiveKey = id;
-            return [id];
-        }
         
+        // 선택 영역이 없을 경우 마지막 활성 키 반환
         return [lastActiveKey].filter(Boolean);
     }
 
