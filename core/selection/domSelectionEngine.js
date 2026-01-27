@@ -1,4 +1,3 @@
-// /module/uiModule/service/selectionService.js
 export function createSelectionService({ root }) {
     let lastValidPos  = null;
     let lastActiveKey = null;
@@ -17,9 +16,8 @@ export function createSelectionService({ root }) {
         return index;
     }
 
-
     /**
-     * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환 (중복/부모 제외 최적화)
+     * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
      */ 
     function getActiveKeys() {
         const sel = window.getSelection();
@@ -28,15 +26,14 @@ export function createSelectionService({ root }) {
         const range = sel.getRangeAt(0);
         const searchRoot = root || document.body;
 
-        // [1] 시각적으로 선택된 셀 (테이블 셀 등)
+        // [시각적 셀 선택] getElementsByClassName은 querySelectorAll보다 훨씬 빠름
         const visualSelectedNodes = document.getElementsByClassName('se-table-cell is-selected');
         const visualSelectedIds = [];
         for (let i = 0; i < visualSelectedNodes.length; i++) {
-            const id = visualSelectedNodes[i].getAttribute('data-container-id');
-            if (id) visualSelectedIds.push(id);
+            visualSelectedIds.push(visualSelectedNodes[i].getAttribute('data-container-id'));
         }
 
-        // [2] 논리적으로 선택된 영역 (드래그 범위)
+        // [기존 영역 분석] searchRoot 내의 컨테이너들만 필터링
         const allPossibleContainers = Array.from(searchRoot.querySelectorAll('[data-container-id]'));
         if (searchRoot.hasAttribute('data-container-id')) allPossibleContainers.push(searchRoot);
 
@@ -65,33 +62,13 @@ export function createSelectionService({ root }) {
             return false;
         }).map(container => container.getAttribute('data-container-id'));
 
-        // [3] 모든 ID 통합 및 중복 제거
         const combinedIds = Array.from(new Set([...visualSelectedIds, ...logicalActiveIds]));
 
-        // 🔥 [4] 계층 구조 필터링 (부모-자식 관계 정리)
-        // 선택된 ID들 중에 '자식'이 포함되어 있다면, '부모'는 스타일 적용 대상에서 제외합니다.
-        const finalIds = combinedIds.filter(id => {
-            const el = document.getElementById(id);
-            if (!el) return false;
-
-            // 다른 선택된 ID들 중에 현재 내(el)가 포함하고 있는 요소가 있는지 확인
-            const hasSelectedChild = combinedIds.some(otherId => {
-                if (id === otherId) return false;
-                const otherEl = document.getElementById(otherId);
-                return otherEl && el.contains(otherEl);
-            });
-
-            // 자식이 이미 선택되어 있다면 부모인 나는 false를 반환하여 제거됨
-            return !hasSelectedChild;
-        });
-
-        // 결과 반환 및 lastActiveKey 업데이트
-        if (finalIds.length > 0) {
-            lastActiveKey = finalIds[finalIds.length - 1];
-            return finalIds;
+        if (combinedIds.length > 0) {
+            lastActiveKey = combinedIds[combinedIds.length - 1];
+            return combinedIds;
         }
 
-        // 선택 영역이 컨테이너 밖일 경우 대비 (기존 fallback)
         let node = range.startContainer;
         if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
         const container = node.closest('[data-container-id]');
@@ -280,6 +257,7 @@ export function createSelectionService({ root }) {
      * 4. 멀티 블록 커서 복원 최적화
      */
     function restoreMultiBlockCursor(positions) {
+
         if (!positions?.length) return;
         const sel = window.getSelection();
         sel.removeAllRanges();
