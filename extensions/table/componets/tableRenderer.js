@@ -10,6 +10,7 @@ export const tableRenderer = {
         const cols = data[0]?.length ?? 0;
 
         const table = document.createElement("table");
+        table.id = chunk.tableId;;
         table.className = "se-table chunk-table";
         table.dataset.lineIndex = lineIndex;
         table.dataset.chunkIndex = chunkIndex;
