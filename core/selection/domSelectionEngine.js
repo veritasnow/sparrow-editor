@@ -94,7 +94,7 @@ export function createSelectionService({ root }) {
     }
 
     /**
-     * 2. 드래그 범위 추출 최적화 (O(1)~O(N) 범위 제한)
+     * 2. 셀 전체 선택 시 누락 방지 및 중첩 구조 인덱스 보정 포함
      */
     function getDomSelection(targetKey) {
         const sel = window.getSelection();
@@ -105,74 +105,76 @@ export function createSelectionService({ root }) {
         const targetContainer = document.getElementById(finalKey) || root;
         if (!targetContainer) return null;
 
+        // [핵심 1] 역방향 드래그 여부 확인
         const isBackwards = sel.anchorNode && sel.focusNode && 
             (sel.anchorNode.compareDocumentPosition(sel.focusNode) & Node.DOCUMENT_POSITION_PRECEDING ||
             (sel.anchorNode === sel.focusNode && sel.anchorOffset > sel.focusOffset));
 
+        // [핵심 2] 해당 컨테이너가 'is-selected'인지 확인 (셀 단위 전체 선택 여부)
         const isFullCellSelected = targetContainer.classList.contains('is-selected');
-        const lines = targetContainer.children; 
+
+        const lines = Array.from(targetContainer.querySelectorAll(':scope > .text-block'));
         const ranges = [];
 
-        // 시작/끝 라인 직접 찾기 (전체 쿼리 제거)
-        const startLineEl = domRange.startContainer.nodeType === Node.TEXT_NODE 
-                            ? domRange.startContainer.parentElement.closest('.text-block')
-                            : domRange.startContainer.closest('.text-block');
-        const endLineEl = domRange.endContainer.nodeType === Node.TEXT_NODE 
-                          ? domRange.endContainer.parentElement.closest('.text-block')
-                          : domRange.endContainer.closest('.text-block');
-
-        const startIdx = getLineIndex(startLineEl);
-        const endIdx = getLineIndex(endLineEl);
-
-        const minIdx = isFullCellSelected ? 0 : Math.max(0, Math.min(startIdx, endIdx));
-        const maxIdx = isFullCellSelected ? lines.length - 1 : Math.max(startIdx, endIdx);
-
-        for (let i = minIdx; i <= maxIdx; i++) {
-            const lineEl = lines[i];
-            if (!lineEl || !lineEl.classList.contains('text-block')) continue;
-
+        lines.forEach((lineEl, idx) => {
+            // [핵심 3] 전체 선택된 셀이라면 계산 없이 해당 라인의 전체 길이를 반환
             if (isFullCellSelected) {
-                ranges.push({ lineIndex: i, startIndex: 0, endIndex: lineEl.textContent.length });
-                continue;
+                // 해당 라인의 전체 텍스트 길이를 구함
+                const lineTotalLength = lineEl.textContent.length;
+                ranges.push({
+                    lineIndex: idx,
+                    startIndex: 0,
+                    endIndex: lineTotalLength
+                });
+                return; // 다음 라인으로
             }
 
-            const pRange = document.createRange();
-            pRange.selectNodeContents(lineEl);
-            const isIntersecting = (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) <= 0 &&
-                                    domRange.compareBoundaryPoints(Range.START_TO_END, pRange) >= 0);
+            // --- 여기서부터는 기존의 일반 텍스트 드래그 분석 로직 ---
+            const isStartInP = lineEl.contains(domRange.startContainer);
+            const isEndInP = lineEl.contains(domRange.endContainer);
+            
+            let isIntersecting = isStartInP || isEndInP;
+            if (!isIntersecting) {
+                const pRange = document.createRange();
+                pRange.selectNodeContents(lineEl);
+                isIntersecting = (domRange.compareBoundaryPoints(Range.END_TO_START, pRange) <= 0 &&
+                                domRange.compareBoundaryPoints(Range.START_TO_END, pRange) >= 0);
+            }
 
             if (isIntersecting) {
                 let total = 0, startOffset = -1, endOffset = -1;
-                const childNodes = lineEl.childNodes;
+                const chunks = Array.from(lineEl.childNodes);
 
-                for (let j = 0; j < childNodes.length; j++) {
-                    const node = childNodes[j];
+                chunks.forEach((node, nodeIdx) => {
                     if (startOffset === -1) {
-                        if (domRange.startContainer === lineEl && domRange.startOffset === j) startOffset = total;
+                        if (domRange.startContainer === lineEl && domRange.startOffset === nodeIdx) startOffset = total;
                         else if (domRange.startContainer === node || node.contains(domRange.startContainer)) {
-                            startOffset = total + (domRange.startContainer.nodeType === Node.TEXT_NODE ? domRange.startOffset : 0);
+                            const rel = domRange.startContainer.nodeType === Node.TEXT_NODE ? domRange.startOffset : 0;
+                            startOffset = total + rel;
                         }
                     }
                     if (endOffset === -1) {
-                        if (domRange.endContainer === lineEl && domRange.endOffset === j) endOffset = total;
+                        if (domRange.endContainer === lineEl && domRange.endOffset === nodeIdx) endOffset = total;
                         else if (domRange.endContainer === node || node.contains(domRange.endContainer)) {
-                            endOffset = total + (domRange.endContainer.nodeType === Node.TEXT_NODE ? domRange.endOffset : 0);
+                            const rel = domRange.endContainer.nodeType === Node.TEXT_NODE ? domRange.endOffset : 0;
+                            endOffset = total + rel;
                         }
                     }
+                    // 텍스트 노드 또는 chunk-text인 경우 길이를 더함
                     total += (node.nodeType === Node.TEXT_NODE || (node.classList && node.classList.contains('chunk-text'))) 
-                             ? node.textContent.length : 1;
-                }
+                            ? node.textContent.length : 1;
+                });
 
-                if (startOffset === -1) startOffset = lineEl.contains(domRange.startContainer) ? total : 0;
-                if (endOffset === -1) endOffset = lineEl.contains(domRange.endContainer) ? total : total;
+                if (startOffset === -1) startOffset = isStartInP ? total : 0;
+                if (endOffset === -1) endOffset = isEndInP ? total : total;
 
                 ranges.push({ 
-                    lineIndex: i, 
+                    lineIndex: idx, 
                     startIndex: Math.min(startOffset, endOffset), 
                     endIndex: Math.max(startOffset, endOffset) 
                 });
             }
-        }
+        });
 
         if (ranges.length > 0) {
             ranges.isBackwards = isBackwards;

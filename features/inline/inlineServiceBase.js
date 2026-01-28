@@ -19,6 +19,7 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             if (!currentState) return;
 
             const domRanges = uiAPI.getDomSelection(activeKey);
+            console.log("domRanges : ", domRanges);
             if (!domRanges || domRanges.length === 0) return;
 
             const ranges = getRanges(currentState, domRanges);
