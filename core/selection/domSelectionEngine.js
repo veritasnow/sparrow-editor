@@ -20,6 +20,7 @@ export function createSelectionService({ root }) {
      * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
      */ 
     function getActiveKeys() {
+        console.log("몇번탈까?");
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
@@ -262,6 +263,7 @@ export function createSelectionService({ root }) {
      */
     function restoreMultiBlockCursor(positions) {
         if (!positions?.length) return;
+        isRestoringCursor = true;
         const sel = window.getSelection();
         sel.removeAllRanges();
         
@@ -303,18 +305,12 @@ export function createSelectionService({ root }) {
                 : sel.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
         }
 
-        // --- 추가된 기능: 비선택 영역 클래스 처리 ---
-        const activeKeys = getActiveKeys(); // 현재 선택 범위 내의 모든 컨테이너 ID 가져오기
-        console.log("activeKeys : ", activeKeys);
-        activeKeys.forEach(key => {
+        // 비선택 영역 클래스 처리 ---
+        posIds.forEach(key => {
             const el = document.getElementById(key);
             if (!el) return;
-
-            console.log("posIds : ", posIds);
-
             // positions 데이터에 없는 키라면? -> 선택 영역 사이에 끼어있는 비선택 영역임
             if (!posIds.has(key)) {
-                console.log("sssssss key : ", key);
                 el.classList.add('is-not-selected');
                 el.classList.remove('is-selected');
             } else {
@@ -322,10 +318,6 @@ export function createSelectionService({ root }) {
                 el.classList.remove('is-not-selected');
             }
         });
-
-        setTimeout(() => {
-            isRestoringCursor = false;
-        }, 10);
     }
 
     /**
@@ -443,6 +435,7 @@ export function createSelectionService({ root }) {
     return { 
         getSelectionPosition, 
         getIsRestoring: () => isRestoringCursor,
+        setIsRestoring: (val) => { isRestoringCursor = val; },        
         restoreMultiBlockCursor,
         getActiveKey,
         getActiveKeys,

@@ -104,7 +104,17 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     document.addEventListener('selectionchange', () => {
         // 복구 중이거나 수동 드래그 중에는 기본 브라우저 로직(횡단 선택)을 타지 않음
-        if (uiAPI.getIsRestoring() || isDragging) return;
+        console.log("uiAPI.getIsRestoring() : ", uiAPI.getIsRestoring());
+        // 1. 복구 중인지 확인
+        if (uiAPI.getIsRestoring()) {
+            console.log("복구 완료 감지 - 가드 해제");
+            
+            // 2. 여기서 플래그를 꺼버림으로써 특정 타이머에 의존하지 않음
+            uiAPI.setIsRestoring(false); 
+            return; 
+        }
+
+        if (isDragging) return;
 
         const sel = window.getSelection();
         if (!sel || !sel.rangeCount) return;

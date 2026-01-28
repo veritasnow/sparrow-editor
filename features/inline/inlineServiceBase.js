@@ -7,7 +7,6 @@ import { normalizeCursorData } from "../../utils/cursorUtils.js";
 export function createInlineServiceBase(stateAPI, uiAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
         const activeKeys = uiAPI.getActiveKeys();
-        console.log("activeKeys:", activeKeys);
         const targets    = activeKeys.length > 0 ? activeKeys : [uiAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
 
