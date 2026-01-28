@@ -2,6 +2,8 @@ export function createSelectionService({ root }) {
     let lastValidPos  = null;
     let lastActiveKey = null;
     let isRestoringCursor = true; // 플래그 On
+    let cacheActiveKeys = null;
+
     /**
      * 헬퍼: 요소가 부모 내에서 몇 번째 .text-block인지 인덱스 계산 (O(N) 최적화)
      */
@@ -16,11 +18,14 @@ export function createSelectionService({ root }) {
         return index;
     }
 
+    function getCacheActiveKeys() {
+        return cacheActiveKeys;
+    }
+
     /**
      * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
      */ 
     function getActiveKeys() {
-        console.log("몇번탈까?");
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
@@ -84,13 +89,25 @@ export function createSelectionService({ root }) {
         return [lastActiveKey].filter(Boolean);
     }
 
+    function updateCacheActiveKey() {
+        cacheActiveKeys = getActiveKeys();
+    }
+
     function getActiveKey() {
-        const keys = getActiveKeys();
+        console.log("cacheActiveKeys : ", cacheActiveKeys);
+        if(cacheActiveKeys == null) {
+            console.log("??????????????????");
+            cacheActiveKeys = getActiveKeys();
+        }
+        const keys = cacheActiveKeys;
         return keys.length > 0 ? keys[keys.length - 1] : lastActiveKey;
     }
 
     function getActiveContainer() {
-        const activeKey = getActiveKey();
+        if(cacheActiveKeys == null) {
+            cacheActiveKeys = getActiveKeys();
+        }
+        const activeKey = cacheActiveKeys;
         return (activeKey ? document.getElementById(activeKey) : null) || root;
     }
 
@@ -433,7 +450,9 @@ export function createSelectionService({ root }) {
     }
 
     return { 
+        getCacheActiveKeys,
         getSelectionPosition, 
+        updateCacheActiveKey,
         getIsRestoring: () => isRestoringCursor,
         setIsRestoring: (val) => { isRestoringCursor = val; },        
         restoreMultiBlockCursor,

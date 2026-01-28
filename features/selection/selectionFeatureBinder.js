@@ -9,6 +9,17 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     let startTD = null;
     let rafId = null;
 
+    // 1. 키보드 방향키 이동 시에만 분석 실행
+    /*
+    editorEl.addEventListener('keyup', (e) => {
+        const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+        if (navKeys.includes(e.key)) {
+            uiAPI.updateCacheActiveKey(); // 위치 갱신
+            scheduleUpdate(); // 툴바 스타일 분석 및 UI 업데이트
+        }
+    });
+    */
+
     const scheduleUpdate = () => {
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
@@ -95,6 +106,8 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     window.addEventListener('mouseup', () => {
         if (isDragging) scheduleUpdate();
+        console.log("설마..?");
+        uiAPI.updateCacheActiveKey();
         isDragging = false;
         startTD = null;
     });

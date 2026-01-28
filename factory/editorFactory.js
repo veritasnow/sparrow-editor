@@ -186,7 +186,9 @@ export function createEditorFactory() {
       extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
       getSelectionContext         : () => domSelection.getSelectionContext(),
       getIsRestoring              : () => domSelection.getIsRestoring(),
-      setIsRestoring              : (val) => domSelection.setIsRestoring(val)
+      setIsRestoring              : (val) => domSelection.setIsRestoring(val),
+      updateCacheActiveKey        : () => domSelection.updateCacheActiveKey(),
+      getCacheActiveKeys          : () => domSelection.getCacheActiveKeys()
     };
 
     const editorAPI = {
