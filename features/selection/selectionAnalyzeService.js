@@ -7,7 +7,7 @@ export function createSelectionAnalyzeService(stateAPI, uiAPI) {
    * 루프를 최소화하고 "통일성 확인"과 "데이터 수집"을 한 번의 패스로 처리합니다.
    */
   function analyzeSelection() {
-    const activeKeys = uiAPI.getCacheActiveKeys(); 
+    const activeKeys = uiAPI.getActiveKeys(); 
     if (!activeKeys?.length) return getEmptyResult();
 
     // 분석을 위한 상태 변수

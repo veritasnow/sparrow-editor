@@ -18,14 +18,14 @@ export function createSelectionService({ root }) {
         return index;
     }
 
-    function getCacheActiveKeys() {
+    function getActiveKeys() {
         return cacheActiveKeys;
     }
 
     /**
      * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
      */ 
-    function getActiveKeys() {
+    function syncActiveKeys() {
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
@@ -89,25 +89,24 @@ export function createSelectionService({ root }) {
         return [lastActiveKey].filter(Boolean);
     }
 
-    function updateCacheActiveKey() {
-        cacheActiveKeys = getActiveKeys();
+    function refreshActiveKeys() {
+        cacheActiveKeys = syncActiveKeys();
+    }
+
+    function ensureActiveKeys() {
+        if (cacheActiveKeys === null) {
+            refreshActiveKeys();
+        }
+        return cacheActiveKeys || [];
     }
 
     function getActiveKey() {
-        console.log("cacheActiveKeys : ", cacheActiveKeys);
-        if(cacheActiveKeys == null) {
-            console.log("??????????????????");
-            cacheActiveKeys = getActiveKeys();
-        }
-        const keys = cacheActiveKeys;
+        const keys = ensureActiveKeys();
         return keys.length > 0 ? keys[keys.length - 1] : lastActiveKey;
     }
 
     function getActiveContainer() {
-        if(cacheActiveKeys == null) {
-            cacheActiveKeys = getActiveKeys();
-        }
-        const activeKey = cacheActiveKeys;
+        const activeKey = ensureActiveKeys();
         return (activeKey ? document.getElementById(activeKey) : null) || root;
     }
 
@@ -450,14 +449,13 @@ export function createSelectionService({ root }) {
     }
 
     return { 
-        getCacheActiveKeys,
+        getActiveKeys,
         getSelectionPosition, 
-        updateCacheActiveKey,
+        refreshActiveKeys,
         getIsRestoring: () => isRestoringCursor,
         setIsRestoring: (val) => { isRestoringCursor = val; },        
         restoreMultiBlockCursor,
         getActiveKey,
-        getActiveKeys,
         getLastActiveKey: () => lastActiveKey,
         getInsertionAbsolutePosition,
         updateLastValidPosition: () => {
@@ -474,7 +472,5 @@ export function createSelectionService({ root }) {
         getSelectionContext, 
         restoreCursor,
         getDomSelection,
-        restoreSelectionPositionByChunk: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: data }),
-        restoreTableSelection: (data) => restoreCursor({ containerId: lastActiveKey, lineIndex: data.lineIndex, anchor: { chunkIndex: data.chunkIndex, type: 'table', detail: data.cell } })
     };
 }

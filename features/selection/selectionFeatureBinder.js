@@ -14,7 +14,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
     editorEl.addEventListener('keyup', (e) => {
         const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
         if (navKeys.includes(e.key)) {
-            uiAPI.updateCacheActiveKey(); // 위치 갱신
+            uiAPI.refreshActiveKeys(); // 위치 갱신
             scheduleUpdate(); // 툴바 스타일 분석 및 UI 업데이트
         }
     });
@@ -106,8 +106,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     window.addEventListener('mouseup', () => {
         if (isDragging) scheduleUpdate();
-        console.log("설마..?");
-        uiAPI.updateCacheActiveKey();
+        uiAPI.refreshActiveKeys();
         isDragging = false;
         startTD = null;
     });

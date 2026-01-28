@@ -187,8 +187,7 @@ export function createEditorFactory() {
       getSelectionContext         : () => domSelection.getSelectionContext(),
       getIsRestoring              : () => domSelection.getIsRestoring(),
       setIsRestoring              : (val) => domSelection.setIsRestoring(val),
-      updateCacheActiveKey        : () => domSelection.updateCacheActiveKey(),
-      getCacheActiveKeys          : () => domSelection.getCacheActiveKeys()
+      refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
     };
 
     const editorAPI = {
