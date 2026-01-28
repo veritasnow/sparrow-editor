@@ -1,7 +1,7 @@
 export function createSelectionService({ root }) {
     let lastValidPos  = null;
     let lastActiveKey = null;
-
+    let isRestoringCursor = true; // 플래그 On
     /**
      * 헬퍼: 요소가 부모 내에서 몇 번째 .text-block인지 인덱스 계산 (O(N) 최적화)
      */
@@ -261,13 +261,15 @@ export function createSelectionService({ root }) {
      * 4. 멀티 블록 커서 복원 최적화
      */
     function restoreMultiBlockCursor(positions) {
-
         if (!positions?.length) return;
         const sel = window.getSelection();
         sel.removeAllRanges();
         
         const isBackwards = positions.isBackwards || positions[0]?.isBackwards;
         let allPoints = [];
+
+        // positions에 포함된 containerId들을 Set으로 변환 (빠른 검색용)
+        const posIds = new Set(positions.map(p => p.containerId));
 
         for (let i = 0; i < positions.length; i++) {
             const pos = positions[i];
@@ -300,6 +302,30 @@ export function createSelectionService({ root }) {
                 ? sel.setBaseAndExtent(end.node, end.offset, start.node, start.offset)
                 : sel.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
         }
+
+        // --- 추가된 기능: 비선택 영역 클래스 처리 ---
+        const activeKeys = getActiveKeys(); // 현재 선택 범위 내의 모든 컨테이너 ID 가져오기
+        console.log("activeKeys : ", activeKeys);
+        activeKeys.forEach(key => {
+            const el = document.getElementById(key);
+            if (!el) return;
+
+            console.log("posIds : ", posIds);
+
+            // positions 데이터에 없는 키라면? -> 선택 영역 사이에 끼어있는 비선택 영역임
+            if (!posIds.has(key)) {
+                console.log("sssssss key : ", key);
+                el.classList.add('is-not-selected');
+                el.classList.remove('is-selected');
+            } else {
+                // 데이터에 있다면 is-not-selected 제거
+                el.classList.remove('is-not-selected');
+            }
+        });
+
+        setTimeout(() => {
+            isRestoringCursor = false;
+        }, 10);
     }
 
     /**
@@ -416,6 +442,7 @@ export function createSelectionService({ root }) {
 
     return { 
         getSelectionPosition, 
+        getIsRestoring: () => isRestoringCursor,
         restoreMultiBlockCursor,
         getActiveKey,
         getActiveKeys,

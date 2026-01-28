@@ -185,6 +185,7 @@ export function createEditorFactory() {
       parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
       extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
       getSelectionContext         : () => domSelection.getSelectionContext(),
+      getIsRestoring              : () => domSelection.getIsRestoring()
     };
 
     const editorAPI = {
