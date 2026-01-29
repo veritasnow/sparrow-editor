@@ -397,6 +397,7 @@ export function createSelectionService({ root }) {
         if (!targetContainer) return;
 
         const sel = window.getSelection();
+        // 기존의 모든 선택 영역을 지우는 것은 동일합니다.
         sel.removeAllRanges();
 
         if (lineIndex !== undefined && anchor) {
@@ -407,27 +408,39 @@ export function createSelectionService({ root }) {
                 const chunkEl = Array.from(lineEl.children).find(el => parseInt(el.dataset.index, 10) === anchor.chunkIndex);
                 if (!chunkEl) return;
 
-                const range = document.createRange();
+                let targetNode = null;
+                let targetOffset = 0;
 
+                // 1. 테이블 내부의 셀 위치 계산
                 if (anchor.type === 'table' && anchor.detail) {
                     const rows = chunkEl.getElementsByTagName('tr');
                     const td = rows[anchor.detail.rowIndex]?.cells[anchor.detail.colIndex];
                     if (td) {
-                        let node = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
-                        range.setStart(node, Math.min(anchor.detail.offset, node.length));
+                        targetNode = td.firstChild || td.appendChild(document.createTextNode('\u00A0'));
+                        targetOffset = Math.min(anchor.detail.offset, targetNode.length);
                     }
                 } 
+                // 2. 개체(이미지, 비디오, 테이블 자체)의 앞/뒤 위치 계산
                 else if (chunkEl.dataset.type === 'table' || anchor.type === 'video' || anchor.type === 'image') {
-                    anchor.offset === 0 ? range.setStartBefore(chunkEl) : range.setStartAfter(chunkEl);
+                    targetNode = chunkEl.parentNode;
+                    const chunkPos = Array.from(targetNode.childNodes).indexOf(chunkEl);
+                    targetOffset = (anchor.offset === 0) ? chunkPos : chunkPos + 1;
                 } 
+                // 3. 일반 텍스트 노드 위치 계산
                 else {
-                    let node = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
-                    range.setStart(node, Math.min(anchor.offset || 0, node.length));
+                    targetNode = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
+                    targetOffset = Math.min(anchor.offset || 0, targetNode.length);
                 }
 
-                range.collapse(true);
-                sel.addRange(range);
-            } catch (e) { console.error("Cursor restoration error:", e); }
+                // 🔥 핵심: Range 객체 생성 없이 Selection에 직접 좌표를 찍습니다.
+                // 시작점(Base)과 끝점(Extent)을 똑같이 주면 '커서'가 됩니다.
+                if (targetNode) {
+                    sel.setBaseAndExtent(targetNode, targetOffset, targetNode, targetOffset);
+                }
+
+            } catch (e) { 
+                console.error("Cursor restoration error:", e); 
+            }
         }
     }
 
