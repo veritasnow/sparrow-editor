@@ -9,17 +9,38 @@
 export function normalizeCursorData(restoreData, defaultContainerId) {
     if (!restoreData) return null;
 
+    console.log("restoreData : ", restoreData);
+    console.log("defaultContainerId : ", defaultContainerId);
     // 1. 다중 라인 블록 선택 영역인 경우 (배열로 들어옴)
     if (Array.isArray(restoreData)) {
+        // containerId(셀)를 찾아서 실제 라인 엘리먼트들을 가져옵니다.
+        const container = document.getElementById(defaultContainerId);
+        
         return {
             containerId: defaultContainerId,
             isSelection: true,
-            source: 'dom', // ✅ 추가
-            ranges: restoreData.map(r => ({
-                lineIndex: r.lineIndex,
-                startIndex: r.startIndex,
-                endIndex: r.endIndex
-            }))
+            source: 'dom',
+            ranges: restoreData.map(r => {
+                // 해당 라인이 테이블을 포함하고 있는지 체크
+                let isTableLine = false;
+                if (container) {
+                    const lineEl = container.querySelector(`[data-line-index="${r.lineIndex}"]`);
+                    if (lineEl) {
+                        const isTable = lineEl.matches('.se-table') || lineEl.querySelector('.se-table');
+                        if (isTable) {
+                            isTableLine = true;
+                        }
+                    }
+                }
+
+                return {
+                    lineIndex: r.lineIndex,
+                    startIndex: r.startIndex,
+                    endIndex: r.endIndex,
+                    selectedLength: r.endIndex - r.startIndex,
+                    isTableLine: isTableLine // ✅ 타입 정보 추가
+                };
+            })
         };
     }
 

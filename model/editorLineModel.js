@@ -2,7 +2,7 @@
 // 1. DTO/Interface 정의 (타입 정의 통합 유지)
 // ----------------------------------------------------------------------
 import {DEFAULT_LINE_STYLE } from '../constants/styleConstants.js';
-
+import {TextChunkModel} from '../model/editorModel.js';
 /**
  * EditorLine Entity 모델을 생성하여 반환합니다.
  * 💡 Object.freeze()를 사용하여 외부에서 속성을 직접 변경하는 것을 방지합니다.

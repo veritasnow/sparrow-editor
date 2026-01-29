@@ -147,16 +147,42 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     function splitChunksByTable(chunks, align) {
         const lines = [];
         let temp = [];
+
+        const flushTemp = () => {
+            if (temp.length > 0) {
+                // ✨ [핵심] 인접한 텍스트 청크가 있다면 하나로 합침 (중복 방지)
+                const mergedChunks = temp.reduce((acc, current) => {
+                    const last = acc[acc.length - 1];
+                    if (last && last.type === 'text' && current.type === 'text') {
+                        // 스타일이 같다면 텍스트만 합침, 다르다면 현재 것을 우선시하거나 교체
+                        // 여기서는 보통 뒤에 들어온 텍스트가 최신이므로 중복을 제거해야 함
+                        // 만약 완전히 중복된 내용이 들어온다면 current만 유지
+                        if (current.text.includes(last.text)) {
+                            last.text = current.text; 
+                        } else {
+                            last.text += current.text;
+                        }
+                    } else {
+                        acc.push(current);
+                    }
+                    return acc;
+                }, []);
+                
+                lines.push(EditorLineModel(align, mergedChunks));
+                temp = [];
+            }
+        };
+
         chunks.forEach(chunk => {
             if (chunk.type === 'table') {
-                if (temp.length > 0) lines.push(EditorLineModel(align, temp));
+                flushTemp();
                 lines.push(EditorLineModel(align, [chunk]));
-                temp = [];
             } else {
                 temp.push(chunk);
             }
         });
-        if (temp.length > 0) lines.push(EditorLineModel(align, temp));
+        
+        flushTemp();
         return lines;
     }
 
