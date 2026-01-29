@@ -84,19 +84,46 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
                 });
             }            
         } else {
-            const table           = selectedCells[0].closest('.se-table');
+            // 1. 현재 드래그 중인 레벨의 메인 테이블 찾기
+            const table = selectedCells[0].closest('.se-table');
+            if (!table) return;
+
+            // 2. 해당 테이블의 모든 셀(직계)에 대해 상태 업데이트
             const allCellsInTable = table.querySelectorAll('.se-table-cell');
+            
             allCellsInTable.forEach(td => {
-                if (selectedCells.includes(td) && td.selectionStatus === 'skip-visual') {
+                // [예외 가드] 해당 셀이 현재 테이블의 직계가 아니면 무시 (중첩 테이블 중복 처리 방지)
+                if (td.closest('.se-table') !== table) return;
+
+                // 선택 상태 결정
+                const isTarget = selectedCells.includes(td);
+                const shouldSkip = isTarget && td.selectionStatus === 'skip-visual';
+
+                if (shouldSkip) {
+                    // 텍스트 드래그 중인 셀은 블록 하이라이트 제거
                     td.classList.remove('is-selected', 'is-not-selected');
-                    return;
-                }
-                if (selectedCells.includes(td)) {
+                } else if (isTarget) {
+                    // [A] 부모 셀 선택
                     td.classList.add('is-selected');
                     td.classList.remove('is-not-selected');
+
+                    // 🔥 [핵심] 부모가 선택되면 그 안의 모든 자식 테이블 셀들도 강제로 선택 처리
+                    const nestedCells = td.querySelectorAll('.se-table-cell');
+                    nestedCells.forEach(child => {
+                        child.classList.add('is-selected');
+                        child.classList.remove('is-not-selected');
+                    });
                 } else {
+                    // [B] 선택되지 않은 셀은 비활성화
                     td.classList.remove('is-selected');
                     td.classList.add('is-not-selected');
+
+                    // 부모가 해제되면 자식들도 해제
+                    const nestedCells = td.querySelectorAll('.se-table-cell');
+                    nestedCells.forEach(child => {
+                        child.classList.remove('is-selected');
+                        child.classList.add('is-not-selected');
+                    });
                 }
             });
         }

@@ -13,36 +13,44 @@ export function applyTableBlock(editorState, rows, cols, currentLineIndex, curso
     // 1. 테이블 청크 생성
     const tableChunk = tableHandler.create(rows, cols);
 
-    // 2. 커서 위치 기준으로 기존 라인의 청크 분리
+    // 2. 커서 위치 기준으로 기존 라인 분리
     const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
 
-    // 3. [최적화] 불필요한 filter 대신 유효성 검사
-    const hasValidBefore = beforeChunks.length > 0 && 
-        (beforeChunks.length > 1 || beforeChunks[0].type !== 'text' || beforeChunks[0].text !== '');
-    
-    const hasValidAfter = afterChunks.length > 0 && 
-        (afterChunks.length > 1 || afterChunks[0].type !== 'text' || afterChunks[0].text !== '');
+    // 3. 유효성 검사 (내용이 있는지 확인)
+    const hasBeforeContent = beforeChunks.some(c => c.type !== 'text' || c.text.trim() !== '');
+    const hasAfterContent = afterChunks.some(c => c.type !== 'text' || c.text.trim() !== '');
 
-    const finalBefore = hasValidBefore ? beforeChunks : [];
-    
-    // 테이블 바로 뒤에 커서가 위치할 수 있도록 빈 텍스트 청크 보장 (개행 대신 청크 추가)
-    const finalAfter = hasValidAfter ? afterChunks : [textHandler.create('', {})];
-
-    // 4. 새로운 chunks 조합 (이미지/비디오와 동일한 Inline-Block 방식)
-    const mergedChunks = [...finalBefore, tableChunk, ...finalAfter];
-    
-    // 5. 상태 업데이트 (해당 라인만 교체)
     const newState = [...editorState];
-    newState[currentLineIndex] = EditorLineModel(currentLine.align, mergedChunks);
+    const insertedLines = [];
 
-    // 6. 복구 정보 설정 (테이블 바로 다음 청크의 시작점)
-    const targetChunkIndex = finalBefore.length + 1;
+    // [Step A] 테이블 앞부분 처리
+    if (hasBeforeContent) {
+        // 앞에 내용이 있으면 기존 라인 유지
+        insertedLines.push(EditorLineModel(currentLine.align, beforeChunks));
+    } else {
+        // 내용이 없더라도 구조 유지를 위해 빈 라인 하나를 보장할 수 있음 (선택 사항)
+    }
+
+    // [Step B] 테이블 전용 라인 (독립된 행으로 삽입)
+    insertedLines.push(EditorLineModel(currentLine.align, [tableChunk]));
+
+    // [Step C] 테이블 뒷부분 처리 (커서가 갈 곳)
+    // 테이블 뒤에는 항상 글을 쓸 수 있는 빈 텍스트 라인을 하나 생성해줍니다.
+    const finalAfter = hasAfterContent ? afterChunks : [textHandler.create('', {})];
+    insertedLines.push(EditorLineModel(currentLine.align, finalAfter));
+
+    // 4. 기존 라인 하나를 제거하고 쪼개진 2~3개의 라인을 삽입
+    newState.splice(currentLineIndex, 1, ...insertedLines);
+
+    // 5. 복구 정보 설정
+    // 테이블이 들어간 라인(혹은 그 전 라인) 이후의 "뒷부분" 라인 인덱스 계산
+    const restoreLineIndex = hasBeforeContent ? currentLineIndex + 2 : currentLineIndex + 1;
 
     return {
         newState,
         tableChunk,
-        restoreLineIndex: currentLineIndex,
-        restoreChunkIndex: targetChunkIndex,
+        restoreLineIndex, // 테이블 다음 라인으로 커서 이동
+        restoreChunkIndex: 0,
         restoreOffset: 0
     };
 }
