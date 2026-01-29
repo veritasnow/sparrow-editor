@@ -5,12 +5,10 @@ import { normalizeCursorData } from '../../utils/cursorUtils.js';
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
     const selectionService = createSelectionAnalyzeService(stateAPI, uiAPI);
     const uiService = createSelectionUIService(toolbarElements);
-    
-    let dragAnchor = null; 
+
     let isDragging = false;
     let startTD = null;
     let rafId = null;
-    let startY = 0;
 
     const scheduleUpdate = () => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -26,7 +24,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
         });
     };
 
-    function applyVisualAndRangeSelection(selectedCells, isForwardDrag, normalized) {
+    function applyVisualAndRangeSelection(selectedCells, normalized) {
         // 1. 먼저 같은 형제가 있는지 확인한다.
         //    형제가 있으면 유즈 비쥬얼, 없으면 스킵비쥬얼을 한다.
 
@@ -159,32 +157,6 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
         if (td) {
             startTD = td;
-
-            if (!isDragging) {
-                startY = e.clientY; 
-                
-                // 닻(dragAnchor) 고정 - 하이브리드(표준+비표준) 추출
-                let range = null;
-                if (document.caretPositionFromPoint) {
-                    const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
-                    if (pos) {
-                        range = document.createRange();
-                        range.setStart(pos.offsetNode, pos.offset);
-                    }
-                } else if (document.caretRangeFromPoint) {
-                    range = document.caretRangeFromPoint(e.clientX, e.clientY);
-                }
-
-                if (range) {
-                    dragAnchor = { node: range.startContainer, offset: range.startOffset };
-                } else {
-                    const s = window.getSelection();
-                    if (s.rangeCount > 0) {
-                        const r = s.getRangeAt(0);
-                        dragAnchor = { node: r.startContainer, offset: r.startOffset };
-                    }
-                }
-            }
             isDragging = true;
         }
     });
@@ -204,9 +176,6 @@ editorEl.addEventListener('mousemove', (e) => {
     // 가장 바깥쪽 editable 영역이나 TD를 찾음
     const mainContainer = commonParent.closest('.se-table-cell, .sparrow-contents');
     const activeId = mainContainer ? mainContainer.id : (startTD.id || 'myEditor-content');
-
-    // 2. 드래그 범위 및 방향 계산
-    const isForwardDrag = e.clientY > startY;
     
     // 💡 여기서 selectedCells는 '테이블 내부 드래그'일 때만 의미가 있으므로 가드를 칩니다.
     let selectedCells = [];
@@ -256,7 +225,7 @@ editorEl.addEventListener('mousemove', (e) => {
     const normalized = normalizeCursorData(domRanges, activeId);
 
     // 4. 시각화 호출
-    applyVisualAndRangeSelection(selectedCells, isForwardDrag, normalized);
+    applyVisualAndRangeSelection(selectedCells, normalized);
 });
 
     window.addEventListener('mouseup', () => {
@@ -264,7 +233,6 @@ editorEl.addEventListener('mousemove', (e) => {
         uiAPI.refreshActiveKeys();
         isDragging = false;
         startTD = null;
-        dragAnchor = null; 
     });
 
     // 브라우저 기본 드래그 방지
