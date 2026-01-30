@@ -1,6 +1,6 @@
-import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../constants/styleConstants.js';
+import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../../constants/styleConstants.js';
 
-export function createSelectionAnalyzeService(stateAPI, uiAPI) {
+export function createAnalyzeService(stateAPI, uiAPI) {
   
   /**
    * [Main] 분석 로직 최적화

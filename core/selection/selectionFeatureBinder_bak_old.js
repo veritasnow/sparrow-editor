@@ -1,8 +1,8 @@
-import { createSelectionAnalyzeService } from './selectionAnalyzeService.js';
-import { createSelectionUIService } from './selectionUiService.js';
+import { createAnalyzeService } from './selectionAnalyzeService.js';
+import { createSelectionUIService } from './uiService.js';
 
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
-    const selectionService = createSelectionAnalyzeService(stateAPI, uiAPI);
+    const selectionService = createAnalyzeService(stateAPI, uiAPI);
     const uiService = createSelectionUIService(toolbarElements);
     
     let dragAnchor = null; 

@@ -1,10 +1,14 @@
-import { createSelectionAnalyzeService } from './selectionAnalyzeService.js';
-import { createSelectionUIService } from './selectionUiService.js';
+import { createAnalyzeService } from './service/binderSerivce/analyzeService.js';
+import { createSelectionUIService } from './service/binderSerivce/selectionUiService.js';
+import { createRangeService } from './service/binderSerivce/rangeService.js';
+import { createDragService } from './service/binderSerivce/dragService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
 export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
-    const selectionService = createSelectionAnalyzeService(stateAPI, uiAPI);
-    const uiService = createSelectionUIService(toolbarElements);
+    const selectionService = createAnalyzeService(stateAPI, uiAPI);
+    const uiService        = createSelectionUIService(toolbarElements);
+    const rangeService     = createRangeService();
+    const dragService      = createDragService(editorEl.id);
 
     let isDragging = false;
     let startTD = null;
@@ -23,123 +27,6 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
             td.classList.remove('is-selected', 'is-not-selected');
         });
     };
-
-    function applyVisualAndRangeSelection(selectedCells, normalized) {
-        // 1. 먼저 같은 형제가 있는지 확인한다.
-        //    형제가 있으면 유즈 비쥬얼, 없으면 스킵비쥬얼을 한다.
-
-        console.log("selectedCells.length : ", selectedCells.length);
-        console.log("selectedCells : ", selectedCells);
-
-        if (!selectedCells || selectedCells.length === 0) {
-            return; 
-        }
-
-        if (selectedCells.length > 0) {
-            const firstCell = selectedCells[0];
-            const firstMidName = firstCell.id.split('-')[1];
-            const hasSameMidName = selectedCells.slice(1).some(td => td.id.split('-')[1] === firstMidName);
-
-            console.log("hasSameMidName : ", hasSameMidName);
-
-            selectedCells.forEach((td, idx) => {
-                // 정방향(아래로)일 때만 부모 텍스트 살리기 적용
-                if (idx === 0 && !hasSameMidName) {
-                    td.selectionStatus = 'skip-visual'; 
-                } else {
-                    td.selectionStatus = 'use-visual';
-                }
-            });
-        } 
-
-        const isSkipVisual = selectedCells[0].selectionStatus === "skip-visual";
-        console.log("isSkipVisual : ", isSkipVisual);
- 
-        if(isSkipVisual) {
-            // [핵심 로직] 단일 셀 내부 정밀 제어
-            const targetTD = selectedCells[0];
-            
-            // 일단 해당 셀 자체는 블록이 아니므로 클래스 제거
-            targetTD.classList.remove('is-selected', 'is-not-selected');
-
-            if (normalized && normalized.ranges) {
-                normalized.ranges.forEach(range => {
-                    // 해당 라인이 테이블을 포함하고 있다면
-                    if (range.isTableLine) {
-                        // 해당 container(td) 안에서 해당 lineIndex를 가진 요소를 찾음
-                        const lineEl = targetTD.querySelector(`[data-line-index="${range.lineIndex}"]`);
-                        
-                        if (lineEl) {
-                            // 라인 자체가 테이블이거나, 내부에 테이블이 있는 경우 처리
-                            const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector('.se-table');
-                            
-                            if (childTable) {
-                                // 테이블 내부의 모든 셀에 is-selected 적용
-                                const subCells = childTable.querySelectorAll('.se-table-cell');
-                                subCells.forEach(subCell => {
-                                    subCell.classList.add('is-selected');
-                                    subCell.classList.remove('is-not-selected');
-                                });
-                            }
-                        }
-                    }
-                });
-            }            
-        } else {
-            // 1. 현재 드래그 중인 레벨의 메인 테이블 찾기
-            const table = selectedCells[0].closest('.se-table');
-            if (!table) return;
-
-            // 2. 해당 테이블의 모든 셀(직계)에 대해 상태 업데이트
-            const allCellsInTable = table.querySelectorAll('.se-table-cell');
-            
-            allCellsInTable.forEach(td => {
-                // [예외 가드] 해당 셀이 현재 테이블의 직계가 아니면 무시 (중첩 테이블 중복 처리 방지)
-                if (td.closest('.se-table') !== table) return;
-
-                // 선택 상태 결정
-                const isTarget = selectedCells.includes(td);
-                const shouldSkip = isTarget && td.selectionStatus === 'skip-visual';
-
-                if (shouldSkip) {
-                    // 텍스트 드래그 중인 셀은 블록 하이라이트 제거
-                    td.classList.remove('is-selected', 'is-not-selected');
-                } else if (isTarget) {
-                    // [A] 부모 셀 선택
-                    td.classList.add('is-selected');
-                    td.classList.remove('is-not-selected');
-
-                    // 🔥 [핵심] 부모가 선택되면 그 안의 모든 자식 테이블 셀들도 강제로 선택 처리
-                    const nestedCells = td.querySelectorAll('.se-table-cell');
-                    nestedCells.forEach(child => {
-                        child.classList.add('is-selected');
-                        child.classList.remove('is-not-selected');
-                    });
-                } else {
-                    // [B] 선택되지 않은 셀은 비활성화
-                    td.classList.remove('is-selected');
-                    td.classList.add('is-not-selected');
-
-                    // 부모가 해제되면 자식들도 해제
-                    const nestedCells = td.querySelectorAll('.se-table-cell');
-                    nestedCells.forEach(child => {
-                        child.classList.remove('is-selected');
-                        child.classList.add('is-not-selected');
-                    });
-                }
-            });
-        }
-        // 2. skipVisual이라면 형제 td가 선택되지 않은 상태이다.
-
-
-
-        console.log("selectedCells : ", selectedCells);
-        console.log("normalized : ", normalized);
-
-
-
-
-    }
 
     // [이벤트 리스너 영역]
 
@@ -167,6 +54,20 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     editorEl.addEventListener('mousemove', (e) => {
         if (!isDragging || !startTD) return;
+        // 1. 드래그 로직 계산 위임
+        const { selectedCells, activeId } = dragService.mouseDragCalculate(e, startTD);
+
+        // 2. 실시간 브라우저 Selection 데이터 획득 (UI API 사용)
+        const domRanges  = uiAPI.getDomSelection(activeId);
+        const normalized = normalizeCursorData(domRanges, activeId);
+
+        // 3. 시각화 호출 (Range 서비스 사용)
+        rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
+    });
+
+    /*
+    editorEl.addEventListener('mousemove', (e) => {
+        if (!isDragging || !startTD) return;
 
         // 1. Selection 정보를 통해 "진짜" 메인 컨테이너 ID 찾기
         const sel = window.getSelection();
@@ -179,7 +80,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
         // 가장 바깥쪽 editable 영역이나 TD를 찾음
         const mainContainer = commonParent.closest('.se-table-cell, .sparrow-contents');
-        const activeId = mainContainer ? mainContainer.id : (startTD.id || 'myEditor-content');
+        const activeId = mainContainer ? mainContainer.id : (startTD.id || editorEl.id);
         
         // 💡 여기서 selectedCells는 '테이블 내부 드래그'일 때만 의미가 있으므로 가드를 칩니다.
         let selectedCells = [];
@@ -267,8 +168,9 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
         const normalized = normalizeCursorData(domRanges, activeId);
 
         // 4. 시각화 호출
-        applyVisualAndRangeSelection(selectedCells, normalized);
+        rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
     });
+    */
 
     window.addEventListener('mouseup', () => {
         if (isDragging) scheduleUpdate();
