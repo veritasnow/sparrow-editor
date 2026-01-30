@@ -19,7 +19,7 @@ import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
 
 import { createSelectionService } from '../core/selection/domSelectionEngine.js';
 
-import { bindSelectionFeature } from '../features/selection/selectionFeatureBinder.js';
+import { bindSelectionFeature } from '../core/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from '../features/style/styleFeatureBinder.js';
 import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 
