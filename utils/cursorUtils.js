@@ -7,9 +7,10 @@
  * @param {string} defaultContainerId - 데이터에 ID가 없을 경우 사용할 기본 컨테이너 ID
  */
 export function normalizeCursorData(restoreData, defaultContainerId) {
+    console.log("restoreData : ", restoreData);
+
     if (!restoreData) return null;
 
-    console.log("restoreData : ", restoreData);
     console.log("defaultContainerId : ", defaultContainerId);
     // 1. 다중 라인 블록 선택 영역인 경우 (배열로 들어옴)
     if (Array.isArray(restoreData)) {

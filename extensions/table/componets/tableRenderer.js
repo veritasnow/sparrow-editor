@@ -57,8 +57,23 @@ export const tableRenderer = {
                  * 본문 에디터의 초기 상태인 <p><span data-index="0"></span></p> 구조를 
                  * 미리 생성하여 getSelectionContext가 activeNode를 즉시 잡을 수 있게 합니다.
                  */
+
+                /**
+                 * ⚠️ IMPORTANT
+                 * 테이블의 TD는 "에디터 안의 에디터" 개념이다.
+                 *
+                 * - table.dataset.lineIndex
+                 *   → 본문 에디터 기준 라인 인덱스
+                 *
+                 * - td 내부의 p.text-block.dataset.lineIndex
+                 *   → 해당 TD 내부 에디터 기준 라인 인덱스
+                 *
+                 * ⚠️ 두 lineIndex는 서로 다른 스코프이며
+                 * 절대 같은 값으로 동기화하면 안 된다.
+                 */                
                 const p = document.createElement("p");
                 p.className = "text-block"; // 본문 클래스와 통일
+                p.dataset.lineIndex = "0"; // ✅ 핵심 추가
 
                 const span = document.createElement("span");
                 span.className = "chunk-text";

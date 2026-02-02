@@ -27,9 +27,7 @@ export function createRestoreCursorService() {
 
             for (let j = 0; j < pos.ranges.length; j++) {
                 const rangeInfo = pos.ranges[j];
-                const lineEl = container.querySelector(
-                    `.text-block[data-line-index="${rangeInfo.lineIndex}"]`
-                );
+                const lineEl = container.children[rangeInfo.lineIndex];
                 if (!lineEl || !lineEl.classList.contains('text-block')) continue;
 
                 if (lineEl.querySelector('[data-container-id]') && rangeInfo.startIndex === 0 && rangeInfo.endIndex === 1) continue;
@@ -84,9 +82,7 @@ export function createRestoreCursorService() {
 
         if (lineIndex !== undefined && anchor) {
             try {
-                const lineEl = targetContainer.querySelector(
-                    `.text-block[data-line-index="${lineIndex}"]`
-                );
+                const lineEl = targetContainer.children[lineIndex];
                 if (!lineEl) return;
 
                 const chunkEl = Array.from(lineEl.children).find(el => parseInt(el.dataset.index, 10) === anchor.chunkIndex);

@@ -27,16 +27,12 @@ export function createRangeService(root) {
         const ranges = [];
 
         lines.forEach((lineEl, idx) => {
-
-            const lineIndex = Number(lineEl.dataset.lineIndex);
-            if (Number.isNaN(lineIndex)) return;
-
             // [핵심 3] 전체 선택된 셀이라면 계산 없이 해당 라인의 전체 길이를 반환
             if (isFullCellSelected) {
                 // 해당 라인의 전체 텍스트 길이를 구함
                 const lineTotalLength = lineEl.textContent.length;
                 ranges.push({
-                    lineIndex: lineIndex,
+                    lineIndex: idx,
                     startIndex: 0,
                     endIndex: lineTotalLength
                 });
@@ -83,7 +79,7 @@ export function createRangeService(root) {
                 if (endOffset === -1) endOffset = isEndInP ? total : total;
 
                 ranges.push({ 
-                    lineIndex: lineIndex, 
+                    lineIndex: idx, 
                     startIndex: Math.min(startOffset, endOffset), 
                     endIndex: Math.max(startOffset, endOffset) 
                 });
