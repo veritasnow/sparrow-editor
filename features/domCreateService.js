@@ -59,7 +59,17 @@ export function createDOMCreateService(rootId) {
         </button>
       </div>
 
-      <div id="${rootId}-content" contenteditable="true" data-container-id="${rootId}-content" class="sparrow-contents"></div>
+      <div id="${rootId}-scroll-viewport" class="sparrow-scroll-viewport" style="position: relative;">
+        <div id="${rootId}-spacer" style="width: 1px; position: absolute; top: 0; left: 0;"></div>
+          
+        <div id="${rootId}-content" 
+             contenteditable="true" 
+             data-container-id="${rootId}-content" 
+             class="sparrow-contents" 
+             style="will-change: transform; position: absolute; width: 100%; top: 0; left: 0;">
+        </div>
+
+      </div>
     `;
   }
 

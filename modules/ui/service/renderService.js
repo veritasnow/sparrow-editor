@@ -47,9 +47,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
     /**
      * 4. 개별 라인 렌더링 (태그 교체 및 테이블 풀 관리)
      */
-    function renderLine(lineIndex, lineData, targetKey, externalPool = null) {
+    function renderLine(lineIndex, lineData, targetKey, externalPool = null, skipSync = false) {
         console.log("test..!! lineIndex :", lineIndex);
-        console.log("test..!! lineData :", lineData);
 
         const container = getTargetElement(targetKey);
         if (!container) return;
@@ -84,11 +83,14 @@ export function createRenderService({ rootId, rendererRegistry }) {
             const br = document.createElement("br");
             br.dataset.marker = "empty";
             lineEl.appendChild(br);
-        } else {
+        } else {        
             this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
         }
 
-        syncLineIndexes(container);
+        // ✅ skipSync가 false일 때만 호출
+        if (!skipSync) {
+            syncLineIndexes(container);
+        }
     }
 
     /**
@@ -192,7 +194,17 @@ export function createRenderService({ rootId, rendererRegistry }) {
     return {
         render(state, targetKey) {
             syncParagraphCount(state, targetKey);
-            state.forEach((line, i) => this.renderLine(i, line, targetKey));
+
+            const container = getTargetElement(targetKey);
+            if (!container) return;
+
+            // 🔹 renderLine 반복 호출 시 skipSync = true
+            state.forEach((line, i) => {
+                this.renderLine(i, line, targetKey, null, true);
+            });
+
+            // 🔹 전체 렌더링 후 한 번만 호출
+            //syncLineIndexes(container);
         },
 
         ensureFirstLine(targetKey) {

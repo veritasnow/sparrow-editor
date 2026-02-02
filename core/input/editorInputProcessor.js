@@ -191,6 +191,8 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     }
 
     function saveFinalState(key, lineIndex, updatedLine, restoreData) {
+        console.log("lineIndexlineIndexlineIndex : ", lineIndex);
+        console.log("updatedLineupdatedLineupdatedLine : ", updatedLine);
         const currentState = state.getState(key);
         const nextState = [...currentState];
         nextState[lineIndex] = updatedLine;

@@ -15,6 +15,11 @@ export function createHistoryStore(initialState = {}) {
       return present[key] || [];
     },
 
+    getLineRange: (key, start, end) => {
+      const currLines = history[currentIndex][key] || [];
+      return currLines.slice(start, end + 1); // start~end 라인만 반환
+    },
+
     getHistoryStatus: () => ({
       pastCount: currentIndex,
       futureCount: history.length - currentIndex - 1,
@@ -84,7 +89,7 @@ export function createHistoryStore(initialState = {}) {
         history[currentIndex] = nextMap;
       }
 
-      //console.log('history:', history);
+      console.log('history:', history);
 
     },
 

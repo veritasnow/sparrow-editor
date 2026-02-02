@@ -158,7 +158,6 @@ export function createEditorFactory() {
         // Selection 상태에 따른 버튼 활성화 바인딩
         const selectionFeature = bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
 
-        /*
         const editorContextSupplier = () => {
           const mode = selectionAPI.getSelectionMode(); // 그대로 사용
           console.log('[EditorContext] selectionMode =', mode);
@@ -168,6 +167,7 @@ export function createEditorFactory() {
             composing: inputApp.isComposing(),
           };
         };
+        /*
         // A. 초기 렌더링 이후
         const scrollRenderService = createScrollRenderService({
           rootEl: editorEl,
@@ -182,7 +182,6 @@ export function createEditorFactory() {
         const unbindScroll = bindScrollEvent(editorEl, scrollRenderService);
         disposers.push(unbindScroll);
         */
-
         // 스타일 적용 버튼 이벤트 바인딩
         const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
         if (styleDisposer) disposers.push(styleDisposer);

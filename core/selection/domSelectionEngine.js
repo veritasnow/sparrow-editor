@@ -76,6 +76,7 @@ export function createSelectionService({ root }) {
         };
     }
 
+    /*
     function getLineIndex(el) {
         if (!el) return -1;
         let index = 0;
@@ -86,6 +87,13 @@ export function createSelectionService({ root }) {
         }
         return index;
     }
+    */
+    function getLineIndex(el) {
+        if (!el) return -1;
+        // data-line-index 값을 읽어서 숫자로 변환
+        const index = el.getAttribute('data-line-index');
+        return index !== null ? parseInt(index, 10) : -1;
+    }       
 
     function getSelectionPosition() {
         const context = getSelectionContext(); 
