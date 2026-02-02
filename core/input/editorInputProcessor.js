@@ -138,8 +138,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             }
         }
 
-        console.log("calculateUpdate result:", result);
-
         if (!result) return { flags: { hasChange: false } };
         return { ...result, flags: { ...flags, hasChange: true } };
     }

@@ -11,8 +11,8 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
     const dragService      = createDragService(editorEl.id);
 
     let isDragging = false;
-    let startTD = null;
-    let rafId = null;
+    let startTD    = null;
+    let rafId      = null;
 
     const scheduleUpdate = () => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -64,6 +64,89 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         // 3. 시각화 호출 (Range 서비스 사용)
         rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
     });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) scheduleUpdate();
+        selectionAPI.refreshActiveKeys();
+        isDragging = false;
+        startTD    = null;
+    });
+
+    // 브라우저 기본 드래그 방지
+    editorEl.addEventListener('dragstart', (e) => e.preventDefault());
+    editorEl.addEventListener('drop', (e) => e.preventDefault());
+
+    // Selection 변경 시 셀 상태 동기화 (가드 로직 포함)
+    document.addEventListener('selectionchange', () => {
+        if (selectionAPI.getIsRestoring()) {
+            selectionAPI.setIsRestoring(false); 
+            return; 
+        }
+
+        if (isDragging) return;
+
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+
+        const range = sel.getRangeAt(0);
+
+        if (editorEl.contains(range.startContainer)) {
+            const containerCell = range.commonAncestorContainer.nodeType === 3 
+                ? range.commonAncestorContainer.parentElement.closest('.se-table-cell')
+                : range.commonAncestorContainer.closest?.('.se-table-cell');
+
+            if (!containerCell) {
+                // 멀티 셀 선택 상황
+                const allTDs = editorEl.querySelectorAll('.se-table-cell');
+                let hasCellInRange = false;
+
+                for(let td of allTDs) {
+                    if (td.classList.contains('is-not-selected')) continue;
+                    if (sel.containsNode(td, true)) {
+                        hasCellInRange = true;
+                        break;
+                    }
+                }
+
+                if (hasCellInRange) {
+                    allTDs.forEach(td => {
+                        const isInRange = sel.containsNode(td, true);
+                        const isNotSelected = td.classList.contains('is-not-selected');
+
+                        if (!isNotSelected) {
+                            if (isInRange) td.classList.add('is-selected');
+                            else td.classList.remove('is-selected');
+                        }
+                    });
+                }
+            } else {
+                // 단일 셀 내부 선택 상황
+                editorEl.querySelectorAll('.se-table-cell.is-selected').forEach(td => {
+                    if (td !== containerCell) td.classList.remove('is-selected');
+                });
+            }
+            
+            scheduleUpdate();
+        } else {
+            if (document.querySelectorAll('.se-table-cell.is-selected').length === 0) {
+                uiService.clearAll();
+            }
+        }
+    });
+
+    return {
+        analyzeNow: () => {
+            const result = selectionService.analyzeSelection();
+            uiService.updateUI(result);
+            return result;
+        },
+        clearTableSelection: clearCellSelection,
+        isDragging: () => isDragging
+    };
+}
+
+
+
 
     /*
     editorEl.addEventListener('mousemove', (e) => {
@@ -171,82 +254,3 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
     });
     */
-
-    window.addEventListener('mouseup', () => {
-        if (isDragging) scheduleUpdate();
-        selectionAPI.refreshActiveKeys();
-        isDragging = false;
-        startTD = null;
-    });
-
-    // 브라우저 기본 드래그 방지
-    editorEl.addEventListener('dragstart', (e) => e.preventDefault());
-    editorEl.addEventListener('drop', (e) => e.preventDefault());
-
-    // Selection 변경 시 셀 상태 동기화 (가드 로직 포함)
-    document.addEventListener('selectionchange', () => {
-        if (selectionAPI.getIsRestoring()) {
-            selectionAPI.setIsRestoring(false); 
-            return; 
-        }
-
-        if (isDragging) return;
-
-        const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return;
-
-        const range = sel.getRangeAt(0);
-
-        if (editorEl.contains(range.startContainer)) {
-            const containerCell = range.commonAncestorContainer.nodeType === 3 
-                ? range.commonAncestorContainer.parentElement.closest('.se-table-cell')
-                : range.commonAncestorContainer.closest?.('.se-table-cell');
-
-            if (!containerCell) {
-                // 멀티 셀 선택 상황
-                const allTDs = editorEl.querySelectorAll('.se-table-cell');
-                let hasCellInRange = false;
-
-                for(let td of allTDs) {
-                    if (td.classList.contains('is-not-selected')) continue;
-                    if (sel.containsNode(td, true)) {
-                        hasCellInRange = true;
-                        break;
-                    }
-                }
-
-                if (hasCellInRange) {
-                    allTDs.forEach(td => {
-                        const isInRange = sel.containsNode(td, true);
-                        const isNotSelected = td.classList.contains('is-not-selected');
-
-                        if (!isNotSelected) {
-                            if (isInRange) td.classList.add('is-selected');
-                            else td.classList.remove('is-selected');
-                        }
-                    });
-                }
-            } else {
-                // 단일 셀 내부 선택 상황
-                editorEl.querySelectorAll('.se-table-cell.is-selected').forEach(td => {
-                    if (td !== containerCell) td.classList.remove('is-selected');
-                });
-            }
-            
-            scheduleUpdate();
-        } else {
-            if (document.querySelectorAll('.se-table-cell.is-selected').length === 0) {
-                uiService.clearAll();
-            }
-        }
-    });
-
-    return {
-        analyzeNow: () => {
-            const result = selectionService.analyzeSelection();
-            uiService.updateUI(result);
-            return result;
-        },
-        clearTableSelection: clearCellSelection
-    };
-}

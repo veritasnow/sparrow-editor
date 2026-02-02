@@ -129,13 +129,13 @@ export function createUiApplication({ rootId, rendererRegistry }) {
 
     /**
      * 스크롤 기반 부분 렌더링
-     * @param {number} scrollTop
+     * @param {number} range
      * @param {Array} editorState
      * @param {Object} editorContext
      */
-    partialRenderOnScroll(scrollTop, editorState, editorContext) {
+    partialRenderOnScroll(range, editorState, editorContext) {
       assertAlive();
-      partialRenderService.onScroll(scrollTop, editorState, editorContext);
+      partialRenderService.onScroll(range, editorState, editorContext);
     },
 
     forceFullRender(editorState) {

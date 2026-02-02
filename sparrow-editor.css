@@ -501,3 +501,22 @@
     pointer-events: none;
     z-index: 11;
 }
+
+
+
+
+
+
+
+
+
+.sparrow-contents {
+    display: block !important;    /* 가끔 flex가 걸려있으면 높이가 멋대로 늘어납니다 */
+    height: 500px !important;    /* 강제 고정 */
+    max-height: 500px !important;/* 절대로 이 이상 커지지 못하게 방어 */
+    overflow-y: auto !important; /* 내용이 넘치면 무조건 스크롤바 생성 */
+    
+    /* 중요: box-sizing이 border-box여야 패딩이 높이에 포함됩니다 */
+    box-sizing: border-box; 
+    position: relative;
+}

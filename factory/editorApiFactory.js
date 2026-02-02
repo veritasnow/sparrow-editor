@@ -47,11 +47,15 @@ export function createEditorAPI({
         // DOM -> Model 파싱 브릿지
         parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
         extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
+        // 부분렌더링
+        partialRenderOnScroll       : (range, editorState, editorContext) => ui.partialRenderOnScroll(range, editorState, editorContext),
+        forceFullRender             : (editorState) => ui.editorState(editorState),
+        resetPartialRender          : () => ui.resetPartialRender(),
     };
 
-  /* ─────────────────────────────
-   * selectionAPI
-   * ───────────────────────────── */
+    /* ─────────────────────────────
+    * selectionAPI
+    * ───────────────────────────── */
     const selectionAPI = {
         restoreCursor               : (pos) => domSelection.restoreCursor(pos),
         restoreMultiBlockCursor     : (positions) => domSelection.restoreMultiBlockCursor(positions),
@@ -67,6 +71,7 @@ export function createEditorAPI({
         getIsRestoring              : () => domSelection.getIsRestoring(),
         setIsRestoring              : (val) => domSelection.setIsRestoring(val),
         refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
+        getSelectionMode            : () => domSelection.getSelectionMode(),
     };
 
   return {

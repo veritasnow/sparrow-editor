@@ -110,6 +110,44 @@ export function createSelectionService({ root }) {
         return { lineIndex, absoluteOffset };
     }
 
+    function getSelectionMode() {
+        const activeKey = getActiveKey();
+        //console.log('[SelectionMode] activeKey =', activeKey);
+        if (!activeKey) {
+            //console.log('[SelectionMode] no active key → none');
+            return 'none';
+        }
+
+        const ranges = getDomSelection(activeKey);
+        //console.log('[SelectionMode] ranges =', ranges);
+        if (!ranges || ranges.length === 0) {
+            //console.log('[SelectionMode] no ranges → none');
+            return 'none';
+        }
+
+        // 1️⃣ 커서만 있는 상태
+        if (ranges.length === 1 && ranges[0].startIndex === ranges[0].endIndex) {
+            //console.log('[SelectionMode] cursor only → cursor');
+            return 'cursor';
+        }
+
+        // 2️⃣ 셀(블록) 전체 선택
+        const container = document.getElementById(activeKey);
+        if (
+            container &&
+            container.classList.contains('is-selected') &&
+            ranges.every(r => r.startIndex === 0)
+        ) {
+            //console.log('[SelectionMode] cell selected → cell');
+            return 'cell';
+        }
+
+        // 3️⃣ 텍스트 범위 선택
+        //console.log('[SelectionMode] text range → range');
+        return 'range';
+    }
+
+
     return { 
         getActiveKeys,
         getSelectionPosition, 
@@ -134,5 +172,6 @@ export function createSelectionService({ root }) {
         getSelectionContext, 
         restoreCursor: (cursorData) => restoreService.restoreCursor(cursorData),
         getDomSelection,
+        getSelectionMode,
     };
 }

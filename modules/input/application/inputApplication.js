@@ -52,6 +52,10 @@ export function createInputApplication({ editorEl }) {
 
             inputService.destroy?.();
             keyService.destroy?.();
-        }
+        },
+
+        isComposing() {
+            return inputService.isComposing();
+        },        
     };
 }

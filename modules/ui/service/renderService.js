@@ -48,10 +48,18 @@ export function createRenderService({ rootId, rendererRegistry }) {
      * 4. 개별 라인 렌더링 (태그 교체 및 테이블 풀 관리)
      */
     function renderLine(lineIndex, lineData, targetKey, externalPool = null) {
+        console.log("test..!! lineIndex :", lineIndex);
+        console.log("test..!! lineData :", lineData);
+
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        let lineEl = container.children[lineIndex];
+        //let lineEl = container.children[lineIndex];
+        let lineEl = container.querySelector(`[data-line-index="${lineIndex}"]`);
+        // 🚩 [추가] 인덱스로 못 찾았다면, 아직 번호가 없는(초기 상태) 첫 번째 자식을 재활용
+        if (!lineEl) {
+            lineEl = Array.from(container.children).find(el => !el.hasAttribute('data-line-index'));
+        }        
         const requiredTag = getTagNameForLine(lineData);
 
         // 라인 엘리먼트가 없거나 태그가 다르면 교체
@@ -138,35 +146,48 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
     /**
      * DOM 기준으로 lineIndex / chunkIndex 재동기화
-     * ⚠️ 렌더링 아님 (dataset만 수정)
+     * 부분 렌더링(Virtual Scroll) 대응 버전
      */
     function syncLineIndexes(container) {
-        if (!container) return;
+        if (!container || !container.children.length) return;
 
         const lines = container.children;
 
-        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-            const lineEl = lines[lineIndex];
-            if (!lineEl || !lineEl.classList.contains('text-block')) continue;
+        // 1️⃣ 기준점 찾기 (가장 중요)
+        // DOM에 있는 첫 번째 요소가 가진 lineIndex를 시작점으로 잡습니다.
+        // 만약 인덱스가 없는 요소라면 0으로 시작하게 유도합니다.
+        let baseIndex = parseInt(lines[0].dataset.lineIndex);
+        if (isNaN(baseIndex)) baseIndex = 0;
 
-            // 1️⃣ 라인 인덱스 재설정
-            lineEl.dataset.lineIndex = lineIndex;
+        for (let i = 0; i < lines.length; i++) {
+            const lineEl = lines[i];
+            
+            // text-block이 아닌 요소(가령 임시 UI 등)는 건너뜁니다.
+            if (!lineEl.classList.contains('text-block')) continue;
 
-            // 2️⃣ 청크 인덱스 재설정
+            // 2️⃣ 상대적 인덱스 부여
+            // 'DOM의 첫 번째 요소 인덱스 + 현재 루프 순서'를 통해 
+            // 전체 데이터상의 위치를 유지하면서 번호를 업데이트합니다.
+            const currentLineIndex = baseIndex + i;
+            lineEl.dataset.lineIndex = currentLineIndex;
+
+            // 3️⃣ 자식 청크들의 인덱스도 동기화
             let chunkIndex = 0;
-
             for (const child of lineEl.children) {
-                if (!child.classList.contains('chunk-text') &&
-                    !child.classList.contains('chunk-table') &&
-                    !child.dataset.chunkIndex) {
-                    continue;
+                // 속성값이 존재하는 요소만 처리
+                if (child.dataset) {
+                    child.dataset.lineIndex = currentLineIndex;
+                    
+                    // chunk-text, chunk-table 등 실제 데이터 유닛인 경우만 chunkIndex 증가
+                    if (child.classList.contains('chunk-text') || 
+                        child.classList.contains('chunk-table') || 
+                        child.dataset.chunkIndex !== undefined) {
+                        child.dataset.chunkIndex = chunkIndex++;
+                    }
                 }
-
-                child.dataset.lineIndex  = lineIndex;
-                child.dataset.chunkIndex = chunkIndex++;
             }
         }
-    }    
+    }
 
     return {
         render(state, targetKey) {

@@ -48,6 +48,10 @@ export function createInputBindingService(editorEl) {
             editorEl.removeEventListener('compositionstart', onCompositionStart);
             editorEl.removeEventListener('compositionend', onCompositionEnd);
             editorEl.removeEventListener('input', onInput);
-        }
+        },
+
+        isComposing() {
+            return composing;
+        }        
     };
 }

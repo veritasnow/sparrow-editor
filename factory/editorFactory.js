@@ -21,6 +21,11 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 import { registerDefaultChunks } from './chunkRegistryFactory.js';
 import { createEditorAPI } from './editorApiFactory.js';
 
+
+import { createScrollRenderService } from '../core/scroll/scrollRenderService.js';
+import { bindScrollEvent } from '../core/scroll/scrollEventBinder.js';
+
+
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
  */
@@ -78,7 +83,6 @@ export function createEditorFactory() {
       ui,
       domSelection,
     });
-
 
     const editorAPI = {
       getToolbarButton(name) {
@@ -152,7 +156,32 @@ export function createEditorFactory() {
         };
 
         // Selection 상태에 따른 버튼 활성화 바인딩
-        bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
+        const selectionFeature = bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
+
+        /*
+        const editorContextSupplier = () => {
+          const mode = selectionAPI.getSelectionMode(); // 그대로 사용
+          console.log('[EditorContext] selectionMode =', mode);
+          return {
+            selectionMode: mode,
+            dragging: selectionFeature.isDragging,
+            composing: inputApp.isComposing(),
+          };
+        };
+        // A. 초기 렌더링 이후
+        const scrollRenderService = createScrollRenderService({
+          rootEl: editorEl,
+          stateAPI,
+          uiAPI,
+          contentKey: MAIN_CONTENT_KEY,
+          getEditorContext: editorContextSupplier
+        });     
+        scrollRenderService.enable(); // 초기화 시점에서 부분 렌더링 활성화
+
+        // 스크롤 이벤트 바인딩
+        const unbindScroll = bindScrollEvent(editorEl, scrollRenderService);
+        disposers.push(unbindScroll);
+        */
 
         // 스타일 적용 버튼 이벤트 바인딩
         const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
@@ -160,6 +189,7 @@ export function createEditorFactory() {
 
         const alignDisposer = bindAlignButtons(stateAPI, uiAPI, selectionAPI, alignToolbar);
         if (alignDisposer) disposers.push(alignDisposer);
+
 
         // E. 익스텐션(Video, Image, Table 등) 실행
         extensions.forEach(ext => {
