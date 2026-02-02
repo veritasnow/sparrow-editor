@@ -1,6 +1,7 @@
 // application/uiApplication.js
 import { createRenderService } from "../service/renderService.js";
 import { createDOMParseService } from "../service/domParserService.js";
+import { createPartialRenderService } from "../service/partialRenderService.js";
 
 /**
  * UI 애플리케이션을 생성합니다.
@@ -18,8 +19,12 @@ export function createUiApplication({ rootId, rendererRegistry }) {
   }
 
   // 💡 renderService 생성 시 rootId 전달 (기본 컨테이너로 설정)
-  const renderService = createRenderService({ rootId, rendererRegistry });
-  const domParserService = createDOMParseService();
+  const renderService        = createRenderService({ rootId, rendererRegistry });
+  const domParserService     = createDOMParseService();
+  const partialRenderService = createPartialRenderService({
+    rootId,
+    renderService
+  });  
 
   let destroyed = false;
 
@@ -121,5 +126,26 @@ export function createUiApplication({ rootId, rendererRegistry }) {
 
     // ───────── Lifecycle ─────────
     destroy,
+
+    /**
+     * 스크롤 기반 부분 렌더링
+     * @param {number} scrollTop
+     * @param {Array} editorState
+     * @param {Object} editorContext
+     */
+    partialRenderOnScroll(scrollTop, editorState, editorContext) {
+      assertAlive();
+      partialRenderService.onScroll(scrollTop, editorState, editorContext);
+    },
+
+    forceFullRender(editorState) {
+      assertAlive();
+      partialRenderService.forceFullRender(editorState);
+    },
+
+    resetPartialRender() {
+      assertAlive();
+      partialRenderService.reset();
+    },
   };
 }
