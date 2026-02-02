@@ -3,13 +3,13 @@ import { createVideoInsertService } from './service/videoInsertService.js';
 
 // features/video/videoFeatureBinder.js
 
-export function bindVideoButton(videoBtn, stateAPI, uiAPI, rootId) {
+export function bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId) {
     const rootEl = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
     const { popup, inputEl, confirmBtn, open, close } = createVideoPopupView(rootEl, toolbar, videoBtn);
-    const { insertVideo } = createVideoInsertService(stateAPI, uiAPI);
+    const { insertVideo } = createVideoInsertService(stateAPI, uiAPI, selectionAPI);
 
     let lastCursorPos = null;
 
@@ -21,7 +21,7 @@ export function bindVideoButton(videoBtn, stateAPI, uiAPI, rootId) {
             close();
         } else {
             // ✨ 핵심: 팝업이 열리기 전(포커스가 본문에 있을 때) 절대 좌표 강제 갱신
-            uiAPI.updateLastValidPosition(); 
+            selectionApi.updateLastValidPosition(); 
             open();
             inputEl.focus();
         }

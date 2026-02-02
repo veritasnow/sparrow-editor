@@ -4,6 +4,9 @@ import { createUiApplication } from '../modules/ui/application/uiApplication.js'
 import { createInputApplication } from '../modules/input/application/inputApplication.js';
 
 import { TextChunkModel } from '../model/editorModel.js';
+import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
+import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';
+import { TableChunkModel } from '../extensions/table/model/tableModel.js';
 
 import { EditorLineModel } from '../model/editorLineModel.js';
 import { textRenderer } from '../features/componets/textRenderer.js';
@@ -23,7 +26,7 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 import { createDOMCreateService } from '../features/domCreateService.js';
 import { DEFAULT_LINE_STYLE, DEFAULT_TEXT_STYLE } from '../constants/styleConstants.js';
 
-import { registerDefaultChunks } from './chunkRegistryFactory.js';
+import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
@@ -43,8 +46,57 @@ export function createEditorFactory() {
     /* ─────────────────────────────
      * 1️⃣ 코어 서비스 초기화 (인스턴스 생성)
      * ───────────────────────────── */
-    // 청크생성
-    registerDefaultChunks();
+
+    // 1. Text Chunk 핸들러
+    chunkRegistry.register('text', {
+      isText    : true,
+      canSplit  : true,
+      create    : (text = '', style = {}) => TextChunkModel('text', text, style),
+      getLength : (chunk) => chunk.text.length,
+      clone     : (chunk) => TextChunkModel('text', chunk.text, { ...chunk.style }),
+      applyStyle: (chunk, patch) => TextChunkModel('text', chunk.text, { ...chunk.style, ...patch })
+    });
+
+    // 2. Video Chunk 핸들러
+    chunkRegistry.register('video', {
+      isText    : false,
+      canSplit  : false,
+      create    : (videoId, src) => VideoChunkModel(videoId, src),
+      getLength : () => 1,
+      clone     : (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
+      applyStyle: (chunk) => chunk
+    });
+
+    // 3. Image Chunk 핸들러
+    chunkRegistry.register('image', {
+      isText    : false,
+      canSplit  : false,
+      create    : (src) => ImageChunkModel(src),
+      getLength : () => 1,
+      clone     : (chunk) => ImageChunkModel(chunk.src),
+      applyStyle: (chunk) => chunk
+    });
+
+    // 4. Table Chunk 핸들러
+    chunkRegistry.register('table', {
+        isText   : false,
+        canSplit : false,
+        create   : (rows, cols) => TableChunkModel(rows, cols),
+        getLength: () => 1,
+        clone    : (chunk) => {
+            return {
+                ...chunk,
+                data: chunk.data.map(row =>
+                    row.map(cell => ({
+                        id: cell.id, 
+                        style: { ...cell.style } 
+                    }))
+                ),
+                style: { ...chunk.style }
+            };
+        },
+        applyStyle: (chunk, patch) => ({ ...chunk, style: { ...chunk.style, ...patch } })
+    });
 
     // DOM 구조 생성 (HTML 기본 뼈대)
     const domService = createDOMCreateService(rootId);
@@ -232,7 +284,7 @@ export function createEditorFactory() {
           if (!ext) return;
           console.log(`[${rootId}] Extension setup:`, ext);
           
-          const extDisposer = ext.setup?.({ stateAPI, uiAPI, selectionAPI, editorAPI });
+          const extDisposer = ext.setup?.({ stateAPI, uiAPI, editorAPI });
           
           if (typeof extDisposer === 'function') {
             disposers.push(extDisposer);

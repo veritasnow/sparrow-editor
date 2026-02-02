@@ -8,20 +8,20 @@ import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
  * 테이블 삽입 서비스
  * 테이블 구조를 생성하고 각 셀을 독립적인 상태 저장소에 등록합니다.
  */
-export function createTableInsertService(stateAPI, uiAPI) {
+export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
     
     function insertTable(rows, cols, cursorPos) {
         if (!rows || !cols) return false;
 
         // 1. 현재 타겟팅된 컨테이너(본문 혹은 부모 셀) 확보
-        const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
+        const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
         if (!activeKey) return false;
 
         const editorState = stateAPI.get(activeKey);
         if (!editorState) return false;
 
         // 2. 삽입 위치 결정
-        let pos = cursorPos || uiAPI.getLastValidPosition();
+        let pos = cursorPos || selectionAPI.getLastValidPosition();
         if (!pos) {
             const lastLineIdx = Math.max(0, editorState.length - 1);
             pos = {
@@ -76,7 +76,7 @@ export function createTableInsertService(stateAPI, uiAPI) {
         // 💡 테이블은 복잡한 DOM이 생성되는 과정이 있으므로 
         // 브라우저가 렌더링을 마친 후 커서를 잡을 수 있도록 테스크 큐에 넣습니다.
         setTimeout(() => {
-            uiAPI.restoreCursor(nextCursorPos);
+            selectionAPI.restoreCursor(nextCursorPos);
         }, 0);
 
         return true;

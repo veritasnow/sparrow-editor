@@ -13,11 +13,11 @@ export function createVideoExtension(rootId) {
      * @param {Object} deps.uiAPI
      * @param {Object} deps.editorAPI
      */
-    setup({ stateAPI, uiAPI, editorAPI }) {
+    setup({ stateAPI, uiAPI, selectionAPI, editorAPI }) {
       const videoBtn = editorAPI.getToolbarButton('video');
       if (!videoBtn) return;
 
-      bindVideoButton(videoBtn, stateAPI, uiAPI, rootId);
+      bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId);
     }
   };
 }

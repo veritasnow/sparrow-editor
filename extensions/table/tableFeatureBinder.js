@@ -2,14 +2,14 @@
 import { createTablePopupView } from './componets/tablePopupView.js';
 import { createTableInsertService } from './service/tableInsertService.js';
 
-export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
+export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId) {
     const rootEl = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
     const { popup, grid, sizeText, open, close } 
         = createTablePopupView(rootEl, toolbar, tableBtn);
-    const { insertTable } = createTableInsertService(stateAPI, uiAPI);
+    const { insertTable } = createTableInsertService(stateAPI, uiAPI, selectionAPI);
 
     let lastCursorPos = null;
     let hoverRows = 0;
@@ -51,8 +51,8 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, rootId) {
             close();
         } else {
             // ✨ 핵심: 팝업 열기 전 현재 커서 위치를 확실히 캡처
-            uiAPI.updateLastValidPosition(); 
-            lastCursorPos = uiAPI.getSelectionPosition();
+            selectionAPI.updateLastValidPosition(); 
+            lastCursorPos = selectionAPI.getSelectionPosition();
             open();
         }
     };

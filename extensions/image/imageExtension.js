@@ -13,11 +13,11 @@ export function createImageExtension(rootId) {
      * @param {Object} deps.uiAPI
      * @param {Object} deps.editorAPI
      */
-    setup({ stateAPI, uiAPI, editorAPI }) {
+    setup({ stateAPI, uiAPI, selectionAPI, editorAPI }) {
       const imageBtn = editorAPI.getToolbarButton('image');
       if (!imageBtn) return;
 
-      bindImageButton(imageBtn, stateAPI, uiAPI, rootId);
+      bindImageButton(imageBtn, stateAPI, uiAPI, selectionAPI, rootId);
     }
   };
 }

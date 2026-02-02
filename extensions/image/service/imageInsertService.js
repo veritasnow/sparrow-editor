@@ -1,14 +1,14 @@
 import { applyImageBlock } from '../utils/imageBlockUtil.js';
 
-export function createImageInsertService(stateAPI, uiAPI) {
+export function createImageInsertService(stateAPI, uiAPI, selectionAPI) {
     
     function insertImage(src, targetKeyOrPos) {
         if (!src) return false;
 
         // 1. 타겟 영역 확보
         const activeKey = (typeof targetKeyOrPos === 'string' ? targetKeyOrPos : null) 
-                         || uiAPI.getActiveKey() 
-                         || uiAPI.getLastActiveKey();
+                         || selectionAPI.getActiveKey() 
+                         || selectionAPI.getLastActiveKey();
         
         if (!activeKey) return false;
 
@@ -18,7 +18,7 @@ export function createImageInsertService(stateAPI, uiAPI) {
         
         // 3. 삽입 위치 결정
         let pos = (typeof targetKeyOrPos === 'object' ? targetKeyOrPos : null) 
-                  || uiAPI.getLastValidPosition();
+                  || selectionAPI.getLastValidPosition();
 
         if (!pos) {
             const lastLineIdx = Math.max(0, areaState.length - 1);
@@ -79,7 +79,7 @@ export function createImageInsertService(stateAPI, uiAPI) {
         };
 
         stateAPI.saveCursor(nextCursorPos);
-        uiAPI.restoreCursor(nextCursorPos);
+        selectionAPI.restoreCursor(nextCursorPos);
         
         return true;
     }

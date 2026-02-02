@@ -1,7 +1,7 @@
 // extensions/video/service/videoInsertService.js
 import { extractYouTubeId, applyVideoBlock } from '../utils/videoBlockUtil.js';
 
-export function createVideoInsertService(stateAPI, uiAPI) {
+export function createVideoInsertService(stateAPI, uiAPI, selectionAPI) {
     
     function insertVideo(url, cursorPos) {
         if (!url) {
@@ -15,14 +15,14 @@ export function createVideoInsertService(stateAPI, uiAPI) {
             return false;
         }
 
-        const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
+        const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
         if (!activeKey) return false;
 
         const areaState = stateAPI.get(activeKey);
         if (!areaState) return false;
 
         // 1. 위치 결정 최적화 (reduce 제거)
-        let pos = cursorPos || uiAPI.getLastValidPosition();
+        let pos = cursorPos || selectionAPI.getLastValidPosition();
         if (!pos) {
             const lastIdx = Math.max(0, areaState.length - 1);
             const lastLine = areaState[lastIdx];
@@ -68,7 +68,7 @@ export function createVideoInsertService(stateAPI, uiAPI) {
         
         // 5. 커서 복원 (브라우저 레이아웃 계산 후 실행되도록 rAF 적용)
         requestAnimationFrame(() => {
-            uiAPI.restoreCursor(nextCursorPos);
+            selectionAPI.restoreCursor(nextCursorPos);
         });
 
         return true;
