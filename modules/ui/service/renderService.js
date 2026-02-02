@@ -7,10 +7,14 @@ export function createRenderService({ rootId, rendererRegistry }) {
     };
 
     // 2. 공통 라인 엘리먼트 생성
-    const createLineElement = (lineData) => {
+    const createLineElement = (lineData, lineIndex = null) => {
         const tagName = getTagNameForLine(lineData);
         const el = document.createElement(tagName);
         el.className = "text-block";
+
+        if (lineIndex !== null) {
+            el.dataset.lineIndex = lineIndex;
+        }        
         return el;
     };
 
@@ -52,13 +56,15 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
         // 라인 엘리먼트가 없거나 태그가 다르면 교체
         if (!lineEl) {
-            lineEl = createLineElement(lineData);
+            lineEl = createLineElement(lineData, lineIndex);
             container.appendChild(lineEl);
         } else if (lineEl.tagName !== requiredTag) {
-            const newLineEl = createLineElement(lineData);
+            const newLineEl = createLineElement(lineData, lineIndex);
             container.replaceChild(newLineEl, lineEl);
             lineEl = newLineEl;
         }
+
+        lineEl.dataset.lineIndex = lineIndex;
 
         // 테이블 재사용 풀 확보 (비우기 전에 추출)
         const tablePool = externalPool || Array.from(lineEl.getElementsByClassName('chunk-table'));
@@ -73,6 +79,8 @@ export function createRenderService({ rootId, rendererRegistry }) {
         } else {
             this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
         }
+
+        syncLineIndexes(container);
     }
 
     /**
@@ -95,7 +103,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             }
 
             // 공통 속성 부여
-            el.dataset.index = chunkIndex;
+            el.dataset.index = chunkIndex; // 혹시몰라서 남김
             el.dataset.lineIndex = lineIndex;
             el.dataset.chunkIndex = chunkIndex;
             el.classList.add(`chunk-${chunk.type}`);
@@ -127,6 +135,38 @@ export function createRenderService({ rootId, rendererRegistry }) {
             this.renderLine(lineIndex, chunkData, targetKey);
         }
     }
+
+    /**
+     * DOM 기준으로 lineIndex / chunkIndex 재동기화
+     * ⚠️ 렌더링 아님 (dataset만 수정)
+     */
+    function syncLineIndexes(container) {
+        if (!container) return;
+
+        const lines = container.children;
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            const lineEl = lines[lineIndex];
+            if (!lineEl || !lineEl.classList.contains('text-block')) continue;
+
+            // 1️⃣ 라인 인덱스 재설정
+            lineEl.dataset.lineIndex = lineIndex;
+
+            // 2️⃣ 청크 인덱스 재설정
+            let chunkIndex = 0;
+
+            for (const child of lineEl.children) {
+                if (!child.classList.contains('chunk-text') &&
+                    !child.classList.contains('chunk-table') &&
+                    !child.dataset.chunkIndex) {
+                    continue;
+                }
+
+                child.dataset.lineIndex  = lineIndex;
+                child.dataset.chunkIndex = chunkIndex++;
+            }
+        }
+    }    
 
     return {
         render(state, targetKey) {
