@@ -4,10 +4,10 @@ import { normalizeCursorData } from "../../utils/cursorUtils.js";
 /**
  * 인라인 스타일(Bold, Italic 등) 적용 서비스 베이스 (최적화 버전)
  */
-export function createInlineServiceBase(stateAPI, uiAPI) {
+export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
-        const activeKeys = uiAPI.getActiveKeys();
-        const targets    = activeKeys.length > 0 ? activeKeys : [uiAPI.getLastActiveKey()].filter(Boolean);
+        const activeKeys = selectionAPI.getActiveKeys();
+        const targets    = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
 
         const updates                = [];
@@ -17,7 +17,7 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
             const currentState = stateAPI.get(activeKey);
             if (!currentState) return;
 
-            const domRanges = uiAPI.getDomSelection(activeKey);
+            const domRanges = selectionAPI.getDomSelection(activeKey);
             console.log("domRanges : ", domRanges);
             if (!domRanges || domRanges.length === 0) return;
 
@@ -63,7 +63,7 @@ export function createInlineServiceBase(stateAPI, uiAPI) {
         // 4. 다중 커서 복원
         if (allNormalizedPositions.length > 0 && options.saveCursor) {
             stateAPI.saveCursor(allNormalizedPositions); 
-            uiAPI.restoreMultiBlockCursor(allNormalizedPositions);
+            selectionAPI.restoreMultiBlockCursor(allNormalizedPositions);
         }
     }
     return { applyInline };

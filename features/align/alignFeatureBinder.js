@@ -5,10 +5,10 @@ import { createEditorAlignService } from '../align/editorAlignService.js'; // �
  * 📐 정렬 버튼 이벤트 바인딩 (최상위 컴포지션 레이어)
  * 이 함수는 Service를 초기화하고 이벤트 리스너를 연결합니다.
  */
-export function bindAlignButtons(stateAPI, uiAPI, { leftBtn, centerBtn, rightBtn }) {
+export function bindAlignButtons(stateAPI, uiAPI, selectionAPI, { leftBtn, centerBtn, rightBtn }) {
 
     // 정렬 Service 초기화
-    const { applyAlign } = createEditorAlignService(stateAPI, uiAPI);
+    const { applyAlign } = createEditorAlignService(stateAPI, uiAPI, selectionAPI);
 
     const onLeft   = () => applyAlign("left");
     const onCenter = () => applyAlign("center");

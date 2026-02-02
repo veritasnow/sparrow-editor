@@ -1,13 +1,13 @@
 import { EditorLineModel } from '../../model/editorLineModel.js'; 
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-export function createEditorAlignService(stateAPI, uiAPI) {
+export function createEditorAlignService(stateAPI, uiAPI, selectionAPI) {
 
     function applyAlign(alignType) {
-        const activeKey = uiAPI.getActiveKey() || uiAPI.getLastActiveKey();
+        const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
         if (!activeKey) return;
 
-        const domRanges = uiAPI.getDomSelection(activeKey);
+        const domRanges = selectionAPI.getDomSelection(activeKey);
         if (!domRanges || domRanges.length === 0) return;
 
         const currentState = stateAPI.get(activeKey); 
@@ -52,7 +52,7 @@ export function createEditorAlignService(stateAPI, uiAPI) {
         stateAPI.save(activeKey, newState);
 
         // 4. 커서 복원
-        const pos = uiAPI.getSelectionPosition();
+        const pos = selectionAPI.getSelectionPosition();
         if (pos) {
             const normalizedPos = normalizeCursorData({
                 ...pos,
@@ -60,7 +60,7 @@ export function createEditorAlignService(stateAPI, uiAPI) {
             }, activeKey);
             
             stateAPI.saveCursor(normalizedPos);
-            uiAPI.restoreCursor(normalizedPos);
+            selectionAPI.restoreCursor(normalizedPos);
         }
     }
 

@@ -1,13 +1,13 @@
 import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../../constants/styleConstants.js';
 
-export function createAnalyzeService(stateAPI, uiAPI) {
+export function createAnalyzeService(stateAPI, selectionAPI) {
   
   /**
    * [Main] 분석 로직 최적화
    * 루프를 최소화하고 "통일성 확인"과 "데이터 수집"을 한 번의 패스로 처리합니다.
    */
   function analyzeSelection() {
-    const activeKeys = uiAPI.getActiveKeys(); 
+    const activeKeys = selectionAPI.getActiveKeys(); 
     if (!activeKeys?.length) return getEmptyResult();
 
     // 분석을 위한 상태 변수
@@ -21,7 +21,7 @@ export function createAnalyzeService(stateAPI, uiAPI) {
 
     // 1. 활성 컨테이너 순회
     for (const key of activeKeys) {
-      const ranges = uiAPI.getDomSelection(key);
+      const ranges = selectionAPI.getDomSelection(key);
       const state = stateAPI.get(key);
       if (!state) continue;
 
@@ -58,7 +58,7 @@ export function createAnalyzeService(stateAPI, uiAPI) {
       } 
       // [Case B] 커서만 있는 경우
       else {
-        const context = uiAPI.getSelectionContext();
+        const context = selectionAPI.getSelectionContext();
         if (context?.containerId === key) {
           const line = state[context.lineIndex];
           if (line) {

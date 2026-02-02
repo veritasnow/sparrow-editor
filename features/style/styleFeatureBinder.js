@@ -1,6 +1,6 @@
 import { createEditorStyleService } from "./editorStyleService.js";
 
-export function bindStyleButtons(stateAPI, uiAPI, elements) {
+export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
     const {
         boldBtn,
         italicBtn,
@@ -10,7 +10,7 @@ export function bindStyleButtons(stateAPI, uiAPI, elements) {
     } = elements;
 
     const { applyStyle, applyStyleValue } =
-        createEditorStyleService(stateAPI, uiAPI);
+        createEditorStyleService(stateAPI, uiAPI, selectionAPI);
 
     // ───────────────── handlers ─────────────────
 

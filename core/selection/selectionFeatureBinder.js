@@ -4,8 +4,8 @@ import { createRangeService } from './service/binderSerivce/rangeService.js';
 import { createDragService } from './service/binderSerivce/dragService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements) {
-    const selectionService = createAnalyzeService(stateAPI, uiAPI);
+export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarElements) {
+    const selectionService = createAnalyzeService(stateAPI, selectionAPI);
     const uiService        = createSelectionUIService(toolbarElements);
     const rangeService     = createRangeService();
     const dragService      = createDragService(editorEl.id);
@@ -58,7 +58,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
         const { selectedCells, activeId } = dragService.mouseDragCalculate(e, startTD);
 
         // 2. 실시간 브라우저 Selection 데이터 획득 (UI API 사용)
-        const domRanges  = uiAPI.getDomSelection(activeId);
+        const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
 
         // 3. 시각화 호출 (Range 서비스 사용)
@@ -174,7 +174,7 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     window.addEventListener('mouseup', () => {
         if (isDragging) scheduleUpdate();
-        uiAPI.refreshActiveKeys();
+        selectionAPI.refreshActiveKeys();
         isDragging = false;
         startTD = null;
     });
@@ -185,8 +185,8 @@ export function bindSelectionFeature(stateAPI, uiAPI, editorEl, toolbarElements)
 
     // Selection 변경 시 셀 상태 동기화 (가드 로직 포함)
     document.addEventListener('selectionchange', () => {
-        if (uiAPI.getIsRestoring()) {
-            uiAPI.setIsRestoring(false); 
+        if (selectionAPI.getIsRestoring()) {
+            selectionAPI.setIsRestoring(false); 
             return; 
         }
 

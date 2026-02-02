@@ -1,8 +1,8 @@
 import { toggleInlineStyle, applyStylePatch } from "./styleUtils.js";
 import { createInlineServiceBase } from "../inline/inlineServiceBase.js";
 
-export function createEditorStyleService(stateAPI, uiAPI) {
-    const { applyInline } = createInlineServiceBase(stateAPI, uiAPI);
+export function createEditorStyleService(stateAPI, uiAPI, selectionAPI) {
+    const { applyInline } = createInlineServiceBase(stateAPI, uiAPI, selectionAPI);
 
     /**
      * Bold / Italic / Underline 등 토글 스타일용

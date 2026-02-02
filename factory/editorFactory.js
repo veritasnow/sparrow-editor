@@ -171,6 +171,15 @@ export function createEditorFactory() {
       shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),
       insertLine                  : (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
       removeLine                  : (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
+      // DOM -> Model 파싱 브릿지
+      parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
+      extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
+    };
+
+    /**
+     * 💡 uiAPI: 모든 렌더링 관련 함수가 targetKey를 선택적으로 받도록 개선
+     */
+    const selectionAPI = {
       restoreCursor               : (pos) => domSelection.restoreCursor(pos),
       restoreMultiBlockCursor     : (positions) => domSelection.restoreMultiBlockCursor(positions),
       getDomSelection             : (targetKey) => domSelection.getDomSelection(targetKey),
@@ -181,14 +190,13 @@ export function createEditorFactory() {
       getActiveKey                : () => domSelection.getActiveKey(),
       getActiveKeys               : () => domSelection.getActiveKeys(),
       getLastActiveKey            : () => domSelection.getLastActiveKey(),
-      // DOM -> Model 파싱 브릿지
-      parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
-      extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
       getSelectionContext         : () => domSelection.getSelectionContext(),
       getIsRestoring              : () => domSelection.getIsRestoring(),
       setIsRestoring              : (val) => domSelection.setIsRestoring(val),
       refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
     };
+
+
 
     const editorAPI = {
       getToolbarButton(name) {
@@ -213,7 +221,7 @@ export function createEditorFactory() {
         const currentContent = stateAPI.get(MAIN_CONTENT_KEY);
         uiAPI.render(currentContent, MAIN_CONTENT_KEY);
         
-        uiAPI.restoreCursor({
+        selectionAPI.restoreCursor({
           containerId : MAIN_CONTENT_KEY,
           lineIndex   : 0,
           anchor: {
@@ -262,13 +270,13 @@ export function createEditorFactory() {
         };
 
         // Selection 상태에 따른 버튼 활성화 바인딩
-        bindSelectionFeature(stateAPI, uiAPI, editorEl, { ...styleToolbar, ...alignToolbar });
+        bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
 
         // 스타일 적용 버튼 이벤트 바인딩
-        const styleDisposer = bindStyleButtons(stateAPI, uiAPI, styleToolbar);
+        const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
         if (styleDisposer) disposers.push(styleDisposer);
 
-        const alignDisposer = bindAlignButtons(stateAPI, uiAPI, alignToolbar);
+        const alignDisposer = bindAlignButtons(stateAPI, uiAPI, selectionAPI, alignToolbar);
         if (alignDisposer) disposers.push(alignDisposer);
 
         // E. 익스텐션(Video, Image, Table 등) 실행
