@@ -128,7 +128,7 @@ extensions/image
 ## 📌 TODO
 
 * [ ] 복사 → 붙여넣기 : 외부 DOM을 Editor의 Line / Chunk 구조로 변환하는 로직(초안완료) 작업중
-* [ ] KeyProcessor 로직이 비대해짐 -> 로직 분리(우선순위로 잡을것!!)
+* [ ] 부분렌더링은 v.0.2.0에서 작업중 -> v.0.1.0은 전체 렌더링으로 구현중
 * [ ] selection 모듈화작업예정
 
 ---
