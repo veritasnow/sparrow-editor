@@ -21,11 +21,6 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 import { registerDefaultChunks } from './chunkRegistryFactory.js';
 import { createEditorAPI } from './editorApiFactory.js';
 
-
-import { createScrollRenderService } from '../core/scroll/scrollRenderService.js';
-import { bindScrollEvent } from '../core/scroll/scrollEventBinder.js';
-
-
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
  */
@@ -167,21 +162,7 @@ export function createEditorFactory() {
             composing: inputApp.isComposing(),
           };
         };
-        /*
-        // A. 초기 렌더링 이후
-        const scrollRenderService = createScrollRenderService({
-          rootEl: editorEl,
-          stateAPI,
-          uiAPI,
-          contentKey: MAIN_CONTENT_KEY,
-          getEditorContext: editorContextSupplier
-        });     
-        scrollRenderService.enable(); // 초기화 시점에서 부분 렌더링 활성화
 
-        // 스크롤 이벤트 바인딩
-        const unbindScroll = bindScrollEvent(editorEl, scrollRenderService);
-        disposers.push(unbindScroll);
-        */
         // 스타일 적용 버튼 이벤트 바인딩
         const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
         if (styleDisposer) disposers.push(styleDisposer);

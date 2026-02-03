@@ -130,7 +130,7 @@ function applyEnterResult(activeKey, result, { state, ui, domSelection }) {
 
     // 2. 🔥 [최적화] 인덱스 직접 접근 및 빠른 테이블 추출
     // 분할 전 현재 라인 엘리먼트를 찾습니다.
-    const currentLineEl = container.children[lineIndex];
+    const currentLineEl = container.querySelector(`[data-line-index="${lineIndex}"]`);
     
     // 현재 줄에서 뒷줄로 넘어갈 테이블들을 담을 풀입니다.
     // getElementsByClassName은 querySelectorAll보다 월등히 빠릅니다.

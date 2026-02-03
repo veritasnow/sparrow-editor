@@ -1,8 +1,9 @@
-    /* ───────── 기본 에디터 영역 ───────── */
+   /* ───────── 기본 에디터 영역 ───────── */
      .sparrow-contents {
       border: 1px solid #ccc;
       padding: 10px;
-      height: 100%;
+      min-height: 200px;
+      height: 500px;
       outline: none;
       position: relative;
       background: #fff;
@@ -499,32 +500,4 @@
     box-shadow: inset 0 0 0 1px rgba(35, 131, 226, 0.1);
     pointer-events: none;
     z-index: 11;
-}
-
-
-
-
-
-
-
-
-
-.sparrow-contents {
-    display: block !important;    /* 가끔 flex가 걸려있으면 높이가 멋대로 늘어납니다 */
-    overflow-y: auto !important; /* 내용이 넘치면 무조건 스크롤바 생성 */
-    
-    /* 중요: box-sizing이 border-box여야 패딩이 높이에 포함됩니다 */
-    box-sizing: border-box; 
-    position: relative;
-}
-
-
-/* 1. 스크롤바를 담당하는 부모 */
-.sparrow-scroll-viewport {
-  position: relative;
-  height: 500px; /* 에디터의 고정 노출 높이 */
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: #fff;
-  scrollbar-width: thin;
 }

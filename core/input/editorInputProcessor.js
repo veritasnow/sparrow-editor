@@ -50,7 +50,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         // 2. 물리적 DOM 분리 실행 (보내주신 HTML 구조를 만드는 핵심)
         const container = document.getElementById(activeKey);
-        const originalLineEl = container?.children[lineIndex];
+        const originalLineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
         
         // 테이블 소실 방지를 위한 Pool
         const movingTablePool = originalLineEl 
@@ -191,8 +191,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     }
 
     function saveFinalState(key, lineIndex, updatedLine, restoreData) {
-        console.log("lineIndexlineIndexlineIndex : ", lineIndex);
-        console.log("updatedLineupdatedLineupdatedLine : ", updatedLine);
         const currentState = state.getState(key);
         const nextState = [...currentState];
         nextState[lineIndex] = updatedLine;
@@ -203,7 +201,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
     function executeRendering(updatedLine, lineIndex, flags, restoreData, targetKey) {
         const container = document.getElementById(targetKey);
-        const lineEl = container?.children[lineIndex];
+        const lineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
         
         // 최적화: DOM 텍스트와 모델 텍스트가 이미 같다면 렌더링 스킵 (커서 튐 방지)
         if (flags.isChunkRendering && !flags.isNewChunk && restoreData) {
