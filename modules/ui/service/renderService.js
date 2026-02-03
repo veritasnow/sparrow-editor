@@ -126,7 +126,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
      */
     function renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
         const container = getTargetElement(targetKey);
-        const lineEl = container?.children[lineIndex];
+        //const lineEl = container?.children[lineIndex];
+        const lineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
+
         if (!lineEl) return;
 
         // dataset.index를 이용해 정확한 청크 엘리먼트 탐색
@@ -220,14 +222,16 @@ export function createRenderService({ rootId, rendererRegistry }) {
             const newEl = createLineElement(lineData);
             newEl.style.textAlign = align;
             
-            const target = container.children[lineIndex];
+            //const target = container.children[lineIndex];
+            const target = container?.querySelector(`[data-line-index="${lineIndex}"]`);
             if (target) container.insertBefore(newEl, target);
             else container.appendChild(newEl);
         },
 
         removeLine(lineIndex, targetKey) {
             const container = getTargetElement(targetKey);
-            const target = container?.children[lineIndex];
+            //const target = container?.children[lineIndex];
+            const target = container?.querySelector(`[data-line-index="${lineIndex}"]`);
             if (target) container.removeChild(target);
         },
 

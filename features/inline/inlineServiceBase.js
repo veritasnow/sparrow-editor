@@ -45,7 +45,8 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
                 // 🔥 [최적화] 전체 DOM 스캔 제거. 인덱스로 즉시 접근
                 update.affectedLineIndices.forEach((lineIndex) => {
                     const lineData = update.newState[lineIndex];
-                    const lineEl = container.children[lineIndex]; // O(1) 접근
+                    //const lineEl = container.children[lineIndex]; // O(1) 접근
+                    const lineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
                     
                     if (!lineEl) return;
 
