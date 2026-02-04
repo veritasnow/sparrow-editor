@@ -1,7 +1,7 @@
 /**
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
-export function createRestoreCursorService() {
+export function createRestoreCursorService(getActiveContainer) {
     
     let isRestoringCursor = true;
 

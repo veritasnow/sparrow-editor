@@ -11,7 +11,6 @@ export function createSelectionService({ root }) {
     // 외부 서비스 주입
     const keyService     = createKeyService(root);
     const rangeService   = createRangeService(root);
-    const restoreService = createRestoreCursorService();    
 
     function getActiveKeys() {
         return cacheActiveKeys;
@@ -155,7 +154,8 @@ export function createSelectionService({ root }) {
         return 'range';
     }
 
-
+    const restoreService = createRestoreCursorService(getActiveContainer);    
+    
     return { 
         getActiveKeys,
         getSelectionPosition, 
