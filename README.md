@@ -2,9 +2,7 @@
 
 상태 기반(State-driven)으로 동작하는 **바닐라 JavaScript 웹 에디터**입니다.
 **React와 유사하게 상태(State)와 렌더링(Rendering)을 분리**하는 것을 목표로 만드는 중입니다.
-v0.1.0은 가상스크롤링이 적용되어있지 않습니다.
-
-가상스크롤링은 https://github.com/veritasnow/sparrow-editor-v0.2.0 에서 작업중(블록지정 및 복구, 재귀렌더링 미적용)
+이 버전은 가상스크롤링이 적용되어있지 않습니다.
 ---
 
 ## ✨ 특징 (Features)
