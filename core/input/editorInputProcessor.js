@@ -6,12 +6,14 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
     /**
      * [Main Entry] 입력 이벤트 발생 시 호출
-     * @param {boolean} skipRender - true일 경우 일반 텍스트 렌더링을 스킵 (IME 대응)
      */
     function processInput(skipRender = false) {
         const activeKey = domSelection.getActiveKey() || defaultKey;
         const selection = domSelection.getSelectionContext();
         if (!selection || selection.lineIndex < 0) return;
+
+        // 테이블 셀 내부인 경우 containerId가 다를 수 있으므로 보정
+        const containerId = selection.containerId || activeKey;
 
         ui.ensureFirstLine(activeKey); 
 
@@ -21,46 +23,42 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         const result = calculateUpdate(currentLine, selection, activeKey);
         if (!result || !result.flags?.hasChange) return;
 
-        // 🔥 [수정] 테이블 분리는 skipRender 여부와 상관없이 무조건 DOM을 쪼갭니다.
-        // 그래야 글자 입력 시 즉시 라인이 나뉩니다.
+        // 라인 분할(Split) 발생 시 처리
         if (result.isSplit) {
             handleSplitUpdate(activeKey, selection.lineIndex, result, currentState); 
             return;
         }
 
-        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, result.restoreData);
+        // 결과 데이터에 컨테이너 정보 주입
+        const restoreDataWithId = { ...result.restoreData, containerId };
+        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, restoreDataWithId);
         
-        // 일반 텍스트 입력(분리X)인 경우에만 한글 조합 등을 고려해 렌더링 스킵
         if (skipRender) return;
 
-        const finalRestoreData = normalizeCursorData(result.restoreData, activeKey);
+        const finalRestoreData = normalizeCursorData(restoreDataWithId, activeKey);
         executeRendering(result.updatedLine, selection.lineIndex, result.flags, finalRestoreData, activeKey);
     }
 
     /**
-     * 라인 분할(Split) 전용 처리 - DOM 구조를 물리적으로 쪼갬
+     * 라인 분할(Split) 전용 처리
      */
     function handleSplitUpdate(activeKey, lineIndex, result, currentState) {
         const { separatedLines, restoreData } = result;
 
-        // 1. 모델 상태 업데이트
         const nextState = [...currentState];
         nextState.splice(lineIndex, 1, ...separatedLines);
         state.saveEditorState(activeKey, nextState);
 
-        // 2. 물리적 DOM 분리 실행 (보내주신 HTML 구조를 만드는 핵심)
         const container = document.getElementById(activeKey);
-        const originalLineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
+        // :scope를 사용하여 현재 에디터 레벨의 직계 자식만 타겟팅 (중첩 인덱스 방지)
+        const originalLineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
         
-        // 테이블 소실 방지를 위한 Pool
         const movingTablePool = originalLineEl 
             ? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
             : [];
 
-        // 첫 번째 라인 업데이트 (예: '냠' 또는 'ㅁ'이 들어있는 라인)
         ui.renderLine(lineIndex, separatedLines[0], activeKey);
 
-        // 분리된 나머지 라인들 (예: 테이블 라인, 그 뒤의 빈 라인 등) 삽입 및 렌더링
         for (let i = 1; i < separatedLines.length; i++) {
             const targetIdx = lineIndex + i;
             const lineData = separatedLines[i];
@@ -71,24 +69,24 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         movingTablePool.length = 0; 
 
-        // 3. 커서 복구
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);
         if (finalRestoreData) {
-            // RAF를 사용하여 브라우저가 새로 생성된 DOM 노드들을 완전히 인식한 후 커서를 잡게 함
+            // 새 DOM 노드가 안정화된 후 커서 복원
             requestAnimationFrame(() => {
                 domSelection.restoreCursor(finalRestoreData);
             });
         }
     }
 
+    /**
+     * 업데이트 로직 계산
+     */
     function calculateUpdate(currentLine, selection, activeKey) {
         const { dataIndex, activeNode, cursorOffset, lineIndex, container, range, parentDom } = selection;
         let result = null;
         let flags = { isNewChunk: false, isChunkRendering: false };
 
-        // 현재 포커스된 노드가 텍스트 노드일 때
         if (activeNode && activeNode.nodeType === Node.TEXT_NODE) {
-            // [최적화] 모델의 텍스트와 실제 DOM의 텍스트가 완벽히 같다면 아무것도 안 함 - 한번 더 검증할 것...!!
             if (currentLine.chunks[dataIndex]?.text === activeNode.textContent) {
                 return { flags: { hasChange: false } }; 
             }
@@ -105,26 +103,20 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         if (!result) {
             const rebuild = ui.parseLineDOM(parentDom, currentLine.chunks, container, cursorOffset, lineIndex);
 
-            // 💡 테이블 분리가 감지된 경우 (shouldSplit)
             if (rebuild.shouldSplit) {
                 const separatedLines = splitChunksByTable(rebuild.newChunks, currentLine.align);
-                
-                // 1. 테이블 청크의 위치를 가져옴
                 const tableIndex = rebuild.newChunks.findIndex(chunk => chunk.type === 'table');
                 const cursorChunkIndex = rebuild.restoreData.chunkIndex;
 
-                // 2. 테이블 뒤에서 입력한 경우에만 lineIndex를 +1
-                // separatedLines가 [테이블, 텍스트] 순서로 쪼개졌을 것이므로 텍스트는 다음 라인(Index+1)
                 if (tableIndex !== -1 && cursorChunkIndex > tableIndex) {
                     rebuild.restoreData.lineIndex = rebuild.restoreData.lineIndex + 1;
-                    // 테이블 뒤에 생긴 새 라인은 [텍스트]만 가지므로 chunkIndex는 0
                     rebuild.restoreData.chunkIndex = 0;
                 } 
 
                 return {
                     isSplit: true,
                     separatedLines,
-                    restoreData: { ...rebuild.restoreData, containerId: activeKey },
+                    restoreData: { ...rebuild.restoreData, containerId: selection.containerId || activeKey },
                     flags: { hasChange: true }
                 };
             }
@@ -132,7 +124,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             if (rebuild.newChunks !== currentLine.chunks) {
                 result = {
                     updatedLine: EditorLineModel(currentLine.align, rebuild.newChunks),
-                    restoreData: { ...rebuild.restoreData, containerId: activeKey }
+                    restoreData: { ...rebuild.restoreData, containerId: selection.containerId || activeKey }
                 };
                 flags.isNewChunk = true;
             }
@@ -142,19 +134,18 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         return { ...result, flags: { ...flags, hasChange: true } };
     }
 
+    /**
+     * 테이블 청크 기준 라인 분리
+     */
     function splitChunksByTable(chunks, align) {
         const lines = [];
         let temp = [];
 
         const flushTemp = () => {
             if (temp.length > 0) {
-                // ✨ [핵심] 인접한 텍스트 청크가 있다면 하나로 합침 (중복 방지)
                 const mergedChunks = temp.reduce((acc, current) => {
                     const last = acc[acc.length - 1];
                     if (last && last.type === 'text' && current.type === 'text') {
-                        // 스타일이 같다면 텍스트만 합침, 다르다면 현재 것을 우선시하거나 교체
-                        // 여기서는 보통 뒤에 들어온 텍스트가 최신이므로 중복을 제거해야 함
-                        // 만약 완전히 중복된 내용이 들어온다면 current만 유지
                         if (current.text.includes(last.text)) {
                             last.text = current.text; 
                         } else {
@@ -199,15 +190,21 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         if (normalized) state.saveCursorState(normalized);
     }
 
+    /**
+     * 최종 렌더링 실행
+     */
     function executeRendering(updatedLine, lineIndex, flags, restoreData, targetKey) {
-        const container = document.getElementById(targetKey);
-        const lineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
+        // 복원 데이터의 컨테이너(에디터 혹은 TD)를 타겟으로 설정
+        const targetContainerId = restoreData?.containerId || targetKey;
+        const container = document.getElementById(targetContainerId);
         
-        // 최적화: DOM 텍스트와 모델 텍스트가 이미 같다면 렌더링 스킵 (커서 튐 방지)
+        // 해당 컨테이너의 직계 자식 라인만 타겟팅
+        const lineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+        
         if (flags.isChunkRendering && !flags.isNewChunk && restoreData) {
             const chunkIndex = restoreData.anchor.chunkIndex;
             const chunk = updatedLine.chunks[chunkIndex];
-            const chunkEl = lineEl?.querySelector(`[data-index="${chunkIndex}"]`);
+            const chunkEl = lineEl?.querySelector(`:scope > [data-index="${chunkIndex}"]`);
             if (chunk?.type === 'text' && chunkEl && chunkEl.textContent === chunk.text) {
                 return;
             }
@@ -216,15 +213,15 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
 
         if (flags.isNewChunk) {
-            ui.renderLine(lineIndex, updatedLine, targetKey, tablePool);
+            ui.renderLine(lineIndex, updatedLine, targetContainerId, tablePool);
             if (restoreData) domSelection.restoreCursor(restoreData);
         } else if (flags.isChunkRendering && restoreData) {
             const chunkIndex = restoreData.anchor.chunkIndex;
             const chunk = updatedLine.chunks[chunkIndex];
             if (!chunk || chunk.type !== 'text') {
-                ui.renderLine(lineIndex, updatedLine, targetKey, tablePool);
+                ui.renderLine(lineIndex, updatedLine, targetContainerId, tablePool);
             } else {
-                ui.renderChunk(lineIndex, chunkIndex, chunk, targetKey);
+                ui.renderChunk(lineIndex, chunkIndex, chunk, targetContainerId);
             }
             domSelection.restoreCursor(restoreData);
         }
@@ -232,7 +229,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
     return { 
         processInput,
-        // ✨ [수정] 외부(Enter 키 처리)에서 강제 동기화를 위해 노출
         syncInput: () => processInput(true) 
     };
 }

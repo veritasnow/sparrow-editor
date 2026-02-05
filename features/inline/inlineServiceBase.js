@@ -7,10 +7,10 @@ import { normalizeCursorData } from "../../utils/cursorUtils.js";
 export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
         const activeKeys = selectionAPI.getActiveKeys();
-        const targets    = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
+        const targets = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
 
-        const updates                = [];
+        const updates = [];
         const allNormalizedPositions = [];
 
         targets.forEach((activeKey) => {
@@ -18,14 +18,12 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
             if (!currentState) return;
 
             const domRanges = selectionAPI.getDomSelection(activeKey);
-            console.log("domRanges : ", domRanges);
             if (!domRanges || domRanges.length === 0) return;
 
             const ranges = getRanges(currentState, domRanges);
             const newState = updateFn(currentState, ranges);
 
             if (newState && newState !== currentState) {
-                // 🔥 [최적화] 중복 줄 번호 제거 (한 줄에 여러 선택 영역이 있을 경우 대비)
                 const affectedLineIndices = Array.from(new Set(ranges.map(r => r.lineIndex)));
                 updates.push({ key: activeKey, newState, affectedLineIndices });
             }
@@ -42,24 +40,24 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
                 const container = document.getElementById(update.key);
                 if (!container) return;
 
-                // 🔥 [최적화] 전체 DOM 스캔 제거. 인덱스로 즉시 접근
+                // 🔥 [최적화 및 격리]
                 update.affectedLineIndices.forEach((lineIndex) => {
                     const lineData = update.newState[lineIndex];
-                    //const lineEl = container.children[lineIndex]; // O(1) 접근
-                    const lineEl = container?.querySelector(`[data-line-index="${lineIndex}"]`);
+                    
+                    // 🚩 :scope > 를 사용하여 현재 컨테이너(update.key)의 직계 라인만 찾습니다.
+                    // 테이블 셀 안의 텍스트 수정 시, 바깥쪽 에디터의 동일 인덱스 라인을 건드리지 않습니다.
+                    const lineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
                     
                     if (!lineEl) return;
 
-                    // 💡 테이블 유지 로직 최적화 (getElementsByClassName 사용)
+                    // 해당 라인 내의 테이블들을 안전하게 보관 (풀 추출)
                     const tablePool = Array.from(lineEl.getElementsByClassName('chunk-table'));
                     
-                    // 해당 라인만 정밀 렌더링
+                    // 해당 라인만 정밀 렌더링 (targetKey를 넘겨 uiAPI도 격리 탐색하게 함)
                     uiAPI.renderLine(lineIndex, lineData, update.key, tablePool);
                 });
             });
         }
-
-        console.log('allNormalizedPositions:', allNormalizedPositions);
 
         // 4. 다중 커서 복원
         if (allNormalizedPositions.length > 0 && options.saveCursor) {

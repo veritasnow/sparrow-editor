@@ -75,18 +75,6 @@ export function createSelectionService({ root }) {
         };
     }
 
-    /*
-    function getLineIndex(el) {
-        if (!el) return -1;
-        let index = 0;
-        let prev = el.previousElementSibling;
-        while (prev) {
-            if (prev.classList.contains('text-block')) index++;
-            prev = prev.previousElementSibling;
-        }
-        return index;
-    }
-    */
     function getLineIndex(el) {
         if (!el) return -1;
         // data-line-index 값을 읽어서 숫자로 변환

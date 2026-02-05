@@ -35,25 +35,25 @@ export function createRangeService() {
         console.log("isSkipVisual : ", isSkipVisual);
  
         if(isSkipVisual) {
-            // [핵심 로직] 단일 셀 내부 정밀 제어
             const targetTD = selectedCells[0];
-            
-            // 일단 해당 셀 자체는 블록이 아니므로 클래스 제거
             targetTD.classList.remove('is-selected', 'is-not-selected');
 
             if (normalized && normalized.ranges) {
                 normalized.ranges.forEach(range => {
-                    // 해당 라인이 테이블을 포함하고 있다면
                     if (range.isTableLine) {
-                        // 해당 container(td) 안에서 해당 lineIndex를 가진 요소를 찾음
-                        const lineEl = targetTD.querySelector(`[data-line-index="${range.lineIndex}"]`);
+                        // 🔥 [수정] :scope > 를 사용하여 targetTD의 직계 자식 라인만 탐색
+                        // 이렇게 해야 중첩된 테이블 내부의 라인을 건드리지 않습니다.
+                        const lineEl = targetTD.querySelector(`:scope > [data-line-index="${range.lineIndex}"]`);
                         
                         if (lineEl) {
-                            // 라인 자체가 테이블이거나, 내부에 테이블이 있는 경우 처리
-                            const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector('.se-table');
+                            // 라인 자체가 테이블이거나, 내부에 테이블이 있는 경우
+                            // .se-table 역시 직계 자식인 경우만 찾도록 제한하는 것이 안전합니다.
+                            const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector(':scope > .se-table');
                             
                             if (childTable) {
                                 // 테이블 내부의 모든 셀에 is-selected 적용
+                                // (이 부분은 하위의 모든 셀을 잡는 것이 의도라면 유지, 
+                                // 직계 셀만 잡는 것이 의도라면 :scope 활용)
                                 const subCells = childTable.querySelectorAll('.se-table-cell');
                                 subCells.forEach(subCell => {
                                     subCell.classList.add('is-selected');
@@ -63,7 +63,7 @@ export function createRangeService() {
                         }
                     }
                 });
-            }            
+            }       
         } else {
             // 1. 현재 드래그 중인 레벨의 메인 테이블 찾기
             const table = selectedCells[0].closest('.se-table');
