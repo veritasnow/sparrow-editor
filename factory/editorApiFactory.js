@@ -7,22 +7,14 @@ export function createEditorAPI({
 }) {
 
     /* ─────────────────────────────
-    * stateAPI
+    * stateAPI (생략 없음)
     * ───────────────────────────── */
     const stateAPI = {
         get           : (key = MAIN_CONTENT_KEY) => state.getState(key),
         save          : (key, data, options = { saveHistory: true }) => {
-        if (data === undefined) {
-            state.saveEditorState(MAIN_CONTENT_KEY, data, options);
-        } else {
-            state.saveEditorState(key, data, options);
-        }
+            state.saveEditorState(data === undefined ? MAIN_CONTENT_KEY : key, data, options);
         },
-        // 💡 인라인 서비스에서 호출할 배치 저장 API 추가
-        saveBatch     : (updates, options = { saveHistory: true }) => {
-        // updates: [{ key, newState, ranges }, ...] 형태의 배열을 기대함
-        state.saveEditorBatchState(updates, options);
-        },      
+        saveBatch     : (updates, options = { saveHistory: true }) => state.saveEditorBatchState(updates, options),      
         saveCursor    : (cursor) => state.saveCursorState(cursor),
         getCursor     : () => state.getCursor(),
         undo          : () => state.undo(),
@@ -32,29 +24,67 @@ export function createEditorAPI({
         getLineRange  : (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
     };
 
-
     /* ─────────────────────────────
-    * uiAPI
+    * uiAPI (renderLine 재귀 추가)
     * ───────────────────────────── */
     const uiAPI = {
-        render                      : (data, key = MAIN_CONTENT_KEY) => ui.render(data, key),
-        renderLine                  : (i, d, key = MAIN_CONTENT_KEY, p = null) => ui.renderLine(i, d, key, p),
+        /**
+         * 1. 딥 렌더링 (전체 컨테이너 동기화)
+         */
+        render: function(data, key = MAIN_CONTENT_KEY) {
+            ui.render(data, key);
+            this._renderSubTables(data);
+        },
+
+        /**
+         * 2. 딥 라인 렌더링 (특정 라인 및 하위 테이블 동기화)
+         */
+        renderLine: function(lineIndex, lineData, key = MAIN_CONTENT_KEY, pool = null) {
+            // 해당 라인 기본 렌더링 실행
+            ui.renderLine(lineIndex, lineData, key, pool);
+
+            // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
+            this._renderSubTables([lineData]);
+        },
+
+        /**
+         * 내부 헬퍼: 라인 목록을 순회하며 하위 테이블 셀들을 재귀 렌더링
+         */
+        _renderSubTables: function(lines) {
+            if (!lines || !Array.isArray(lines)) return;
+
+            lines.forEach(line => {
+                line.chunks?.forEach(chunk => {
+                    if (chunk.type === 'table' && chunk.data) {
+                        // 테이블의 모든 셀(td)을 1차원 배열로 펼쳐서 순회
+                        chunk.data.flat().forEach(cell => {
+                            if (cell && cell.id) {
+                                const cellState = stateAPI.get(cell.id);
+                                if (cellState) {
+                                    // 하위 셀 컨테이너에 대해 다시 딥 렌더링 호출
+                                    this.render(cellState, cell.id);
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        },
+
         renderChunk                 : (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
         ensureFirstLine             : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLine(key),
         shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),
         insertLine                  : (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
         removeLine                  : (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
-        // DOM -> Model 파싱 브릿지
         parseLineDOM                : (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
         extractTableDataFromDOM     : (tableEl) => ui.extractTableDataFromDOM(tableEl),
-        // 부분렌더링
         partialRenderOnScroll       : (range, editorState, editorContext) => ui.partialRenderOnScroll(range, editorState, editorContext),
-        forceFullRender             : (editorState) => ui.editorState(editorState),
+        forceFullRender             : (editorState) => ui.render(editorState), // 오타 수정: ui.render
         resetPartialRender          : () => ui.resetPartialRender(),
     };
 
     /* ─────────────────────────────
-    * selectionAPI
+    * selectionAPI (동일)
     * ───────────────────────────── */
     const selectionAPI = {
         restoreCursor               : (pos) => domSelection.restoreCursor(pos),
@@ -74,9 +104,5 @@ export function createEditorAPI({
         getSelectionMode            : () => domSelection.getSelectionMode(),
     };
 
-  return {
-    stateAPI,
-    uiAPI,
-    selectionAPI
-  };
+  return { stateAPI, uiAPI, selectionAPI };
 }
