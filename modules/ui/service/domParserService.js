@@ -1,10 +1,7 @@
 export function createDOMParseService() {
     
     /**
-     * [최적화 포인트]
-     * 1. Array.from 제거: childNodes를 직접 for-loop로 순회하여 메모리 할당 방지
-     * 2. textBuffer 최적화: 텍스트 노드가 연속될 때만 결합
-     * 3. dataset 직접 참조: parseInt와 dataset 접근 속도 개선
+     * 라인 DOM을 분석하여 데이터 모델(Chunks)로 변환
      */
     function parseLineDOM(lineEl, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
         const newChunks = [];
@@ -18,9 +15,11 @@ export function createDOMParseService() {
         for (let i = 0; i < len; i++) {
             const node = children[i];
 
-            if (node.nodeType === 3) { // Node.TEXT_NODE
+            // 1. 텍스트 노드 처리
+            if (node.nodeType === 3) { 
                 textBuffer += node.textContent;
                 
+                // 커서 위치 파악 (텍스트 노드 직접 비교)
                 if (node === selectionContainer) {
                     restoreData = { 
                         lineIndex, 
@@ -28,55 +27,82 @@ export function createDOMParseService() {
                         offset: cursorOffset 
                     };
                 }
-            } else if (node.nodeType === 1) { // Node.ELEMENT_NODE
+            } 
+            // 2. 엘리먼트 노드 처리 (span.chunk-text, table.se-table 등)
+            else if (node.nodeType === 1) { 
                 if (textBuffer.length > 0) {
                     newChunks.push({ type: 'text', text: textBuffer, style: {} });
                     textBuffer = '';
                 }
 
-                // 테이블 및 기타 청크 판단 로직 통합
+                const isTable = node.tagName === 'TABLE' || node.classList.contains('chunk-table');
                 const oldIndexStr = node.getAttribute('data-index');
+                
                 if (oldIndexStr !== null) {
                     const oldIndex = Number(oldIndexStr);
-                    const existingChunk = currentLineChunks[oldIndex];
+                    // 🔥 [안전장치] 현재 라인의 원본 데이터와 인덱스가 일치하는지 확인
+                    const existingChunk = currentLineChunks && currentLineChunks[oldIndex];
+                    
                     if (existingChunk) {
-                        if (existingChunk.type === 'table') hasTable = true;
-                        newChunks.push(existingChunk);
+                        if (isTable) {
+                            hasTable = true;
+                            // 테이블인 경우 최신 DOM 상태를 반영하여 데이터 업데이트
+                            newChunks.push({ 
+                                ...existingChunk, 
+                                ...extractTableDataFromDOM(node) 
+                            });
+                        } else {
+                            newChunks.push(existingChunk);
+                        }
                     }
-                } else if (node.tagName === 'TABLE') {
-                    // data-index가 없는 신규 테이블 대응
+                } else if (isTable) {
+                    // 인덱스가 없는 신규 테이블
                     hasTable = true;
-                    // 신규 테이블 파싱 로직 호출 (필요 시)
+                    newChunks.push({ type: 'table', ...extractTableDataFromDOM(node) });
+                } else if (node.classList.contains('chunk-text')) {
+                    // 인덱스가 유실된 텍스트 요소 (복사 등)
+                    newChunks.push({ 
+                        type: 'text', 
+                        text: node.textContent, 
+                        style: _extractStyleFromElement(node) 
+                    });
+                }
+
+                // 커서 위치 파악 (엘리먼트 내부에 커서가 있는 경우 포함)
+                if (node === selectionContainer || node.contains(selectionContainer)) {
+                    if (!restoreData) { // 중복 설정 방지
+                        restoreData = { 
+                            lineIndex, 
+                            chunkIndex: newChunks.length - 1, 
+                            offset: cursorOffset 
+                        };
+                    }
                 }
             }
         }
 
+        // 남은 텍스트 처리
         if (textBuffer.length > 0) {
             newChunks.push({ type: 'text', text: textBuffer, style: {} });
         }
 
-        const shouldSplit = hasTable && newChunks.length > 1;
-
-        if (!restoreData) {
-            restoreData = { 
-                lineIndex, 
-                chunkIndex: Math.max(0, newChunks.length - 1), 
-                offset: 0 
-            };
+        // 빈 라인 방지
+        if (newChunks.length === 0) {
+            newChunks.push({ type: 'text', text: '', style: {} });
         }
 
-        return { newChunks, restoreData, shouldSplit };
+        if (!restoreData) {
+            restoreData = { lineIndex, chunkIndex: 0, offset: 0 };
+        }
+
+        return { newChunks, restoreData, shouldSplit: hasTable && newChunks.length > 1 };
     }
 
     /**
-     * [최적화 포인트]
-     * 1. querySelectorAll 대신 native rows/cells 컬렉션 사용 (압도적 속도 차이)
-     * 2. 불필요한 객체 생성 및 배열 메서드(map) 최소화
+     * 테이블 DOM에서 데이터를 추출 (셀 내부 멀티라인 대응)
      */
     function extractTableDataFromDOM(tableEl) {
-        if (!tableEl || tableEl.tagName !== 'TABLE') {
-            return { rows: 0, cols: 0, data: [] };
-        }
+        if (!tableEl || tableEl.tagName !== 'TABLE') return { rows: 0, cols: 0, data: [] };
 
         const rows = tableEl.rows;
         const rowCount = rows.length;
@@ -90,17 +116,13 @@ export function createDOMParseService() {
 
             for (let j = 0; j < cellCount; j++) {
                 const cell = cells[j];
-                let text = cell.textContent || '\u00A0';
                 
-                // 스타일 추출 최적화 (존재하는 값만 할당)
-                const style = {};
-                const s = cell.style;
-                if (s.fontWeight) style.fontWeight = s.fontWeight;
-                if (s.fontSize) style.fontSize = s.fontSize;
-                if (s.color) style.color = s.color;
-                if (s.backgroundColor) style.backgroundColor = s.backgroundColor;
-
-                rowData[j] = { text, style };
+                // 🔥 [중요] cell.textContent 대신 줄바꿈(\n)을 보존하는 innerText 사용
+                // 더 정교한 처리가 필요하면 여기서도 자식 P 태그들을 루프 돌아야 함
+                rowData[j] = { 
+                    text: cell.innerText.replace(/\n\n/g, '\n').trim() || '\u00A0', 
+                    style: _extractStyleFromElement(cell)
+                };
             }
             tableData[i] = rowData;
         }
@@ -110,6 +132,19 @@ export function createDOMParseService() {
             cols: rowCount > 0 ? tableData[0].length : 0, 
             data: tableData 
         };
+    }
+
+    // 스타일 추출 헬퍼 (중복 코드 제거)
+    function _extractStyleFromElement(el) {
+        const s = el.style;
+        const style = {};
+        if (s.fontWeight === 'bold' || parseInt(s.fontWeight) >= 700) style.fontWeight = 'bold';
+        if (s.fontStyle === 'italic') style.fontStyle = 'italic';
+        if (s.textDecoration.includes('underline')) style.textDecoration = 'underline';
+        if (s.fontSize) style.fontSize = s.fontSize;
+        if (s.color) style.color = s.color;
+        if (s.backgroundColor) style.backgroundColor = s.backgroundColor;
+        return style;
     }
 
     return { parseLineDOM, extractTableDataFromDOM };
