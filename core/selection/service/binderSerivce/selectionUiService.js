@@ -6,6 +6,7 @@ export function createSelectionUIService(toolbarElements = {}) {
     italicBtn,
     underLineBtn,
     fontSizeSelect,
+    fontFamilySelect,
 
     // line style
     leftBtn,
@@ -24,6 +25,10 @@ export function createSelectionUIService(toolbarElements = {}) {
     if (fontSizeSelect) {
       fontSizeSelect.value = '';
     }
+
+    if (fontFamilySelect) {
+      fontFamilySelect.value = '';
+    }    
   }
 
   function clearLineUI() {
@@ -74,6 +79,11 @@ export function createSelectionUIService(toolbarElements = {}) {
     if (fontSizeSelect) {
       fontSizeSelect.value = style.fontSize || '';
     }
+
+    // font size
+    if (fontFamilySelect) {
+      fontFamilySelect.value = style.fontFamily || '';
+    }    
   }
 
   /* -----------------------------
@@ -96,6 +106,7 @@ export function createSelectionUIService(toolbarElements = {}) {
    * 외부 API
    * ----------------------------- */
   function updateUI(result) {
+    console.log("resultresultresultresult: ", result);
     if (!result) {
       clearAll();
       return;

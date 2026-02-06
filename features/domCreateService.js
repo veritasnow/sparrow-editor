@@ -1,3 +1,5 @@
+import { FONT_FAMILY_LIST } from '../constants/styleConstants.js';
+
 export function createDOMCreateService(rootId) {
   const root = document.getElementById(rootId);
   if (!root) {
@@ -6,6 +8,10 @@ export function createDOMCreateService(rootId) {
   }
 
   function create() {
+
+    const fontOptions = FONT_FAMILY_LIST.map(font => 
+      `<option value="${font.value}">${font.name}</option>`
+    ).join('');
 
     root.innerHTML = `
       <div class="sparrow-toolbar">
@@ -30,6 +36,10 @@ export function createDOMCreateService(rootId) {
           <option value="20px">20</option>
           <option value="24px">24</option>
         </select>
+
+        <select id="${rootId}-fontFamilySelect" class="font-family-select" title="글꼴 변경">
+          ${fontOptions}
+        </select>        
 
         <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
 

@@ -6,6 +6,7 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
         italicBtn,
         underLineBtn,
         fontSizeSelect,
+        fontFamilySelect,
         textColorBtn
     } = elements;
 
@@ -25,6 +26,9 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
 
     const onFontSizeChange = (e) =>
         applyStyleValue("fontSize", e.target.value);
+
+    const onFontFamilyChange = (e) =>
+        applyStyleValue("fontFamily", e.target.value);
 
     let onColorBtnClick;
     let onColorInputChange;
@@ -46,6 +50,11 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
     if (fontSizeSelect) {
         fontSizeSelect.addEventListener("change", onFontSizeChange);
     }
+
+
+    if (fontFamilySelect) {
+        fontFamilySelect.addEventListener("change", onFontFamilyChange);
+    }    
 
     if (textColorBtn) {
         const input   = textColorBtn.querySelector(".color-input");

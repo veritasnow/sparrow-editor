@@ -137,11 +137,12 @@ export function createEditorFactory() {
 
         // D. 툴바 피처 바인딩
         const styleToolbar = {
-          boldBtn       : document.getElementById(`${rootId}-boldBtn`),
-          italicBtn     : document.getElementById(`${rootId}-italicBtn`),
-          underLineBtn  : document.getElementById(`${rootId}-underLineBtn`),
-          fontSizeSelect: document.getElementById(`${rootId}-fontSizeSelect`),
-          textColorBtn  : document.getElementById(`${rootId}-textColorBtn`)
+          boldBtn         : document.getElementById(`${rootId}-boldBtn`),
+          italicBtn       : document.getElementById(`${rootId}-italicBtn`),
+          underLineBtn    : document.getElementById(`${rootId}-underLineBtn`),
+          fontSizeSelect  : document.getElementById(`${rootId}-fontSizeSelect`),
+          fontFamilySelect: document.getElementById(`${rootId}-fontFamilySelect`),
+          textColorBtn    : document.getElementById(`${rootId}-textColorBtn`)
         };
 
         const alignToolbar = {
@@ -151,17 +152,7 @@ export function createEditorFactory() {
         };
 
         // Selection 상태에 따른 버튼 활성화 바인딩
-        const selectionFeature = bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
-
-        const editorContextSupplier = () => {
-          const mode = selectionAPI.getSelectionMode(); // 그대로 사용
-          console.log('[EditorContext] selectionMode =', mode);
-          return {
-            selectionMode: mode,
-            dragging: selectionFeature.isDragging,
-            composing: inputApp.isComposing(),
-          };
-        };
+        bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
 
         // 스타일 적용 버튼 이벤트 바인딩
         const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
