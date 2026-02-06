@@ -1,7 +1,7 @@
 /**
  * 가상 스크롤 및 중첩 컨테이너(테이블 등) 대응 커서 복원 서비스
  */
-export function createRestoreCursorService(getActiveContainer) {
+export function createRestoreCursorService(getActiveContainer, root) {
     
     let isRestoringCursor = false;
 
@@ -128,6 +128,21 @@ export function createRestoreCursorService(getActiveContainer) {
                 // 4. 커서 찍기
                 if (targetNode) {
                     sel.setBaseAndExtent(targetNode, targetOffset, targetNode, targetOffset);
+
+                    // 스크롤바 복구 이벤트 추가
+                    // 5. 커서 위치로 스크롤 동기화
+                    const range         = sel.getRangeAt(0);
+                    const rect          = range.getBoundingClientRect(); // 커서의 화면상 좌표
+                    const containerRect = root.getBoundingClientRect();
+
+                    // 커서가 컨테이너 하단보다 아래에 있을 때
+                    if (rect.bottom > containerRect.bottom) {
+                        root.scrollTop += (rect.bottom - containerRect.bottom) + 20; // 20px 여유
+                    } 
+                    // 커서가 컨테이너 상단보다 위에 있을 때 (역방향 스크롤 대비)
+                    else if (rect.top < containerRect.top) {
+                        root.scrollTop -= (containerRect.top - rect.top) + 20;
+                    }                    
                 }
 
             } catch (e) { 

@@ -51,7 +51,6 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
         fontSizeSelect.addEventListener("change", onFontSizeChange);
     }
 
-
     if (fontFamilySelect) {
         fontFamilySelect.addEventListener("change", onFontFamilyChange);
     }    

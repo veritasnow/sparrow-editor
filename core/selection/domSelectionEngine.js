@@ -142,7 +142,7 @@ export function createSelectionService({ root }) {
         return 'range';
     }
 
-    const restoreService = createRestoreCursorService(getActiveContainer);    
+    const restoreService = createRestoreCursorService(getActiveContainer, root);    
     
     return { 
         getActiveKeys,

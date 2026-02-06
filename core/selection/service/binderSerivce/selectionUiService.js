@@ -80,7 +80,7 @@ export function createSelectionUIService(toolbarElements = {}) {
       fontSizeSelect.value = style.fontSize || '';
     }
 
-    // font size
+    // font family
     if (fontFamilySelect) {
       fontFamilySelect.value = style.fontFamily || '';
     }    
