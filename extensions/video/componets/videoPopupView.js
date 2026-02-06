@@ -7,12 +7,24 @@
  */
 export function createVideoPopupView(rootEl, toolbar, videoBtn) {
     let popup = rootEl.querySelector('.video-input-popup');
+    const rootId = rootEl.id;
     if (!popup) {
         popup = document.createElement('div');
+        popup.id        = `${rootId}-video-input-popup`;
         popup.className = 'video-input-popup';
         popup.innerHTML = `
-        <input type="text" placeholder="YouTube URL 입력..." class="video-url-input" />
-        <button class="video-confirm-btn">추가</button>
+            <input 
+                type="text" 
+                id="${rootId}-video-url-input" 
+                name="${rootId}-video-url-input" 
+                placeholder="YouTube URL 입력..." 
+                class="video-url-input" 
+            />
+            <button 
+                type="button"
+                id="${rootId}-video-confirm-btn" 
+                class="video-confirm-btn"
+            >추가</button>
         `;
         toolbar.appendChild(popup);
     }
@@ -22,7 +34,7 @@ export function createVideoPopupView(rootEl, toolbar, videoBtn) {
 
     // 팝업 열기/위치 조정 (View responsibility)
     const open = () => {
-        popup.style.display = 'block';
+        popup.style.display = 'flex';
         const rect = videoBtn.getBoundingClientRect();
         const toolbarRect = toolbar.getBoundingClientRect();
         popup.style.top = `${rect.bottom - toolbarRect.top + 6}px`;

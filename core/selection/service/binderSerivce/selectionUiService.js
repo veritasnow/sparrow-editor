@@ -106,7 +106,6 @@ export function createSelectionUIService(toolbarElements = {}) {
    * 외부 API
    * ----------------------------- */
   function updateUI(result) {
-    console.log("resultresultresultresult: ", result);
     if (!result) {
       clearAll();
       return;

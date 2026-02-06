@@ -167,7 +167,7 @@ export function createEditorFactory() {
           if (!ext) return;
           console.log(`[${rootId}] Extension setup:`, ext);
           
-          const extDisposer = ext.setup?.({ stateAPI, uiAPI, selectionAPI, editorAPI });
+          const extDisposer = ext.setup({ stateAPI, uiAPI, selectionAPI, editorAPI });
           
           if (typeof extDisposer === 'function') {
             disposers.push(extDisposer);

@@ -21,7 +21,7 @@ export function bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId)
             close();
         } else {
             // ✨ 핵심: 팝업이 열리기 전(포커스가 본문에 있을 때) 절대 좌표 강제 갱신
-            selectionApi.updateLastValidPosition(); 
+            selectionAPI.updateLastValidPosition(); 
             open();
             inputEl.focus();
         }

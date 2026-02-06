@@ -75,7 +75,7 @@
       border: 1px solid #dfdfdf;
       background: #f0f0f0;
       border-radius: 4px;
-      padding: 6px 10px;
+      padding: 6px 6px;
       cursor: pointer;
       font-size: 14px;
       transition: all 0.2s ease;
@@ -160,7 +160,7 @@
     .sparrow-toolbar .video-icon {
       position: relative;
       width: 16px;
-      height: 12px;
+      height: 16px;
       background: currentColor;
       border-radius: 2px;
     }
@@ -168,16 +168,16 @@
     .sparrow-toolbar .video-icon::after {
       content: "";
       position: absolute;
-      right: -4px;
-      top: 2px;
-      border-left: 6px solid currentColor;
+      right: 4px;
+      top: 4px;
+      border-left: 6px solid white;
       border-top: 4px solid transparent;
       border-bottom: 4px solid transparent;
     }
 
     /* ───────── YouTube URL 입력창 ───────── */
     .sparrow-toolbar .video-input-popup {
-      display: none;
+      display: none; /* 기본은 숨김 */
       position: absolute;
       top: 50px;
       left: 10px;
@@ -187,15 +187,25 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       padding: 10px;
       z-index: 10;
-      width: 260px;
+      width: 300px; /* 조금 더 여유 있게 조정 */
+
+      /* 추가된 속성: 팝업이 켜졌을 때 내부 요소 정렬 */
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* 팝업이 활성화되었을 때 적용할 클래스 */
+    .sparrow-toolbar .video-input-popup.show {
+      display: flex !important; /* 자바스크립트에서 이 클래스를 add 하세요 */
     }
 
     .sparrow-toolbar .video-input-popup input {
-      width: calc(100% - 60px);
-      padding: 5px 8px;
+      flex: 1; /* width: calc 대신 사용. 남는 공간을 다 차지함 */
+      padding: 6px 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 13px;
+      outline: none;
     }
 
     .sparrow-toolbar .video-input-popup button {
@@ -203,18 +213,18 @@
       color: white;
       border: none;
       border-radius: 4px;
-      padding: 5px 8px;
+      padding: 6px 12px;
       font-size: 13px;
-      margin-left: 6px;
       cursor: pointer;
       transition: 0.2s;
+      white-space: nowrap; /* 버튼 글자가 줄바꿈되지 않게 방지 */
     }
 
     .sparrow-toolbar .video-input-popup button:hover {
       background: #0056b3;
     }
-
     /* ───────── 이미지 추가 버튼 아이콘 (사진 느낌 강화) ───────── */
+    /* 메인 프레임 */
     .sparrow-toolbar .image-icon {
       position: relative;
       width: 18px;
@@ -223,48 +233,45 @@
       border-radius: 2px;
       box-sizing: border-box;
       background: transparent;
-      overflow: hidden;
+      overflow: hidden; /* 산이 프레임 밖으로 나가지 않게 차단 */
     }
 
-    /* 🏔️ 산 (1번) */
+    /* 앞쪽 산 (더 크고 뾰족하게) */
     .sparrow-toolbar .image-icon::before {
       content: "";
       position: absolute;
-      bottom: -1px;
-      left: 2px;
-      width: 8px;
-      height: 6px;
+      bottom: -1px; /* 바닥에 딱 붙임 */
+      left: 1px;
+      width: 10px;
+      height: 7px;
       background: currentColor;
-      transform: skewX(-15deg) rotate(-4deg);
-      border-radius: 2px;
+      /* 뾰족한 삼각형 모양을 만드는 더 깔끔한 방법 */
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
     }
 
-    /* 🏔️ 산 (2번, 뒤에 있는 느낌) */
+    /* 뒤쪽 산 (약간 작게) */
     .sparrow-toolbar .image-icon::after {
       content: "";
       position: absolute;
-      bottom: 1px;
-      left: 8px;
-      width: 6px;
-      height: 4px;
+      bottom: -1px;
+      left: 7px;
+      width: 8px;
+      height: 5px;
       background: currentColor;
-      transform: skewX(-15deg) rotate(-4deg);
-      border-radius: 2px;
-      opacity: 0.8;
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+      opacity: 0.6; /* 원근감을 위해 조금 더 흐리게 조정 */
     }
 
-    /* ☀️ 해 (프레임 오른쪽 위) */
+    /* 해 (오른쪽 상단) */
     .sparrow-toolbar .image-icon span {
-      content: "";
       position: absolute;
       top: 2px;
       right: 2px;
-      width: 4px;
-      height: 4px;
+      width: 3px;
+      height: 3px;
       background: currentColor;
       border-radius: 50%;
     }
-
     /* ───────── 컬러 버튼 (툴바) ───────── */
     .sparrow-toolbar .color-btn {
       position: relative;
