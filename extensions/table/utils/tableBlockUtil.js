@@ -36,8 +36,8 @@ export function applyTableBlock(editorState, rows, cols, currentLineIndex, curso
 
     // [Step C] 테이블 뒷부분 처리 (커서가 갈 곳)
     // 테이블 뒤에는 항상 글을 쓸 수 있는 빈 텍스트 라인을 하나 생성해줍니다.
-    const finalAfter = hasAfterContent ? afterChunks : [textHandler.create('', {})];
-    insertedLines.push(EditorLineModel(currentLine.align, finalAfter));
+    //const finalAfter = hasAfterContent ? afterChunks : [textHandler.create('', {})];
+    //insertedLines.push(EditorLineModel(currentLine.align, finalAfter));
 
     // 4. 기존 라인 하나를 제거하고 쪼개진 2~3개의 라인을 삽입
     newState.splice(currentLineIndex, 1, ...insertedLines);

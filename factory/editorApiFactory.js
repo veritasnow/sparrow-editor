@@ -70,7 +70,7 @@ export function createEditorAPI({
                 });
             });
         },
-
+        insertLineAfter             : (refEl, newIndex, align, targetKey) => (refEl, newIndex, align, targetKey),
         renderChunk                 : (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
         ensureFirstLine             : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLine(key),
         shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),

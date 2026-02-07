@@ -195,12 +195,33 @@ export function createRenderService({ rootId, rendererRegistry }) {
             // :scope > 를 사용해 현재 container의 '직계 자식'인 lineIndex를 찾습니다.
             // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
             const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
-            
+
+            console.log("targettarget : ", target);
+            console.log("newElnewEl : ", newEl);
+
             if (target) {
                 container.insertBefore(newEl, target);
             } else {
                 container.appendChild(newEl);
             }
+
+            syncLineIndexes(container);
+        },
+
+        insertLineAfter(refEl, newIndex, align, targetKey) {
+            const container = getTargetElement(targetKey);
+            const newEl = createLineElement();
+            newEl.style.textAlign = align;
+            newEl.setAttribute('data-line-index', newIndex);
+
+            // 기준 노드 바로 다음 형제 앞에 삽입 = 기준 노드 바로 뒤에 삽입
+            if (refEl && refEl.nextSibling) {
+                container.insertBefore(newEl, refEl.nextSibling);
+            } else {
+                container.appendChild(newEl);
+            }
+            syncLineIndexes(container);
+            return newEl;
         },
 
         removeLine(lineIndex, targetKey) {

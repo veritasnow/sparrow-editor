@@ -90,6 +90,11 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       renderService.insertLine(lineIndex, align, targetKey);
     },
 
+    insertLineAfter(refEl, newIndex, align, targetKey) {
+      assertAlive();
+      renderService.insertLineAfter(refEl, newIndex, align, targetKey);
+    },
+
     removeLine(lineIndex, targetKey = rootId) {
       assertAlive();
       renderService.removeLine(lineIndex, targetKey);

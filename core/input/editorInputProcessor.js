@@ -57,8 +57,34 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             ? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
             : [];
 
-        ui.renderLine(lineIndex, separatedLines[0], activeKey);
+        
+        const isTableShifted = separatedLines[1]?.chunks[0]?.type === 'table';
+        console.log("isTableShifted isTableShifted: ", isTableShifted);            
+        if (isTableShifted) {
+            // [CASE A] 테이블 앞에서 입력 (텍스트 + 테이블)
+            
+            // 1. 먼저 테이블(separatedLines[1])을 담을 새 라인을 기존 라인 "뒤"에 만듭니다.
+            // (이 시점에서 syncLineIndexes가 호출되어 인덱스가 밀립니다)
+            ui.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
 
+            // 2. 0번 데이터(텍스트)를 기존 라인(originalLineEl)에 렌더링합니다.
+            // 이제 originalLineEl은 텍스트 라인이 됩니다.
+            ui.renderLine(lineIndex, separatedLines[0], activeKey);
+
+            // 3. 1번 데이터(테이블)를 방금 만든 새 라인(tableLineEl)에 렌더링합니다.
+            ui.renderLine(lineIndex + 1, separatedLines[1], activeKey, movingTablePool);
+        } else {
+            // [CASE] 테이블 뒤에서 입력 (테이블 + 텍스트)
+            // 1. 기존 노드(테이블)는 0번 자리에 그대로 렌더링
+            ui.renderLine(lineIndex, separatedLines[0], activeKey, movingTablePool);
+
+            // 2. 새 텍스트(1번 데이터)를 기존 노드 "뒤"에 삽입
+            ui.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
+            ui.renderLine(lineIndex + 1, separatedLines[1], activeKey);
+        }
+
+        /*
+        ui.renderLine(lineIndex, separatedLines[0], activeKey);
         for (let i = 1; i < separatedLines.length; i++) {
             const targetIdx = lineIndex + i;
             const lineData = separatedLines[i];
@@ -66,6 +92,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             ui.insertLine(targetIdx, lineData.align, activeKey);
             ui.renderLine(targetIdx, lineData, activeKey, movingTablePool);
         }
+        */
 
         movingTablePool.length = 0; 
 
