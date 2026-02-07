@@ -71,61 +71,53 @@ export function createRestoreCursorService(getActiveContainer, root) {
     function restoreCursor(cursorData) {
         if (!cursorData) return;
         const { containerId, anchor, lineIndex } = cursorData;
-        
-        // 1. 컨테이너 확정 (테이블 TD ID일 수도 있고, 메인 에디터 ID일 수도 있음)
         const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
         if (!targetContainer) return;
+
+        if (document.activeElement !== targetContainer) {
+            targetContainer.focus({ preventScroll: true });
+        }
 
         const sel = window.getSelection();
         sel.removeAllRanges();
 
         if (lineIndex !== undefined && anchor) {
             try {
-                // 2. 🔥 [중요] 중첩 인덱스 충돌 방지
-                // :scope > 를 사용하여 targetContainer 바로 아래의 text-block만 찾습니다.
-                // 이로써 에디터 0번 라인과 테이블 내부 0번 라인이 섞이지 않습니다.
+                // 🔥 [수정] :scope > 적용
                 const lineEl = targetContainer.querySelector(
                     `:scope > .text-block[data-line-index="${lineIndex}"]`
                 );
+                if (!lineEl) return;
 
-                if (!lineEl) {
-                    console.warn(`Line ${lineIndex} not found in container ${containerId}`);
-                    return;
-                }
-
-                // 3. 청크 탐색
-                const chunkEl = Array.from(lineEl.children).find(
-                    el => parseInt(el.dataset.chunkIndex, 10) === anchor.chunkIndex
-                );
-                
+                // 🔥 [수정] 라인의 직계 자식 청크만 탐색 (Array.from 없이 querySelector로 최적화)
+                const chunkEl = lineEl.querySelector(`:scope > [data-index="${anchor.chunkIndex}"]`);
                 if (!chunkEl) return;
 
                 let targetNode = null;
                 let targetOffset = 0;
 
-                // 케이스별 노드 결정
+                // Case 1: 테이블 셀 내부 (td)
                 if (anchor.type === 'table' && anchor.detail) {
-                    // 테이블 내부 셀 위치 계산
-                    const rows = chunkEl.getElementsByTagName('tr');
-                    const td = rows[anchor.detail.rowIndex]?.cells[anchor.detail.colIndex];
+                    const table = chunkEl.querySelector(':scope > table, :scope > .se-table');
+                    const rows = table?.rows;
+                    const td = rows?.[anchor.detail.rowIndex]?.cells[anchor.detail.colIndex];
                     if (td) {
-                        targetNode = findFirstTextNode(td) || td.appendChild(document.createTextNode('\u200B'));
+                        targetNode = findFirstTextNode(td) || td.appendChild(document.createTextNode(''));
                         targetOffset = Math.min(anchor.detail.offset, targetNode.length);
                     }
                 } 
-                else if (['table', 'video', 'image'].includes(anchor.type)) {
-                    // 개체 앞/뒤 (Node Selection)
-                    targetNode = chunkEl.parentNode;
-                    const chunkPos = Array.from(targetNode.childNodes).indexOf(chunkEl);
+                // Case 2: 개체(테이블 자체, 이미지, 비디오)의 앞/뒤
+                else if (chunkEl.getAttribute('data-type') === 'table' || anchor.type === 'video' || anchor.type === 'image') {
+                    targetNode = lineEl; 
+                    const chunkPos = Array.from(lineEl.childNodes).indexOf(chunkEl);
                     targetOffset = (anchor.offset === 0) ? chunkPos : chunkPos + 1;
                 } 
+                // Case 3: 일반 텍스트
                 else {
-                    // 일반 텍스트
-                    targetNode = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode('\u200B'));
+                    targetNode = findFirstTextNode(chunkEl) || chunkEl.appendChild(document.createTextNode(''));
                     targetOffset = Math.min(anchor.offset || 0, targetNode.length);
                 }
 
-                // 4. 커서 찍기
                 if (targetNode) {
                     sel.setBaseAndExtent(targetNode, targetOffset, targetNode, targetOffset);
 
@@ -142,7 +134,7 @@ export function createRestoreCursorService(getActiveContainer, root) {
                     // 커서가 컨테이너 상단보다 위에 있을 때 (역방향 스크롤 대비)
                     else if (rect.top < containerRect.top) {
                         root.scrollTop -= (containerRect.top - rect.top) + 20;
-                    }                    
+                    }                        
                 }
 
             } catch (e) { 

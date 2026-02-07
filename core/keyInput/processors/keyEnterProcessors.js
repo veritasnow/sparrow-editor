@@ -13,12 +13,12 @@ export function executeEnter({ state, ui, domSelection }) {
     if (!activeKey) return;
 
     // 현재 커서가 있는 실제 컨테이너(에디터 혹은 TD) 정보를 가져옵니다.
-    const selection = domSelection.getSelectionContext();
+    const selection   = domSelection.getSelectionContext();
     const containerId = selection?.containerId || activeKey;
 
     // 해당 컨테이너의 상태와 선택 범위를 가져옵니다.
     const currentState = state.get(containerId);
-    const domRanges = domSelection.getDomSelection(containerId);
+    const domRanges    = domSelection.getDomSelection(containerId);
     
     if (!domRanges || domRanges.length === 0 || !currentState) return;
 
@@ -125,7 +125,7 @@ function applyEnterResult(targetContainerId, result, { state, ui, domSelection }
 
     // 2. 🔥 [중요] :scope를 사용하여 해당 컨테이너의 직계 자식 라인만 추출
     // 이를 통해 테이블 외부 엔터 시 내부 0번 라인이 잡히는 것을 방지합니다.
-    const currentLineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+    const currentLineEl   = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
     
     // 테이블 소실 방지를 위한 Pool 추출
     const movingTablePool = currentLineEl 
@@ -144,6 +144,7 @@ function applyEnterResult(targetContainerId, result, { state, ui, domSelection }
         
         // 6. 커서 복원 (가상 스크롤 및 DOM 안정화 대응)
         const finalPos = normalizeCursorData(newPos, targetContainerId);
+        console.log("finalPos : ", finalPos);
         if (finalPos) {
             state.saveCursor(finalPos);
             // RAF를 사용하여 브라우저가 신규 <p> 태그의 인덱스를 완전히 인지한 후 커서 고정

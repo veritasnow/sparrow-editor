@@ -1,151 +1,184 @@
 export function createDOMParseService() {
-    
+
     /**
      * 라인 DOM을 분석하여 데이터 모델(Chunks)로 변환
+     * ⚠️ table chunk는 DOM에서 재구성하지 않는다.
      */
-    function parseLineDOM(lineEl, currentLineChunks, selectionContainer, cursorOffset, lineIndex) {
+    function parseLineDOM(
+        lineEl,
+        currentLineChunks,
+        selectionContainer,
+        cursorOffset,
+        lineIndex
+    ) {
         const newChunks = [];
         let textBuffer = '';
         let restoreData = null;
         let hasTable = false;
 
         const children = lineEl.childNodes;
-        const len = children.length;
 
-        for (let i = 0; i < len; i++) {
+        for (let i = 0; i < children.length; i++) {
             const node = children[i];
 
-            // 1. 텍스트 노드 처리
-            if (node.nodeType === 3) { 
-                textBuffer += node.textContent;
-                
-                // 커서 위치 파악 (텍스트 노드 직접 비교)
+            /* -----------------------------
+             * 1. TEXT NODE
+             * ----------------------------- */
+            if (node.nodeType === Node.TEXT_NODE) {
+                textBuffer += node.textContent || '';
+
                 if (node === selectionContainer) {
-                    restoreData = { 
-                        lineIndex, 
-                        chunkIndex: newChunks.length, 
-                        offset: cursorOffset 
+                    restoreData = {
+                        lineIndex,
+                        chunkIndex: newChunks.length,
+                        offset: cursorOffset
                     };
                 }
-            } 
-            // 2. 엘리먼트 노드 처리 (span.chunk-text, table.se-table 등)
-            else if (node.nodeType === 1) { 
-                if (textBuffer.length > 0) {
-                    newChunks.push({ type: 'text', text: textBuffer, style: {} });
-                    textBuffer = '';
-                }
+                continue;
+            }
 
-                const isTable = node.tagName === 'TABLE' || node.classList.contains('chunk-table');
-                const oldIndexStr = node.getAttribute('data-index');
-                
-                if (oldIndexStr !== null) {
-                    const oldIndex = Number(oldIndexStr);
-                    // 🔥 [안전장치] 현재 라인의 원본 데이터와 인덱스가 일치하는지 확인
-                    const existingChunk = currentLineChunks && currentLineChunks[oldIndex];
-                    
-                    if (existingChunk) {
-                        if (isTable) {
-                            hasTable = true;
-                            // 테이블인 경우 최신 DOM 상태를 반영하여 데이터 업데이트
-                            newChunks.push({ 
-                                ...existingChunk, 
-                                ...extractTableDataFromDOM(node) 
-                            });
-                        } else {
-                            newChunks.push(existingChunk);
-                        }
-                    }
-                } else if (isTable) {
-                    // 인덱스가 없는 신규 테이블
-                    hasTable = true;
-                    newChunks.push({ type: 'table', ...extractTableDataFromDOM(node) });
-                } else if (node.classList.contains('chunk-text')) {
-                    // 인덱스가 유실된 텍스트 요소 (복사 등)
-                    newChunks.push({ 
-                        type: 'text', 
-                        text: node.textContent, 
-                        style: _extractStyleFromElement(node) 
+            /* -----------------------------
+             * 2. ELEMENT NODE
+             * ----------------------------- */
+            if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+            // 이전 텍스트 flush
+            if (textBuffer.length > 0) {
+                newChunks.push({
+                    type: 'text',
+                    text: textBuffer,
+                    style: {}
+                });
+                textBuffer = '';
+            }
+
+            const isTable =
+                node.tagName === 'TABLE' ||
+                node.classList.contains('chunk-table') ||
+                node.classList.contains('se-table');
+
+            const oldIndexStr = node.getAttribute('data-index');
+            const oldIndex = oldIndexStr !== null ? Number(oldIndexStr) : null;
+            const existingChunk =
+                oldIndex !== null ? currentLineChunks?.[oldIndex] : null;
+
+            /* -----------------------------
+             * TABLE 처리 (🔥 핵심)
+             * ----------------------------- */
+            if (isTable) {
+                hasTable = true;
+
+                if (existingChunk && existingChunk.type === 'table') {
+                    // ✅ table은 무조건 기존 모델 유지
+                    newChunks.push(existingChunk);
+                } else {
+                    // 예외 케이스: 신규 table (초기 생성 직후)
+                    newChunks.push({
+                        type: 'table',
+                        rows: 0,
+                        cols: 0,
+                        data: [],
+                        style: {}
                     });
                 }
 
-                // 커서 위치 파악 (엘리먼트 내부에 커서가 있는 경우 포함)
-                if (node === selectionContainer || node.contains(selectionContainer)) {
-                    if (!restoreData) { // 중복 설정 방지
-                        restoreData = { 
-                            lineIndex, 
-                            chunkIndex: newChunks.length - 1, 
-                            offset: cursorOffset 
-                        };
-                    }
+                // 커서 위치 보정
+                if (
+                    node === selectionContainer ||
+                    node.contains(selectionContainer)
+                ) {
+                    restoreData ??= {
+                        lineIndex,
+                        chunkIndex: newChunks.length - 1,
+                        offset: 0
+                    };
                 }
+
+                continue;
+            }
+
+            /* -----------------------------
+             * TEXT ELEMENT (span.chunk-text)
+             * ----------------------------- */
+            if (existingChunk && existingChunk.type === 'text') {
+                newChunks.push(existingChunk);
+            } else if (node.classList.contains('chunk-text')) {
+                newChunks.push({
+                    type: 'text',
+                    text: node.textContent || '',
+                    style: _extractStyleFromElement(node)
+                });
+            }
+
+            if (
+                node === selectionContainer ||
+                node.contains(selectionContainer)
+            ) {
+                restoreData ??= {
+                    lineIndex,
+                    chunkIndex: newChunks.length - 1,
+                    offset: cursorOffset
+                };
             }
         }
 
-        // 남은 텍스트 처리
+        /* -----------------------------
+         * trailing text
+         * ----------------------------- */
         if (textBuffer.length > 0) {
-            newChunks.push({ type: 'text', text: textBuffer, style: {} });
+            newChunks.push({
+                type: 'text',
+                text: textBuffer,
+                style: {}
+            });
         }
 
-        // 빈 라인 방지
+        /* -----------------------------
+         * empty line guard
+         * ----------------------------- */
         if (newChunks.length === 0) {
-            newChunks.push({ type: 'text', text: '', style: {} });
+            newChunks.push({
+                type: 'text',
+                text: '',
+                style: {}
+            });
         }
 
         if (!restoreData) {
-            restoreData = { lineIndex, chunkIndex: 0, offset: 0 };
+            restoreData = {
+                lineIndex,
+                chunkIndex: 0,
+                offset: 0
+            };
         }
 
-        return { newChunks, restoreData, shouldSplit: hasTable && newChunks.length > 1 };
-    }
-
-    /**
-     * 테이블 DOM에서 데이터를 추출 (셀 내부 멀티라인 대응)
-     */
-    function extractTableDataFromDOM(tableEl) {
-        if (!tableEl || tableEl.tagName !== 'TABLE') return { rows: 0, cols: 0, data: [] };
-
-        const rows = tableEl.rows;
-        const rowCount = rows.length;
-        const tableData = new Array(rowCount);
-
-        for (let i = 0; i < rowCount; i++) {
-            const row = rows[i];
-            const cells = row.cells;
-            const cellCount = cells.length;
-            const rowData = new Array(cellCount);
-
-            for (let j = 0; j < cellCount; j++) {
-                const cell = cells[j];
-                
-                // 🔥 [중요] cell.textContent 대신 줄바꿈(\n)을 보존하는 innerText 사용
-                // 더 정교한 처리가 필요하면 여기서도 자식 P 태그들을 루프 돌아야 함
-                rowData[j] = { 
-                    text: cell.innerText.replace(/\n\n/g, '\n').trim() || '\u00A0', 
-                    style: _extractStyleFromElement(cell)
-                };
-            }
-            tableData[i] = rowData;
-        }
-
-        return { 
-            rows: rowCount, 
-            cols: rowCount > 0 ? tableData[0].length : 0, 
-            data: tableData 
+        return {
+            newChunks,
+            restoreData,
+            shouldSplit: hasTable && newChunks.length > 1
         };
     }
 
-    // 스타일 추출 헬퍼 (중복 코드 제거)
+    /* -----------------------------
+     * STYLE EXTRACTOR
+     * ----------------------------- */
     function _extractStyleFromElement(el) {
         const s = el.style;
         const style = {};
-        if (s.fontWeight === 'bold' || parseInt(s.fontWeight) >= 700) style.fontWeight = 'bold';
-        if (s.fontStyle === 'italic') style.fontStyle = 'italic';
-        if (s.textDecoration.includes('underline')) style.textDecoration = 'underline';
+
+        if (s.fontWeight === 'bold' || Number(s.fontWeight) >= 700)
+            style.fontWeight = 'bold';
+        if (s.fontStyle === 'italic')
+            style.fontStyle = 'italic';
+        if (s.textDecoration.includes('underline'))
+            style.textDecoration = 'underline';
         if (s.fontSize) style.fontSize = s.fontSize;
         if (s.color) style.color = s.color;
-        if (s.backgroundColor) style.backgroundColor = s.backgroundColor;
+        if (s.backgroundColor)
+            style.backgroundColor = s.backgroundColor;
+
         return style;
     }
 
-    return { parseLineDOM, extractTableDataFromDOM };
+    return { parseLineDOM };
 }
