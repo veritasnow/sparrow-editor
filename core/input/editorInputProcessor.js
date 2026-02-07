@@ -58,8 +58,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             : [];
 
         
-        const isTableShifted = separatedLines[1]?.chunks[0]?.type === 'table';
-        console.log("isTableShifted isTableShifted: ", isTableShifted);            
+        const isTableShifted = separatedLines[1]?.chunks[0]?.type === 'table';         
         if (isTableShifted) {
             // [CASE A] 테이블 앞에서 입력 (텍스트 + 테이블)
             
@@ -82,18 +81,6 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             ui.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
             ui.renderLine(lineIndex + 1, separatedLines[1], activeKey);
         }
-
-        /*
-        ui.renderLine(lineIndex, separatedLines[0], activeKey);
-        for (let i = 1; i < separatedLines.length; i++) {
-            const targetIdx = lineIndex + i;
-            const lineData = separatedLines[i];
-            
-            ui.insertLine(targetIdx, lineData.align, activeKey);
-            ui.renderLine(targetIdx, lineData, activeKey, movingTablePool);
-        }
-        */
-
         movingTablePool.length = 0; 
 
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);

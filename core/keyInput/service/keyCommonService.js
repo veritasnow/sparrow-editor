@@ -8,7 +8,7 @@ import { chunkRegistry } from '../../chunk/chunkRegistry.js'; // 레지스트리
  */
 export function calculateDeleteSelectionState(editorState, ranges) {
     const startRange = ranges[0];
-    const endRange = ranges[ranges.length - 1];
+    const endRange   = ranges[ranges.length - 1];
 
     const { lineIndex: startLineIdx, startIndex: startOffset } = startRange;
     const { lineIndex: endLineIdx, endIndex: endOffset } = endRange;

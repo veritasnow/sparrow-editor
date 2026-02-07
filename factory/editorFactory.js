@@ -20,6 +20,7 @@ import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 
 import { registerDefaultChunks } from './chunkRegistryFactory.js';
 import { createEditorAPI } from './editorApiFactory.js';
+import { virtualSelection } from '../core/selection/state/virtualSelection.js';
 
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
@@ -152,7 +153,7 @@ export function createEditorFactory() {
         };
 
         // Selection 상태에 따른 버튼 활성화 바인딩
-        bindSelectionFeature(stateAPI, selectionAPI, editorEl, { ...styleToolbar, ...alignToolbar });
+        bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSelection, { ...styleToolbar, ...alignToolbar });
 
         // 스타일 적용 버튼 이벤트 바인딩
         const styleDisposer = bindStyleButtons(stateAPI, uiAPI, selectionAPI, styleToolbar);
