@@ -2,14 +2,85 @@
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
 export function createRangeService() {
+    function applyVisualAndRangeSelection(selectedCells, normalized) {
+        if (!selectedCells || selectedCells.length === 0) return;
+
+        // [1] 초기 상태 세팅 (기존 로직 유지)
+        const firstCell = selectedCells[0];
+        const firstMidName = firstCell.id.split('-')[1];
+        const hasSameMidName = selectedCells.slice(1).some(td => td.id.split('-')[1] === firstMidName);
+
+        selectedCells.forEach((td, idx) => {
+            td.selectionStatus = (idx === 0 && !hasSameMidName) ? 'skip-visual' : 'use-visual';
+        });
+
+        const isSkipVisual = firstCell.selectionStatus === "skip-visual";
+
+        // [2] 핵심: containerId(최상위 부모)로부터 모든 라인을 추적
+        const rootContainer = document.getElementById(normalized.containerId);
+        if (!rootContainer) return;
+
+        if (isSkipVisual) {
+            // 첫 번째 셀 배경 제거
+            firstCell.classList.remove('is-selected', 'is-not-selected');
+
+            // normalized.ranges에 포함된 모든 라인을 순회 (targetTD 밖의 라인까지 포함)
+            normalized.ranges.forEach(range => {
+                if (range.isTableLine) {
+                    // rootContainer 내부에서 해당 라인을 찾음 (직계 자식 위주)
+                    // 만약 container가 셀 내부라면 그 안의 라인을, 에디터라면 에디터의 라인을 찾음
+                    const lineEl = rootContainer.querySelector(`[data-line-index="${range.lineIndex}"]`);
+                    
+                    if (lineEl) {
+                        const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector('.se-table');
+                        if (childTable) {
+                            // 테이블 내의 모든 셀 하이라이트
+                            childTable.querySelectorAll('.se-table-cell').forEach(subCell => {
+                                subCell.classList.add('is-selected');
+                                subCell.classList.remove('is-not-selected');
+                            });
+                        }
+                    }
+                }
+            });
+        } else {
+            // [3] 일반적인 셀 드래그 모드 (기존 로직 유지)
+            const table = firstCell.closest('.se-table');
+            if (!table) return;
+
+            const allCellsInTable = table.querySelectorAll('.se-table-cell');
+            allCellsInTable.forEach(td => {
+                if (td.closest('.se-table') !== table) return;
+
+                const isTarget = selectedCells.includes(td);
+                if (isTarget) {
+                    td.classList.add('is-selected');
+                    td.classList.remove('is-not-selected');
+                    td.querySelectorAll('.se-table-cell').forEach(child => {
+                        child.classList.add('is-selected');
+                        child.classList.remove('is-not-selected');
+                    });
+                } else {
+                    td.classList.remove('is-selected');
+                    td.classList.add('is-not-selected');
+                    td.querySelectorAll('.se-table-cell').forEach(child => {
+                        child.classList.remove('is-selected');
+                        child.classList.add('is-not-selected');
+                    });
+                }
+            });
+        }
+    }
+
+    return { applyVisualAndRangeSelection };
+}
+/*
+버그가 있긴한데 임시 백업
+export function createRangeService() {
     
     function applyVisualAndRangeSelection(selectedCells, normalized) {
         // 1. 먼저 같은 형제가 있는지 확인한다.
         //    형제가 있으면 유즈 비쥬얼, 없으면 스킵비쥬얼을 한다.
-
-        console.log("selectedCells.length : ", selectedCells.length);
-        console.log("selectedCells : ", selectedCells);
-
         if (!selectedCells || selectedCells.length === 0) {
             return; 
         }
@@ -18,8 +89,6 @@ export function createRangeService() {
             const firstCell = selectedCells[0];
             const firstMidName = firstCell.id.split('-')[1];
             const hasSameMidName = selectedCells.slice(1).some(td => td.id.split('-')[1] === firstMidName);
-
-            console.log("hasSameMidName : ", hasSameMidName);
 
             selectedCells.forEach((td, idx) => {
                 // 정방향(아래로)일 때만 부모 텍스트 살리기 적용
@@ -32,8 +101,9 @@ export function createRangeService() {
         } 
 
         const isSkipVisual = selectedCells[0].selectionStatus === "skip-visual";
-        console.log("isSkipVisual : ", isSkipVisual);
- 
+        console.log("Is Skip Visual:", isSkipVisual);
+        console.log("Selected Cells Count:", selectedCells.length);
+        console.table(normalized.ranges);
         if(isSkipVisual) {
             const targetTD = selectedCells[0];
             targetTD.classList.remove('is-selected', 'is-not-selected');
@@ -67,6 +137,7 @@ export function createRangeService() {
         } else {
             // 1. 현재 드래그 중인 레벨의 메인 테이블 찾기
             const table = selectedCells[0].closest('.se-table');
+            console.log("Current Processing Table ID:", table?.id);
             if (!table) return;
 
             // 2. 해당 테이블의 모든 셀(직계)에 대해 상태 업데이트
@@ -109,12 +180,8 @@ export function createRangeService() {
             });
         }
         // 2. skipVisual이라면 형제 td가 선택되지 않은 상태이다.
-
-
-
-        console.log("selectedCells : ", selectedCells);
-        console.log("normalized : ", normalized);
     }
 
     return { applyVisualAndRangeSelection };
 }
+*/

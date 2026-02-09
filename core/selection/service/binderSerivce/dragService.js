@@ -9,7 +9,7 @@ export function createDragService(defaultRootId) {
     function mouseDragCalculate(e, startTD) {
         if (!startTD) return { selectedCells: [], activeId: null };
 
-        const activeId = _resolveActiveId(startTD);
+        const activeId      = _resolveActiveId(startTD);
         const selectedCells = _calculateSelectedCells(e, startTD);
 
         return { selectedCells, activeId };
@@ -36,7 +36,7 @@ export function createDragService(defaultRootId) {
      * [내부] 마우스 위치에 따른 최종 선택 셀 배열 결정
      */
     function _calculateSelectedCells(e, startTD) {
-        const currentTD = e.target.closest('.se-table-cell');
+        const currentTD  = e.target.closest('.se-table-cell');
         const startTable = startTD.closest('.se-table');
 
         // CASE 0: 동일 테이블 내부 드래그
@@ -65,11 +65,11 @@ export function createDragService(defaultRootId) {
      * [내부] 중첩 테이블 상황에서 할아버지 테이블의 직계 아들 TD를 찾아 범위 계산
      */
     function _calculateNestedTableRange(parentTable, startTD, parentTD) {
-        const directCells = _getDirectCells(parentTable);
+        const directCells      = _getDirectCells(parentTable);
         const effectiveStartTD = _findDirectAncestorInList(startTD, parentTable, directCells);
 
         const startIdx = directCells.indexOf(effectiveStartTD);
-        const endIdx = directCells.indexOf(parentTD);
+        const endIdx   = directCells.indexOf(parentTD);
 
         if (startIdx !== -1 && endIdx !== -1) {
             const rangeIndices = [startIdx, endIdx].sort((a, b) => a - b);

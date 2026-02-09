@@ -4,7 +4,7 @@ import { createRangeService } from './service/binderSerivce/rangeService.js';
 import { createDragService } from './service/binderSerivce/dragService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSelection, toolbarElements) {
+export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarElements) {
     const selectionService = createAnalyzeService(stateAPI, selectionAPI);
     const uiService        = createSelectionUIService(toolbarElements);
     const rangeService     = createRangeService();
@@ -13,7 +13,6 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSe
     let isDragging        = false;
     let startTD           = null;
     let rafId             = null;
-    let isVirtualDragging = false;
 
     const scheduleUpdate = () => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -57,7 +56,6 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSe
     editorEl.addEventListener('mousedown', (e) => {
         if (e.target.closest('.se-table-cell') && !e.shiftKey) return;
 
-        isVirtualDragging = false; 
         const actualTarget = document.elementFromPoint(e.clientX, e.clientY);
         const lineEl = actualTarget?.closest('.text-block');
         
@@ -66,17 +64,6 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSe
         const realLineIndex = parseInt(lineEl.dataset.lineIndex); // 0이 확실함
         const chunkEl = actualTarget.closest('.chunk-text');
         const realChunkIndex = chunkEl ? parseInt(chunkEl.dataset.chunkIndex) : 0;
-
-        // 브라우저 Selection을 믿지 말고 직접 계산한 인덱스를 강제 주입
-        virtualSelection.isActive = true;
-        virtualSelection.anchor = {
-            lineIndex : realLineIndex, // 👈 5번으로 튀는 걸 방지
-            chunkIndex: realChunkIndex,
-            offset    : 0, // mousedown 시점엔 보통 0 (혹은 정교한 계산 필요)
-            type      : 'text'
-        };
-        virtualSelection.focus = { ...virtualSelection.anchor };
-        isVirtualDragging      = true;
     });    
 
     editorEl.addEventListener('mousemove', (e) => {
@@ -88,72 +75,20 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, virtualSe
         const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
 
+        console.log("domRangesdomRangesdomRanges : ", domRanges);
+        console.log("normalizednormalizednormalized : ", normalized);
+
         // 3. 시각화 호출 (Range 서비스 사용)
         rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
     });
 
     window.addEventListener('mouseup', (e) => {
-        if (isVirtualDragging) {
-            const actualTarget = document.elementFromPoint(e.clientX, e.clientY);
-            const lineEl       = actualTarget?.closest('.text-block');
-
-            if (lineEl) {
-                virtualSelection.focus.lineIndex = parseInt(lineEl.dataset.lineIndex);
-            } else {
-                // [보정] 만약 마우스가 에디터 아래로 나갔다면?
-                const rect = editorEl.getBoundingClientRect();
-                if (e.clientY > rect.bottom) {
-                    // 현재 데이터상 가장 큰 인덱스나 마지막 라인 인덱스 주입 로직 필요
-                    console.log("에디터 하단 이탈 - 마지막 라인 강제 지정");
-                }
-            }
-        }
-
-        console.log("virtualSelectionvirtualSelectionvirtualSelection : ", virtualSelection);
 
         if (isDragging) scheduleUpdate();
         selectionAPI.refreshActiveKeys();
         isDragging        = false;
-        isVirtualDragging = false;
         startTD           = null;
     });
-
-    // 가상 선택 영역
-    editorEl.addEventListener('mousemove', (e) => {
-        if (!isVirtualDragging) return;
-
-        const targetEl = document.elementFromPoint(e.clientX, e.clientY);
-        const lineEl   = targetEl?.closest('.text-block');
-        
-        // 💡 보정: 만약 lineEl을 못 찾았는데 마우스 Y좌표가 에디터 상단 근처라면?
-        // 0번 라인으로 강제 인식하게 하는 로직이 필요할 수 있습니다.
-        if (!lineEl) {
-            const rect = editorEl.getBoundingClientRect();
-            if (e.clientY <= rect.top) {
-                virtualSelection.focus.lineIndex = 0; // 최상단으로 드래그 중
-            }
-            return;
-        }
-
-        const currentIdx = parseInt(lineEl.dataset.lineIndex);
-        const sel        = window.getSelection();
-        
-        virtualSelection.focus.lineIndex = currentIdx;
-        if (sel && sel.rangeCount > 0) {
-            // focusNode가 현재 lineEl 안에 있는지 검증 후 오프셋 저장
-            if (lineEl.contains(sel.focusNode)) {
-                virtualSelection.focus.offset = sel.focusOffset;
-            }
-        }
-
-        // 3. 방향 판정 (Anchor vs Focus 절대 비교)
-        const a                = virtualSelection.anchor;
-        const f                = virtualSelection.focus;
-        const isBefore         = f.lineIndex < a.lineIndex;
-        const isSameLineBefore = (f.lineIndex === a.lineIndex && f.offset < a.offset);
-        
-        virtualSelection.isBackwards = isBefore || isSameLineBefore;
-    });    
 
     // 브라우저 기본 드래그 방지
     editorEl.addEventListener('dragstart', (e) => e.preventDefault());
