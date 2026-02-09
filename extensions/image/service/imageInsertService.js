@@ -58,7 +58,10 @@ export function createImageInsertService(stateAPI, uiAPI, selectionAPI) {
             const tablePool = lineEl ? Array.from(lineEl.getElementsByClassName('chunk-table')) : [];
             
             // 만약 새로 생성된 라인이면 renderLine이 알아서 새 태그를 만듦
-            uiAPI.renderLine(i, newState[i], activeKey, tablePool);
+            uiAPI.renderLine(i, newState[i], {
+                key : activeKey,
+                pool: tablePool
+            });
             
             // endUpdateIdx까지만 필수 렌더링하고, 이후 라인은 데이터가 변했을 때만 렌더링하도록 
             // 렌더링 엔진 내부 로직에 맡기거나 여기서 중단 가능

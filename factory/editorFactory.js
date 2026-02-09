@@ -67,9 +67,6 @@ export function createEditorFactory() {
     // 입력 시스템
     const inputApp       = createInputApplication({ editorEl });
     
-    // inputProcessor 생성 시 MAIN_CONTENT_KEY 전달
-    const inputProcessor = createEditorInputProcessor(state, ui, domSelection, MAIN_CONTENT_KEY);
-
     /* ─────────────────────────────
      * 2️⃣ 내부 API 정의 (Key 기반 대응)
      * ───────────────────────────── */
@@ -78,6 +75,9 @@ export function createEditorFactory() {
       ui,
       domSelection,
     });
+
+    // inputProcessor 생성 시 MAIN_CONTENT_KEY 전달
+    const inputProcessor = createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, MAIN_CONTENT_KEY);
 
     const editorAPI = {
       getToolbarButton(name) {
@@ -120,9 +120,9 @@ export function createEditorFactory() {
 
         // C. 키보드 핸들러 (Enter, Backspace 등)
         const keyProcessor = createEditorKeyHandler({
-          state       : stateAPI,
-          ui          : uiAPI,
-          domSelection: domSelection
+          stateAPI    : stateAPI,
+          uiAPI       : uiAPI,
+          selectionAPI: selectionAPI
         });
 
         inputApp.bindKeydown({

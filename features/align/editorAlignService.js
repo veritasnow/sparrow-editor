@@ -44,7 +44,10 @@ export function createEditorAlignService(stateAPI, uiAPI, selectionAPI) {
             } else {
                 // 태그가 달라져야 한다면 테이블 풀을 뽑아서 교체 렌더링
                 const tablePool = Array.from(lineEl.getElementsByClassName('chunk-table'));
-                uiAPI.renderLine(i, newState[i], activeKey, tablePool);
+                uiAPI.renderLine(i, newState[i], {
+                    key : activeKey,
+                    pool: tablePool
+                });
             }
         }
 

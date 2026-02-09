@@ -1,12 +1,12 @@
 /**
  * 히스토리(Undo/Redo) 실행 프로세서
  */
-export function executeHistory(type, { state, ui, domSelection }) {
+export function executeHistory(type, { stateAPI, ui, selectionAPI }) {
     // 1. 현재(이동 전)의 정확한 커서 정보 미리 확보
-    const cursor = state.getCursor();
+    const cursor = stateAPI.getCursor();
     
     // 2. 히스토리 스택 이동 (undo/redo 실행)
-    const historyData = state[type](); 
+    const historyData = stateAPI[type](); 
     if (!historyData || !historyData.state) return;
 
     const { state: newStateMap } = historyData;
@@ -22,6 +22,6 @@ export function executeHistory(type, { state, ui, domSelection }) {
 
     // 4. 미리 확보한 커서 정보로 위치 복원
     if (cursor) {
-        domSelection.restoreCursor(cursor);
+        selectionAPI.restoreCursor(cursor);
     }
 }

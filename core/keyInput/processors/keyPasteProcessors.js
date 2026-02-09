@@ -9,9 +9,9 @@ import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 /**
  * 붙여넣기 실행 핵심 프로세서
  */
-export function executePaste(e, { state, ui, domSelection }) {
+export function executePaste(e, { stateAPI, uiAPI, selectionAPI }) {
     e.preventDefault();
-    const activeKey = domSelection.getActiveKey();
+    const activeKey = selectionAPI.getActiveKey();
     if (!activeKey) return;
 
     // 1. 데이터 가져오기 및 컨버팅
@@ -26,8 +26,8 @@ export function executePaste(e, { state, ui, domSelection }) {
           };
 
     // 2. 현재 상태와 커서 위치 파악
-    const currentLines = [...state.get(activeKey)];
-    const domRanges = domSelection.getDomSelection(activeKey);
+    const currentLines = [...stateAPI.get(activeKey)];
+    const domRanges = selectionAPI.getDomSelection(activeKey);
     const { lineIndex, endIndex: offset } = domRanges[0];
     const targetLine = currentLines[lineIndex];
 
@@ -64,15 +64,15 @@ export function executePaste(e, { state, ui, domSelection }) {
     ];
 
     // 6. 데이터 저장
-    state.save(activeKey, nextState);
+    stateAPI.save(activeKey, nextState);
     
     // 테이블 셀 등 추가 데이터 저장
     Object.entries(additionalState).forEach(([cellId, content]) => {
-        state.save(cellId, content);
+        stateAPI.save(cellId, content);
     });
 
     // 7. 렌더링
-    ui.render(nextState, activeKey);
+    uiAPI.render(nextState, activeKey);
     
     // 💡 다음 스텝: 붙여넣기 후 커서를 마지막 위치로 이동시키는 로직 호출 가능
     // focusAtLastPasted(domSelection, lineIndex, newLines);

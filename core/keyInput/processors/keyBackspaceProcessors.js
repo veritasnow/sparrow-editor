@@ -10,12 +10,12 @@ import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
 /**
  * ⌫ 백스페이스 키 실행 메인 함수
  */
-export function executeBackspace(e, { state, ui, domSelection }) {
-    const activeKey = domSelection.getActiveKey();
+export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
+    const activeKey = selectionAPI.getActiveKey();
     if (!activeKey) return;
 
-    const currentState = state.get(activeKey);
-    const domRanges = domSelection.getDomSelection(activeKey);
+    const currentState = stateAPI.get(activeKey);
+    const domRanges = selectionAPI.getDomSelection(activeKey);
     if (!domRanges || domRanges.length === 0) return;
 
     const firstDomRange = domRanges[0];
@@ -25,14 +25,14 @@ export function executeBackspace(e, { state, ui, domSelection }) {
     if (shouldPreventDeletion(activeKey, firstDomRange, isSelection, e)) return;
 
     // 2. [위치 파악] 삭제할 위치(lineIndex, offset) 및 선택영역 확보
-    const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, domSelection, domRanges, isSelection);
+    const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
 
     // 3. [상태 계산] 비즈니스 로직 수행
     const result = calculateBackspaceState(currentState, lineIndex, offset, ranges);
     if (result.newState === currentState) return;
 
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applyBackspaceResult(activeKey, result, { state, ui, domSelection });
+    applyBackspaceResult(activeKey, result, { state, uiAPI, selectionAPI });
 }
 
 /**
@@ -55,7 +55,7 @@ function shouldPreventDeletion(activeKey, firstDomRange, isSelection, e) {
 /**
  * [Step 2] 입력된 Selection 정보를 바탕으로 논리적 삭제 위치를 도출
  */
-function resolveTargetPosition(currentState, domSelection, domRanges, isSelection) {
+function resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection) {
     if (isSelection) {
         const ranges = getRanges(currentState, domRanges);
         return {
@@ -70,7 +70,7 @@ function resolveTargetPosition(currentState, domSelection, domRanges, isSelectio
     const currentLine = currentState[lineIndex];
 
     // 커서가 0인데 Atomic 청크 뒤에 있는 경우 offset 보정
-    const context = domSelection.getSelectionContext();
+    const context = selectionAPI.getSelectionContext();
     if (context?.dataIndex !== null && currentLine) {
         const targetChunk = currentLine.chunks[context.dataIndex];
         const handler = chunkRegistry.get(targetChunk?.type);
@@ -206,11 +206,11 @@ function getFallbackAnchor(chunks, i) {
 /**
  * [Step 4] UI 및 에디터 상태 반영 (최적화 버전)
  */
-function applyBackspaceResult(activeKey, result, { state, ui, domSelection }) {
+function applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
     // 1. 상태 저장
-    state.save(activeKey, newState);
+    stateAPI.save(activeKey, newState);
 
     const container = document.getElementById(activeKey);
     if (!container) return;
@@ -232,7 +232,7 @@ function applyBackspaceResult(activeKey, result, { state, ui, domSelection }) {
                 if (tables.length > 0) movingTablePool.push(...tables);
                 
                 // DOM에서 라인 삭제
-                ui.removeLine(startIdx, activeKey);
+                uiAPI.removeLine(startIdx, activeKey);
             }
         }
     }
@@ -243,19 +243,22 @@ function applyBackspaceResult(activeKey, result, { state, ui, domSelection }) {
         // 만약 단순 텍스트 삭제(isSimpleTextUpdate) 플래그가 있다면 renderChunk를 쓰고, 
         // 줄 병합 등 구조 변경이 있다면 renderLine을 호출합니다.
         if (result.isSimpleTextUpdate && result.chunkIndex !== undefined) {
-            ui.renderChunk(updatedLineIndex, result.chunkIndex, newState[updatedLineIndex].chunks[result.chunkIndex], activeKey);
+            uiAPI.renderChunk(updatedLineIndex, result.chunkIndex, newState[updatedLineIndex].chunks[result.chunkIndex], activeKey);
         } else {
-            ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey, movingTablePool);
+            uiAPI.renderLine(updatedLineIndex, newState[updatedLineIndex], {
+                key: activeKey,
+                pool: movingTablePool
+            });
         }
     }
 
     // 4. 공통 마무리 (비어있는 에디터 방지 및 커서 복구)
-    ui.ensureFirstLine(activeKey);
+    uiAPI.ensureFirstLine(activeKey);
     
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
     if (finalPos) {
-        state.saveCursor(finalPos);
-        domSelection.restoreCursor(finalPos);
+        stateAPI.saveCursor(finalPos);
+        selectionAPI.restoreCursor(finalPos);
     }
 
     // 5. 메모리 참조 해제 (GC 지원)

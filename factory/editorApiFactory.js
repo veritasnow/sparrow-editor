@@ -31,26 +31,36 @@ export function createEditorAPI({
         /**
          * 1. 딥 렌더링 (전체 컨테이너 동기화)
          */
-        render: function(data, key = MAIN_CONTENT_KEY) {
+        render: function(data, key = MAIN_CONTENT_KEY, shouldRenderSub = true) {
             ui.render(data, key);
-            this._renderSubTables(data);
+            if(shouldRenderSub) {
+                this._renderSubTables(data);
+            }
         },
 
         /**
          * 2. 딥 라인 렌더링 (특정 라인 및 하위 테이블 동기화)
          */
-        renderLine: function(lineIndex, lineData, key = MAIN_CONTENT_KEY, pool = null) {
+        renderLine: function(lineIndex, lineData, { 
+            key             = MAIN_CONTENT_KEY, 
+            pool            = null, 
+            shouldRenderSub = true 
+        } = {}) {
+        //renderLine: function(lineIndex, lineData, key = MAIN_CONTENT_KEY, pool = null, shouldRenderSub = true) {
             // 해당 라인 기본 렌더링 실행
             ui.renderLine(lineIndex, lineData, key, pool);
 
             // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
-            this._renderSubTables([lineData]);
+            if(shouldRenderSub) {
+                this._renderSubTables([lineData]);
+            }
         },
 
         /**
          * 내부 헬퍼: 라인 목록을 순회하며 하위 테이블 셀들을 재귀 렌더링
          */
         _renderSubTables: function(lines) {
+            console.log("sssssssssssssssssss");
             if (!lines || !Array.isArray(lines)) return;
 
             lines.forEach(line => {
@@ -70,7 +80,7 @@ export function createEditorAPI({
                 });
             });
         },
-        insertLineAfter             : (refEl, newIndex, align, targetKey) => (refEl, newIndex, align, targetKey),
+        insertLineAfter             : (refEl, newIndex, align, targetKey) => ui.insertLineAfter(refEl, newIndex, align, targetKey),
         renderChunk                 : (li, ci, d, key = MAIN_CONTENT_KEY) => ui.renderChunk(li, ci, d, key),
         ensureFirstLine             : (key = MAIN_CONTENT_KEY) => ui.ensureFirstLine(key),
         shiftLinesDown              : (from, key = MAIN_CONTENT_KEY) => ui.shiftLinesDown(from, key),

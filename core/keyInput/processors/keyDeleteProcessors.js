@@ -10,12 +10,12 @@ import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
 /**
  * ⌦ Delete 키 실행 메인 함수
  */
-export function executeDelete(e, { state, ui, domSelection }) {
-    const activeKey = domSelection.getActiveKey();
+export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
+    const activeKey = selectionAPI.getActiveKey();
     if (!activeKey) return;
 
-    const currentState = state.get(activeKey);
-    const domRanges = domSelection.getDomSelection(activeKey);
+    const currentState = stateAPI.get(activeKey);
+    const domRanges = selectionAPI.getDomSelection(activeKey);
     if (!domRanges || domRanges.length === 0) return;
 
     const firstDomRange = domRanges[0];
@@ -32,7 +32,7 @@ export function executeDelete(e, { state, ui, domSelection }) {
     if (result.newState === currentState) return;
 
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applyDeleteResult(activeKey, result, { state, ui, domSelection });
+    applyDeleteResult(activeKey, result, { state, uiAPI, selectionAPI });
 }
 
 /**
@@ -45,8 +45,8 @@ function shouldPreventDeletion(activeKey, currentState, firstDomRange, isSelecti
     const currentLine = currentState[lineIndex];
     const lineLen = getLineLengthFromState(currentLine);
     
-    const activeContainer = document.getElementById(activeKey);
-    const isCell = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
+    //const activeContainer = document.getElementById(activeKey);
+   // const isCell = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
     const isLastPosition = lineIndex === currentState.length - 1 && offset === lineLen;
 
     // 마지막 라인 끝이거나 테이블 셀 마지막 칸에서 Delete 방지
@@ -194,11 +194,11 @@ function performInternalDelete(currentState, lineIndex, offset) {
 /**
  * [Step 4] UI 및 에디터 상태 반영
  */
-function applyDeleteResult(activeKey, result, { state, ui, domSelection }) {
+function applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
     // 1. 상태 저장
-    state.save(activeKey, newState);
+    stateAPI.save(activeKey, newState);
 
     const container = document.getElementById(activeKey);
     if (!container) return;
@@ -224,7 +224,7 @@ function applyDeleteResult(activeKey, result, { state, ui, domSelection }) {
             const lineToDeleteEl = container.children[startIdx];
             if (lineToDeleteEl) {
                 movingTablePool.push(...lineToDeleteEl.getElementsByClassName('chunk-table'));
-                ui.removeLine(startIdx, activeKey); // O(1) 삭제
+                uiAPI.removeLine(startIdx, activeKey); // O(1) 삭제
             }
         }
     }
@@ -232,16 +232,19 @@ function applyDeleteResult(activeKey, result, { state, ui, domSelection }) {
     // 3. 🔥 [핵심 최적화] 병합된 줄 리렌더링 (Pool 주입)
     if (updatedLineIndex !== null && newState[updatedLineIndex]) {
         // 병합된 결과에 기존 줄 + 아랫줄에서 추출한 모든 테이블 DOM을 넘겨줌
-        ui.renderLine(updatedLineIndex, newState[updatedLineIndex], activeKey, movingTablePool);
+        uiAPI.renderLine(updatedLineIndex, newState[updatedLineIndex], {
+            key : activeKey,
+            pool: movingTablePool
+        });
     }
 
     // 4. 공통 마무리
-    ui.ensureFirstLine(activeKey);
+    uiAPI.ensureFirstLine(activeKey);
     
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
     if (finalPos) {
-        state.saveCursor(finalPos);
-        domSelection.restoreCursor(finalPos);
+        stateAPI.saveCursor(finalPos);
+        selectionAPI.restoreCursor(finalPos);
     }
 
     // 메모리 해제

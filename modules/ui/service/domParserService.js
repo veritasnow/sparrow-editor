@@ -2,7 +2,6 @@ export function createDOMParseService() {
 
     /**
      * 라인 DOM을 분석하여 데이터 모델(Chunks)로 변환
-     * ⚠️ table chunk는 DOM에서 재구성하지 않는다.
      */
     function parseLineDOM(
         lineEl,
@@ -22,7 +21,7 @@ export function createDOMParseService() {
             const node = children[i];
 
             /* -----------------------------
-             * 1. TEXT NODE
+             * 1. TEXT NODE (순수 텍스트)
              * ----------------------------- */
             if (node.nodeType === Node.TEXT_NODE) {
                 textBuffer += node.textContent || '';
@@ -38,11 +37,11 @@ export function createDOMParseService() {
             }
 
             /* -----------------------------
-             * 2. ELEMENT NODE
+             * 2. ELEMENT NODE (IMG, TABLE, SPAN 등)
              * ----------------------------- */
             if (node.nodeType !== Node.ELEMENT_NODE) continue;
 
-            // 이전 텍스트 flush
+            // 엘리먼트를 만나면 이전까지 쌓인 텍스트 버퍼를 먼저 처리 (Flush)
             if (textBuffer.length > 0) {
                 newChunks.push({
                     type: 'text',
@@ -52,57 +51,36 @@ export function createDOMParseService() {
                 textBuffer = '';
             }
 
-            const isTable =
-                node.tagName === 'TABLE' ||
-                node.classList.contains('chunk-table') ||
-                node.classList.contains('se-table');
-
+            const tagName = node.tagName.toUpperCase();
+            const isTable = tagName === 'TABLE' || node.classList.contains('chunk-table') || node.classList.contains('se-table');
+            
+            // data-index를 기반으로 기존 모델 데이터 조회
             const oldIndexStr = node.getAttribute('data-index');
             const oldIndex = oldIndexStr !== null ? Number(oldIndexStr) : null;
-            const existingChunk =
-                oldIndex !== null ? currentLineChunks?.[oldIndex] : null;
+            const existingChunk = oldIndex !== null ? currentLineChunks?.[oldIndex] : null;
 
             /* -----------------------------
-             * TABLE 처리 (🔥 핵심)
+             * 분기 처리: 테이블 vs 기타 기존청크 vs 신규
              * ----------------------------- */
             if (isTable) {
                 hasTable = true;
-
+                // 테이블은 기존 모델 데이터를 최우선으로 유지 (불필요한 재파싱 방지)
                 if (existingChunk && existingChunk.type === 'table') {
-                    // ✅ table은 무조건 기존 모델 유지
                     newChunks.push(existingChunk);
                 } else {
-                    // 예외 케이스: 신규 table (초기 생성 직후)
                     newChunks.push({
                         type: 'table',
-                        rows: 0,
-                        cols: 0,
-                        data: [],
+                        rows: 0, cols: 0, data: [],
                         style: {}
                     });
                 }
-
-                // 커서 위치 보정
-                if (
-                    node === selectionContainer ||
-                    node.contains(selectionContainer)
-                ) {
-                    restoreData ??= {
-                        lineIndex,
-                        chunkIndex: newChunks.length - 1,
-                        offset: 0
-                    };
-                }
-
-                continue;
-            }
-
-            /* -----------------------------
-             * TEXT ELEMENT (span.chunk-text)
-             * ----------------------------- */
-            if (existingChunk && existingChunk.type === 'text') {
+            } 
+            // 🔥 이미지, 비디오, 가로줄 등 인덱스가 있는 모든 기존 청크 보존
+            else if (existingChunk) {
                 newChunks.push(existingChunk);
-            } else if (node.classList.contains('chunk-text')) {
+            } 
+            // 신규로 생성된 텍스트 엘리먼트 (예: 스타일이 적용된 텍스트 붙여넣기 등)
+            else if (node.classList.contains('chunk-text')) {
                 newChunks.push({
                     type: 'text',
                     text: node.textContent || '',
@@ -110,21 +88,23 @@ export function createDOMParseService() {
                 });
             }
 
-            if (
-                node === selectionContainer ||
-                node.contains(selectionContainer)
-            ) {
+            /* -----------------------------
+             * 커서 위치(restoreData) 보정
+             * ----------------------------- */
+            if (node === selectionContainer || node.contains(selectionContainer)) {
                 restoreData ??= {
                     lineIndex,
                     chunkIndex: newChunks.length - 1,
-                    offset: cursorOffset
+                    // 테이블이나 이미지 등은 오프셋 의미가 없으므로 0 혹은 전달받은 값 사용
+                    offset: isTable ? 0 : cursorOffset
                 };
             }
         }
 
         /* -----------------------------
-         * trailing text
+         * 마무리: 남은 텍스트 및 예외 처리
          * ----------------------------- */
+        // 루프가 끝난 뒤 남은 텍스트 처리
         if (textBuffer.length > 0) {
             newChunks.push({
                 type: 'text',
@@ -133,24 +113,13 @@ export function createDOMParseService() {
             });
         }
 
-        /* -----------------------------
-         * empty line guard
-         * ----------------------------- */
+        // 빈 라인 보호
         if (newChunks.length === 0) {
-            newChunks.push({
-                type: 'text',
-                text: '',
-                style: {}
-            });
+            newChunks.push({ type: 'text', text: '', style: {} });
         }
 
-        if (!restoreData) {
-            restoreData = {
-                lineIndex,
-                chunkIndex: 0,
-                offset: 0
-            };
-        }
+        // 커서 데이터가 여전히 없다면 첫 번째 청크로 기본값 설정
+        restoreData ??= { lineIndex, chunkIndex: 0, offset: 0 };
 
         return {
             newChunks,
@@ -159,23 +128,20 @@ export function createDOMParseService() {
         };
     }
 
-    /* -----------------------------
-     * STYLE EXTRACTOR
-     * ----------------------------- */
+    /**
+     * 스타일 추출 함수 (fontFamily 추가)
+     */
     function _extractStyleFromElement(el) {
         const s = el.style;
         const style = {};
 
-        if (s.fontWeight === 'bold' || Number(s.fontWeight) >= 700)
-            style.fontWeight = 'bold';
-        if (s.fontStyle === 'italic')
-            style.fontStyle = 'italic';
-        if (s.textDecoration.includes('underline'))
-            style.textDecoration = 'underline';
+        if (s.fontWeight === 'bold' || Number(s.fontWeight) >= 700) style.fontWeight = 'bold';
+        if (s.fontStyle === 'italic') style.fontStyle = 'italic';
+        if (s.textDecoration.includes('underline')) style.textDecoration = 'underline';
         if (s.fontSize) style.fontSize = s.fontSize;
         if (s.color) style.color = s.color;
-        if (s.backgroundColor)
-            style.backgroundColor = s.backgroundColor;
+        if (s.backgroundColor) style.backgroundColor = s.backgroundColor;
+        if (s.fontFamily) style.fontFamily = s.fontFamily; // 폰트 패밀리 보존 추가
 
         return style;
     }

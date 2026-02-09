@@ -64,7 +64,9 @@ export function createVideoInsertService(stateAPI, uiAPI, selectionAPI) {
         // 4. 🔥 [핵심 최적화] 전체 렌더링 대신 라인 렌더링 사용
         // 비디오(iframe)는 전체 렌더링 시 기존에 재생 중이던 다른 비디오들이 
         // 모두 새로고침되는 치명적인 문제가 있습니다. renderLine으로 해당 줄만 교체합니다.
-        uiAPI.renderLine(lineIndex, newState[lineIndex], activeKey);
+        uiAPI.renderLine(lineIndex, newState[lineIndex], { 
+            key: activeKey 
+        });
         
         // 5. 커서 복원 (브라우저 레이아웃 계산 후 실행되도록 rAF 적용)
         requestAnimationFrame(() => {

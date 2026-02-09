@@ -2,22 +2,22 @@ import { EditorLineModel } from '../../model/editorLineModel.js';
 import { inputModelService } from './inputModelService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
-export function createEditorInputProcessor(state, ui, domSelection, defaultKey) {
+export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaultKey) {
 
     /**
      * [Main Entry] 입력 이벤트 발생 시 호출
      */
     function processInput(skipRender = false) {
-        const activeKey = domSelection.getActiveKey() || defaultKey;
-        const selection = domSelection.getSelectionContext();
+        const activeKey = selectionAPI.getActiveKey() || defaultKey;
+        const selection = selectionAPI.getSelectionContext();
         if (!selection || selection.lineIndex < 0) return;
 
         // 테이블 셀 내부인 경우 containerId가 다를 수 있으므로 보정
         const containerId = selection.containerId || activeKey;
 
-        ui.ensureFirstLine(activeKey); 
+        uiAPI.ensureFirstLine(activeKey); 
 
-        const currentState = state.getState(activeKey); 
+        const currentState = stateAPI.get(activeKey); 
         const currentLine = currentState[selection.lineIndex] || EditorLineModel();
 
         const result = calculateUpdate(currentLine, selection, activeKey);
@@ -47,7 +47,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         const nextState = [...currentState];
         nextState.splice(lineIndex, 1, ...separatedLines);
-        state.saveEditorState(activeKey, nextState);
+        stateAPI.save(activeKey, nextState);
 
         const container = document.getElementById(activeKey);
         // :scope를 사용하여 현재 에디터 레벨의 직계 자식만 타겟팅 (중첩 인덱스 방지)
@@ -64,22 +64,36 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
             
             // 1. 먼저 테이블(separatedLines[1])을 담을 새 라인을 기존 라인 "뒤"에 만듭니다.
             // (이 시점에서 syncLineIndexes가 호출되어 인덱스가 밀립니다)
-            ui.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
+            uiAPI.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
 
             // 2. 0번 데이터(텍스트)를 기존 라인(originalLineEl)에 렌더링합니다.
             // 이제 originalLineEl은 텍스트 라인이 됩니다.
-            ui.renderLine(lineIndex, separatedLines[0], activeKey);
+            uiAPI.renderLine(lineIndex, separatedLines[0], { 
+                key: activeKey, 
+                shouldRenderSub: false 
+            });
 
             // 3. 1번 데이터(테이블)를 방금 만든 새 라인(tableLineEl)에 렌더링합니다.
-            ui.renderLine(lineIndex + 1, separatedLines[1], activeKey, movingTablePool);
+            uiAPI.renderLine(lineIndex + 1, separatedLines[1], { 
+                key: activeKey, 
+                pool: movingTablePool, 
+                shouldRenderSub: false 
+            });
         } else {
             // [CASE] 테이블 뒤에서 입력 (테이블 + 텍스트)
             // 1. 기존 노드(테이블)는 0번 자리에 그대로 렌더링
-            ui.renderLine(lineIndex, separatedLines[0], activeKey, movingTablePool);
+            uiAPI.renderLine(lineIndex, separatedLines[0], { 
+                key: activeKey, 
+                pool: movingTablePool, 
+                shouldRenderSub: false 
+            });
 
             // 2. 새 텍스트(1번 데이터)를 기존 노드 "뒤"에 삽입
-            ui.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
-            ui.renderLine(lineIndex + 1, separatedLines[1], activeKey);
+            uiAPI.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
+            uiAPI.renderLine(lineIndex + 1, separatedLines[1], { 
+                key: activeKey, 
+                shouldRenderSub: false 
+            });
         }
         movingTablePool.length = 0; 
 
@@ -87,7 +101,7 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         if (finalRestoreData) {
             // 새 DOM 노드가 안정화된 후 커서 복원
             requestAnimationFrame(() => {
-                domSelection.restoreCursor(finalRestoreData);
+                selectionAPI.restoreCursor(finalRestoreData);
             });
         }
     }
@@ -115,7 +129,8 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
 
         // Case 2: DOM Rebuild (구조 변경 감지)
         if (!result) {
-            const rebuild = ui.parseLineDOM(parentDom, currentLine.chunks, container, cursorOffset, lineIndex);
+            const rebuild = uiAPI.parseLineDOM(parentDom, currentLine.chunks, container, cursorOffset, lineIndex);
+            console.log("rebuildrebuild : ", rebuild);
 
             if (rebuild.shouldSplit) {
                 const separatedLines = splitChunksByTable(rebuild.newChunks, currentLine.align);
@@ -196,12 +211,12 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
     }
 
     function saveFinalState(key, lineIndex, updatedLine, restoreData) {
-        const currentState = state.getState(key);
+        const currentState = stateAPI.get(key);
         const nextState = [...currentState];
         nextState[lineIndex] = updatedLine;
-        state.saveEditorState(key, nextState);
+        stateAPI.save(key, nextState);
         const normalized = normalizeCursorData(restoreData, key);
-        if (normalized) state.saveCursorState(normalized);
+        if (normalized) stateAPI.saveCursor(normalized);
     }
 
     /**
@@ -227,17 +242,25 @@ export function createEditorInputProcessor(state, ui, domSelection, defaultKey) 
         const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
 
         if (flags.isNewChunk) {
-            ui.renderLine(lineIndex, updatedLine, targetContainerId, tablePool);
-            if (restoreData) domSelection.restoreCursor(restoreData);
+            uiAPI.renderLine(lineIndex, updatedLine, { 
+                key: targetContainerId, 
+                pool: tablePool, 
+                shouldRenderSub: false 
+            });
+            if (restoreData) selectionAPI.restoreCursor(restoreData);
         } else if (flags.isChunkRendering && restoreData) {
             const chunkIndex = restoreData.anchor.chunkIndex;
             const chunk = updatedLine.chunks[chunkIndex];
             if (!chunk || chunk.type !== 'text') {
-                ui.renderLine(lineIndex, updatedLine, targetContainerId, tablePool);
+            uiAPI.renderLine(lineIndex, updatedLine, { 
+                key: targetContainerId, 
+                pool: tablePool, 
+                shouldRenderSub: false 
+            });
             } else {
-                ui.renderChunk(lineIndex, chunkIndex, chunk, targetContainerId);
+                uiAPI.renderChunk(lineIndex, chunkIndex, chunk, targetContainerId);
             }
-            domSelection.restoreCursor(restoreData);
+            selectionAPI.restoreCursor(restoreData);
         }
     }
 

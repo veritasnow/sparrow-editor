@@ -54,7 +54,10 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
                     const tablePool = Array.from(lineEl.getElementsByClassName('chunk-table'));
                     
                     // 해당 라인만 정밀 렌더링 (targetKey를 넘겨 uiAPI도 격리 탐색하게 함)
-                    uiAPI.renderLine(lineIndex, lineData, update.key, tablePool);
+                    uiAPI.renderLine(lineIndex, lineData, {
+                        key : update.key,
+                        pool: tablePool
+                    });
                 });
             });
         }

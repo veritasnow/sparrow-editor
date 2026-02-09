@@ -8,36 +8,36 @@ import { executeHistory } from '../../core/keyInput/historyProcessor.js';
  * EditorKeyHandler
  */
 export function createEditorKeyHandler(context) {
-    const { state, ui, domSelection } = context;
+    const { stateAPI, uiAPI, selectionAPI } = context;
 
     // 엔터 키 처리
     const processEnter = () => {
-        executeEnter({ state, ui, domSelection });
+        executeEnter({ stateAPI, uiAPI, selectionAPI });
     };
 
     // 백스페이스 키 처리
     const processBackspace = (e) => {
-        executeBackspace(e, { state, ui, domSelection });
+        executeBackspace(e, { stateAPI, uiAPI, selectionAPI });
     };
 
     // 델 키 처리
     const processDelete = (e) => {
-        executeDelete(e, { state, ui, domSelection });
+        executeDelete(e, { stateAPI, uiAPI, selectionAPI });
     };    
 
     // 📋 붙여넣기 처리 추가
     const processPaste = (e) => {
-        executePaste(e, { state, ui, domSelection });
+        executePaste(e, { stateAPI, uiAPI, selectionAPI });
     };    
 
     // 실행 취소
     const callUndo = () => {
-        executeHistory('undo', { state, ui, domSelection });
+        executeHistory('undo', { stateAPI, uiAPI, selectionAPI });
     };
 
     // 다시 실행
     const callRedo = () => {
-        executeHistory('redo', { state, ui, domSelection });
+        executeHistory('redo', { stateAPI, uiAPI, selectionAPI });
     };
 
     return {
