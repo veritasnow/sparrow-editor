@@ -2,39 +2,100 @@
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
 export function createRangeService() {
-    function applyVisualAndRangeSelection(selectedCells, normalized) {
+    function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId) {
         if (!selectedCells || selectedCells.length === 0) return;
 
-        // [1] 초기 상태 세팅 (기존 로직 유지)
-        const firstCell = selectedCells[0];
-        const firstMidName = firstCell.id.split('-')[1];
-        const hasSameMidName = selectedCells.slice(1).some(td => td.id.split('-')[1] === firstMidName);
+        const finalSelectedIds = new Set();
+        let newSelectedCells = [];
+        const rootContainer = document.getElementById(normalized.containerId);
+        if (!rootContainer) return;
 
-        selectedCells.forEach((td, idx) => {
-            td.selectionStatus = (idx === 0 && !hasSameMidName) ? 'skip-visual' : 'use-visual';
+        // [1] 데이터 수집 (여러 라인 선택 시)
+        if (normalized.ranges && normalized.ranges.length > 1) {
+            const startLine = normalized.ranges[0].lineIndex;
+            const endLine = normalized.ranges[normalized.ranges.length - 1].lineIndex;
+            const targetLines = stateAPI.getLineRange(startLine, endLine, normalized.containerId);
+            console.log("targetLinestargetLinestargetLines : ", targetLines);
+            
+            //collectAllCellIdsFromState(targetLines, finalSelectedIds);
+            // 2. 재귀 호출 (stateAPI를 함께 넘겨서 내부 셀들도 조회하며 수집)
+            collectAllCellIdsFromState(targetLines, finalSelectedIds, stateAPI);
+            
+            newSelectedCells = Array.from(finalSelectedIds).map(id => {
+                const existing = selectedCells.find(cell => cell.id === id);
+                const targetTd = existing || rootContainer.querySelector(`#${id}`);
+                if (targetTd) {
+                    targetTd.classList.add('is-selected');
+                    targetTd.classList.remove('is-not-selected');
+                }
+                return targetTd;
+            }).filter(Boolean);      
+        } else {
+            //newSelectedCells = [...selectedCells];
+            // 1. 새로운 집합 생성 (원본 유지)
+            const allCollectedIds = new Set();
+            
+            // 2. 한 번의 루프로 본인 ID + 자식 ID 수집
+            selectedCells.forEach(cell => {
+                // 본인 ID 추가
+                allCollectedIds.add(cell.id);
+                
+                // 자식들 탐색 (조회만 수행)
+                const innerLines = stateAPI.get(cell.id);
+                if (innerLines && innerLines.length > 0) {
+                    collectAllCellIdsFromState(innerLines, allCollectedIds, stateAPI);
+                }
+            });
+
+            // 3. 수집된 ID들을 바탕으로 새로운 배열 생성
+            newSelectedCells = Array.from(allCollectedIds).map(id => {
+                const existing = selectedCells.find(c => c.id === id);
+                const targetTd = existing || rootContainer.querySelector(`#${id}`);
+                
+                if (targetTd) {
+                    targetTd.classList.add('is-selected');
+                    targetTd.classList.remove('is-not-selected');
+                }
+                return targetTd;
+            }).filter(Boolean);
+
+            console.log("원본은 그대로, 결과만 새로 생성됨:", newSelectedCells);
+        }
+
+        console.log("newSelectedCellsnewSelectedCells : ", newSelectedCells);
+
+        // [2] 핵심 수정: 복수 테이블/셀 판정 로직
+        const firstCell = newSelectedCells[0];
+        // 모든 셀의 midName을 수집하여 유일한 테이블 ID들 추출
+        const midNames = new Set(newSelectedCells.map(td => td.id.split('-')[1]));
+        
+        // 판정 기준 변경: 
+        // 1. midName 종류가 2개 이상이다 (여러 테이블이 잡혔다)
+        // 2. 혹은 같은 midName 내에 여러 셀이 있다
+        const isMultiSelection = midNames.size > 1 || 
+            newSelectedCells.some((td, idx) => idx !== 0 && td.id.split('-')[1] === firstCell.id.split('-')[1]);
+
+        newSelectedCells.forEach((td, idx) => {
+            // 여러 개가 잡혔다면 무조건 'use-visual', 딱 하나면 'skip-visual'
+            td.selectionStatus = (idx === 0 && !isMultiSelection) ? 'skip-visual' : 'use-visual';
         });
 
         const isSkipVisual = firstCell.selectionStatus === "skip-visual";
 
-        // [2] 핵심: containerId(최상위 부모)로부터 모든 라인을 추적
-        const rootContainer = document.getElementById(normalized.containerId);
-        if (!rootContainer) return;
+        // [3] 공통 초기화
+        const mainRootContainer = document.getElementById(rootId);
+        const allCellsInRoot = mainRootContainer.querySelectorAll('.se-table-cell');
+        allCellsInRoot.forEach(td => td.classList.remove('is-selected', 'is-not-selected'));
 
         if (isSkipVisual) {
-            // 첫 번째 셀 배경 제거
+            // 단일 셀 모드: 기존 로직 유지
             firstCell.classList.remove('is-selected', 'is-not-selected');
-
-            // normalized.ranges에 포함된 모든 라인을 순회 (targetTD 밖의 라인까지 포함)
             normalized.ranges.forEach(range => {
                 if (range.isTableLine) {
-                    // rootContainer 내부에서 해당 라인을 찾음 (직계 자식 위주)
-                    // 만약 container가 셀 내부라면 그 안의 라인을, 에디터라면 에디터의 라인을 찾음
                     const lineEl = rootContainer.querySelector(`[data-line-index="${range.lineIndex}"]`);
-                    
                     if (lineEl) {
                         const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector('.se-table');
                         if (childTable) {
-                            // 테이블 내의 모든 셀 하이라이트
                             childTable.querySelectorAll('.se-table-cell').forEach(subCell => {
                                 subCell.classList.add('is-selected');
                                 subCell.classList.remove('is-not-selected');
@@ -44,36 +105,69 @@ export function createRangeService() {
                 }
             });
         } else {
-            // [3] 일반적인 셀 드래그 모드 (기존 로직 유지)
-            const table = firstCell.closest('.se-table');
-            if (!table) return;
+            // [4] 핵심 수정: 선택된 모든 테이블 루프
+            // newSelectedCells가 속한 모든 테이블을 찾음
+            const targetTables = new Set();
+            newSelectedCells.forEach(td => {
+                const table = td.closest('.se-table');
+                if (table) targetTables.add(table);
+            });
 
-            const allCellsInTable = table.querySelectorAll('.se-table-cell');
-            allCellsInTable.forEach(td => {
-                if (td.closest('.se-table') !== table) return;
+            // 찾은 모든 테이블을 순회하며 클래스 입히기
+            targetTables.forEach(table => {
+                const allCellsInTable = table.querySelectorAll('.se-table-cell');
+                allCellsInTable.forEach(td => {
+                    // 중첩 테이블 방어
+                    if (td.closest('.se-table') !== table) return;
 
-                const isTarget = selectedCells.includes(td);
-                if (isTarget) {
-                    td.classList.add('is-selected');
-                    td.classList.remove('is-not-selected');
-                    td.querySelectorAll('.se-table-cell').forEach(child => {
-                        child.classList.add('is-selected');
-                        child.classList.remove('is-not-selected');
-                    });
-                } else {
-                    td.classList.remove('is-selected');
-                    td.classList.add('is-not-selected');
-                    td.querySelectorAll('.se-table-cell').forEach(child => {
-                        child.classList.remove('is-selected');
-                        child.classList.add('is-not-selected');
+                    const isTarget = newSelectedCells.some(selected => selected.id === td.id);
+
+                    if (isTarget) {
+                        td.classList.add('is-selected');
+                        td.classList.remove('is-not-selected');
+                    } else {
+                        td.classList.remove('is-selected');
+                        td.classList.add('is-not-selected');
+                    }
+                });
+            });
+        }
+    }    
+
+    function collectAllCellIdsFromState(lines, idSet, stateAPI) {
+        if (!lines || !Array.isArray(lines)) return;
+
+        lines.forEach(line => {
+            // 라인 내에 chunks가 없으면 스킵
+            if (!line.chunks || !Array.isArray(line.chunks)) return;
+
+            line.chunks.forEach(chunk => {
+                // chunk가 테이블인 경우에만 셀 ID 수집 및 내부 탐색
+                if (chunk.type === 'table' && chunk.data) {
+                    chunk.data.forEach(row => {
+                        row.forEach(cell => {
+                            // 1. 이미 수집한 ID면 무한 루프 방지를 위해 패스
+                            if (idSet.has(cell.id)) return;
+
+                            // 2. 셀 ID 저장
+                            idSet.add(cell.id);
+
+                            // 3. ★ 핵심 수정: stateAPI.get(cell.id)의 결과가 바로 'lines' 배열임
+                            const innerLines = stateAPI.get(cell.id); 
+                            
+                            // 4. 가져온 게 배열이고 내용이 있다면, 그 배열을 그대로 들고 다시 재귀
+                            if (innerLines && Array.isArray(innerLines) && innerLines.length > 0) {
+                                collectAllCellIdsFromState(innerLines, idSet, stateAPI);
+                            }
+                        });
                     });
                 }
             });
-        }
+        });
     }
-
     return { applyVisualAndRangeSelection };
 }
+
 /*
 버그가 있긴한데 임시 백업
 export function createRangeService() {

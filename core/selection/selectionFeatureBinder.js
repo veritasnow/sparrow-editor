@@ -50,21 +50,7 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
             startTD = td;
             isDragging = true;
         }
-    });
-
-    // 가상영역 저장용 마우스 다운
-    editorEl.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.se-table-cell') && !e.shiftKey) return;
-
-        const actualTarget = document.elementFromPoint(e.clientX, e.clientY);
-        const lineEl = actualTarget?.closest('.text-block');
-        
-        if (!lineEl) return;
-
-        const realLineIndex = parseInt(lineEl.dataset.lineIndex); // 0이 확실함
-        const chunkEl = actualTarget.closest('.chunk-text');
-        const realChunkIndex = chunkEl ? parseInt(chunkEl.dataset.chunkIndex) : 0;
-    });    
+    });  
 
     editorEl.addEventListener('mousemove', (e) => {
         if (!isDragging || !startTD) return;
@@ -75,11 +61,13 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
 
-        console.log("domRangesdomRangesdomRanges : ", domRanges);
+        console.log("domRangesdomRangesdomRanges    : ", domRanges);
         console.log("normalizednormalizednormalized : ", normalized);
+        console.log("stateAPIstateAPIstateAPI       : ", stateAPI.get(activeId));
+        console.log("selectedCellsselectedCells : ", selectedCells);
 
         // 3. 시각화 호출 (Range 서비스 사용)
-        rangeService.applyVisualAndRangeSelection(selectedCells, normalized);
+        rangeService.applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, editorEl.id);
     });
 
     window.addEventListener('mouseup', (e) => {
