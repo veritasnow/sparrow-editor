@@ -61,11 +61,6 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
 
-        console.log("domRangesdomRangesdomRanges    : ", domRanges);
-        console.log("normalizednormalizednormalized : ", normalized);
-        console.log("stateAPIstateAPIstateAPI       : ", stateAPI.get(activeId));
-        console.log("selectedCellsselectedCells : ", selectedCells);
-
         // 3. 시각화 호출 (Range 서비스 사용)
         rangeService.applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, editorEl.id);
     });

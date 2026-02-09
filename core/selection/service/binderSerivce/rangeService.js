@@ -5,6 +5,187 @@ export function createRangeService() {
     function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId) {
         if (!selectedCells || selectedCells.length === 0) return;
 
+        let newSelectedCells = [];
+        const rootContainer = document.getElementById(normalized.containerId);
+        if (!rootContainer) return;
+
+        // [1] 데이터 수집 (여러 라인 선택 시)
+        if (normalized.ranges && normalized.ranges.length > 1) {
+            const startLine   = normalized.ranges[0].lineIndex;
+            const endLine     = normalized.ranges[normalized.ranges.length - 1].lineIndex;
+            const targetLines = stateAPI.getLineRange(startLine, endLine, normalized.containerId);
+            console.log("targetLinestargetLinestargetLines : ", targetLines);
+            
+            // 2. 재귀 호출 (stateAPI를 함께 넘겨서 내부 셀들도 조회하며 수집)
+            const finalSelectedIds = new Set();
+            collectAllCellIdsFromState(targetLines, finalSelectedIds, stateAPI);
+            newSelectedCells = mapIdsToCells(finalSelectedIds, selectedCells, rootContainer);
+ 
+        } else {
+            //newSelectedCells = [...selectedCells];
+            const startLine = normalized.ranges[0].lineIndex;
+            const lineData  = stateAPI.getLineRange(startLine, startLine, normalized.containerId);
+            if(lineData[0].chunks[0].type === 'table') {
+                // 1. 새로운 집합 생성 (원본 유지)
+                const allCollectedIds = new Set();
+                // 2. 한 번의 루프로 본인 ID + 자식 ID 수집
+                selectedCells.forEach(cell => {
+                    // 본인 ID 추가
+                    allCollectedIds.add(cell.id);
+                    // 자식들 탐색 (조회만 수행)
+                    const innerLines = stateAPI.get(cell.id);
+                    if (innerLines && innerLines.length > 0) {
+                        collectAllCellIdsFromState(innerLines, allCollectedIds, stateAPI);
+                    }
+                });
+                // 3. 수집된 ID들을 바탕으로 새로운 배열 생성
+                newSelectedCells = mapIdsToCells(allCollectedIds, selectedCells, rootContainer);
+            } else {
+                newSelectedCells = [...selectedCells];
+            }
+        }
+        console.log("newSelectedCellsnewSelectedCells : ", newSelectedCells);
+
+        // 셀판정
+        const isMultiSelection = checkIsMultiSelection(newSelectedCells);
+
+        newSelectedCells.forEach((td, idx) => {
+            // 여러 개가 잡혔다면 무조건 'use-visual', 딱 하나면 'skip-visual'
+            td.selectionStatus = (idx === 0 && !isMultiSelection) ? 'skip-visual' : 'use-visual';
+        });
+
+        const isSkipVisual = newSelectedCells[0].selectionStatus === "skip-visual";
+
+        // [3] 전체 초기화 (Global Cleanup)
+        const mainRootContainer = document.getElementById(rootId);
+        mainRootContainer?.querySelectorAll('.se-table-cell').forEach(td => {
+            td.classList.remove('is-selected', 'is-not-selected');
+        });
+
+        if (isSkipVisual) {
+            // 단일 셀 모드
+            applySingleSelectionVisuals(normalized.ranges, rootContainer);
+        } else {
+            // 선택된 모든 테이블 루프
+            // newSelectedCells가 속한 모든 테이블을 찾음
+            applyMultiSelectionVisuals(newSelectedCells);
+        }
+    }    
+
+    // ID 셋을 받아 실제 TD 엘리먼트 배열로 변환
+    function mapIdsToCells(idSet, selectedCells, rootContainer) {
+        return Array.from(idSet).map(id => {
+            const existing = selectedCells.find(cell => cell.id === id);
+            const targetTd = existing || rootContainer.querySelector(`#${id}`);
+            return targetTd;
+        }).filter(Boolean);
+    }    
+
+    // 멀티 선택 여부 판정
+    function checkIsMultiSelection(cells) {
+        // 복수 테이블/셀 판정 로직
+        // 판정 기준 변경: 
+        // 1. midName 종류가 2개 이상이다 (여러 테이블이 잡혔다)
+        // 2. 혹은 같은 midName 내에 여러 셀이 있다
+        if (cells.length <= 1) return false;
+        
+        const firstCellId = cells[0].id;
+        const firstTableId = firstCellId.split('-')[1];
+        
+        // 1. 테이블 ID(midName)가 다른 게 하나라도 섞여 있거나
+        // 2. 같은 테이블 내에서 다른 셀이 더 선택되어 있거나
+        // 모든 셀의 midName을 수집하여 유일한 테이블 ID들 추출
+        const midNames = new Set(cells.map(td => td.id.split('-')[1]));
+        const hasDifferentTable = midNames.size > 1;
+        const hasMoreCellsInSameTable = cells.some((td, idx) => 
+            idx !== 0 && td.id.split('-')[1] === firstTableId
+        );
+
+        return hasDifferentTable || hasMoreCellsInSameTable;
+    }
+
+    // 단일 셀 선택 시 시각적 처리 (기존 로직 그대로)
+    function applySingleSelectionVisuals(ranges, rootContainer) {
+        ranges.forEach(range => {
+            if (range.isTableLine) {
+                const lineEl = rootContainer.querySelector(`[data-line-index="${range.lineIndex}"]`);
+                if (lineEl) {
+                    const childTable = lineEl.matches('.se-table') ? lineEl : lineEl.querySelector('.se-table');
+                    if (childTable) {
+                        childTable.querySelectorAll('.se-table-cell').forEach(subCell => {
+                            subCell.classList.add('is-selected');
+                            subCell.classList.remove('is-not-selected');
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    // 복수 셀 선택 시 시각적 처리 (기존 로직 그대로)
+    function applyMultiSelectionVisuals(newSelectedCells) {
+        const targetTables = new Set();
+        newSelectedCells.forEach(td => {
+            const table = td.closest('.se-table');
+            if (table) targetTables.add(table);
+        });
+
+        targetTables.forEach(table => {
+            const allCellsInTable = table.querySelectorAll('.se-table-cell');
+            allCellsInTable.forEach(td => {
+                if (td.closest('.se-table') !== table) return; // 중첩 테이블 방어
+
+                const isTarget = newSelectedCells.some(selected => selected.id === td.id);
+                if (isTarget) {
+                    td.classList.add('is-selected');
+                    td.classList.remove('is-not-selected');
+                } else {
+                    td.classList.remove('is-selected');
+                    td.classList.add('is-not-selected');
+                }
+            });
+        });
+    }    
+    function collectAllCellIdsFromState(lines, idSet, stateAPI) {
+        if (!lines || !Array.isArray(lines)) return;
+
+        lines.forEach(line => {
+            // 라인 내에 chunks가 없으면 스킵
+            if (!line.chunks || !Array.isArray(line.chunks)) return;
+
+            line.chunks.forEach(chunk => {
+                // chunk가 테이블인 경우에만 셀 ID 수집 및 내부 탐색
+                if (chunk.type === 'table' && chunk.data) {
+                    chunk.data.forEach(row => {
+                        row.forEach(cell => {
+                            // 1. 이미 수집한 ID면 무한 루프 방지를 위해 패스
+                            if (idSet.has(cell.id)) return;
+
+                            // 2. 셀 ID 저장
+                            idSet.add(cell.id);
+
+                            // 3. ★ 핵심 수정: stateAPI.get(cell.id)의 결과가 바로 'lines' 배열임
+                            const innerLines = stateAPI.get(cell.id); 
+                            
+                            // 4. 가져온 게 배열이고 내용이 있다면, 그 배열을 그대로 들고 다시 재귀
+                            if (innerLines && Array.isArray(innerLines) && innerLines.length > 0) {
+                                collectAllCellIdsFromState(innerLines, idSet, stateAPI);
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    }
+    return { applyVisualAndRangeSelection };
+}
+
+/*
+리팩토링 전 코드...!!!! 선택범위 영역 정확도 많이 상승함...
+export function createRangeService() {
+    function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId) {
+        if (!selectedCells || selectedCells.length === 0) return;
+
         const finalSelectedIds = new Set();
         let newSelectedCells = [];
         const rootContainer = document.getElementById(normalized.containerId);
@@ -31,6 +212,8 @@ export function createRangeService() {
                 return targetTd;
             }).filter(Boolean);      
         } else {
+            // 여기 이대로 하면 안됨 무조건 해당 행이 테이블인지 아닌지 비교후 처리해야함 -> 테이블이면 재귀고 아니면 재귀 x
+
             //newSelectedCells = [...selectedCells];
             // 1. 새로운 집합 생성 (원본 유지)
             const allCollectedIds = new Set();
@@ -167,6 +350,8 @@ export function createRangeService() {
     }
     return { applyVisualAndRangeSelection };
 }
+*/
+
 
 /*
 버그가 있긴한데 임시 백업
