@@ -1,6 +1,6 @@
 
 
-import { createDOMCreateService } from '../features/domCreateService.js';
+import { createEditorLayoutBuilder } from '../core/layout/editorLayoutBuilder.js';
 import { createStateApplication } from '../modules/state/application/editorApplication.js';
 import { EditorLineModel } from '../model/editorLineModel.js';
 import { TextChunkModel } from '../model/editorModel.js';
@@ -15,7 +15,7 @@ import { createApiApplication } from '../modules/rest/apiApplication.js';
  */
 export function createEditorBootstrap({ rootId, contentKey, rendererRegistry }) {
     // 1. DOM 뼈대 생성
-    const domService = createDOMCreateService(rootId);
+    const domService = createEditorLayoutBuilder(rootId);
     domService.create();
 
     const editorEl = document.getElementById(contentKey);

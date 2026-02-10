@@ -1,6 +1,6 @@
-import { FONT_FAMILY_LIST } from '../constants/styleConstants.js';
+import { FONT_FAMILY_LIST } from '../../constants/styleConstants.js';
 
-export function createDOMCreateService(rootId) {
+export function createEditorLayoutBuilder(rootId) {
   const root = document.getElementById(rootId);
   if (!root) {
     console.error(`❌ rootId "${rootId}"를 찾을 수 없습니다.`);
