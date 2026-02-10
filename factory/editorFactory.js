@@ -1,10 +1,5 @@
 // factory/editorFactory.js
 import { createEditorBootstrap } from './editorBootstrapFactory.js';
-
-import { createUiApplication } from '../modules/ui/application/uiApplication.js';
-import { createInputApplication } from '../modules/input/application/inputApplication.js';
-import { createSelectionApplication } from '../modules/selection/selectionApplication.js';
-
 import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
@@ -42,26 +37,25 @@ export function createEditorFactory() {
     registerDefaultChunks();
 
     // DOM구조, 상태관리 초기화
-    const { state, domService } = createEditorBootstrap({
-      rootId,
-      contentKey: MAIN_CONTENT_KEY
+    const {        
+        domService,
+        state,
+        ui,
+        domSelection,
+        restApi,
+        inputApp,
+        editorEl 
+    } = createEditorBootstrap({
+        rootId,
+        contentKey: MAIN_CONTENT_KEY,
+        rendererRegistry: {
+            text : textRenderer,
+            video: videoRenderer,
+            image: imageRenderer,
+            table: tableRenderer
+        }
     });
 
-    // UI 및 렌더링 엔진
-    const ui = createUiApplication({
-      rootId: MAIN_CONTENT_KEY,
-      rendererRegistry: {
-        text  : textRenderer,
-        video : videoRenderer,
-        image : imageRenderer,
-        table : tableRenderer
-      }
-    });
-
-    const editorEl       = document.getElementById(MAIN_CONTENT_KEY);
-    const domSelection   = createSelectionApplication({ root: editorEl });
-    const inputApp       = createInputApplication({ editorEl });
-    
     /* ─────────────────────────────
      * 2️⃣ 내부 API 정의 (Key 기반 대응)
      * ───────────────────────────── */

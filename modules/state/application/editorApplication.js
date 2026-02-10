@@ -3,7 +3,7 @@ import { createHistoryStore } from "../store/historyStore.js";
 import { createCursorHistoryStore } from "../store/cursorHistoryStore.js";
 import { createEditorSnapshotService } from "../service/editorSnapshotService.js";
 
-export function createEditorApp(initialState = {}) {
+export function createStateApplication(initialState = {}) {
   // ----------------------------
   // [1] 상태 저장소 초기화
   // ----------------------------
