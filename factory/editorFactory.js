@@ -3,6 +3,7 @@ import { createEditorBootstrap } from './editorBootstrapFactory.js';
 
 import { createUiApplication } from '../modules/ui/application/uiApplication.js';
 import { createInputApplication } from '../modules/input/application/inputApplication.js';
+import { createSelectionApplication } from '../modules/selection/selectionApplication.js';
 
 import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
@@ -11,8 +12,6 @@ import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 
 import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
-
-import { createSelectionService } from '../core/selection/domSelectionEngine.js';
 
 import { bindSelectionFeature } from '../core/selection/selectionFeatureBinder.js';
 import { bindStyleButtons } from '../features/style/styleFeatureBinder.js';
@@ -60,11 +59,7 @@ export function createEditorFactory() {
     });
 
     const editorEl       = document.getElementById(MAIN_CONTENT_KEY);
-
-    // 선택 시스템
-    const domSelection   = createSelectionService({ root: editorEl });
-
-    // 입력 시스템
+    const domSelection   = createSelectionApplication({ root: editorEl });
     const inputApp       = createInputApplication({ editorEl });
     
     /* ─────────────────────────────

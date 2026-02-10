@@ -97,9 +97,7 @@ export function createRangeService(root) {
         return null;
     }
 
-    function getSelectionPosition(selectionContext) {
-        const context = selectionContext; 
-
+    function getSelectionPosition(context) {
         const { lineIndex, dataIndex, activeNode, container, cursorOffset, activeContainer } = context;
         const targetEl = activeNode?.nodeType === Node.TEXT_NODE ? activeNode.parentElement : activeNode;
         const tableEl = targetEl?.closest('table');
@@ -138,7 +136,58 @@ export function createRangeService(root) {
             }
         };
     }
-    
 
-    return { getDomSelection, getSelectionPosition };
+    function getSelectionContext(targetContainer) {
+
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+
+        const range = sel.getRangeAt(0);
+        const container = range.startContainer;
+        const el = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
+
+        const activeContainer = el.closest('td[id], th[id]') || targetContainer;
+        if (!activeContainer) return null;
+
+        const parentDom = el.closest('.text-block');
+        if (!parentDom || !activeContainer.contains(parentDom)) return null;
+
+        const lineIndex = getLineIndex(parentDom);
+        if (lineIndex < 0) return null;
+
+        const rawActiveNode = el.closest('[data-index]');
+        const activeNode = rawActiveNode && activeContainer.contains(rawActiveNode) ? rawActiveNode : null;
+        const dataIndex = activeNode?.dataset.index !== undefined ? parseInt(activeNode.dataset.index, 10) : null;
+
+        return {
+            activeContainer, containerId: activeContainer.id, lineIndex,
+            parentDom, container, cursorOffset: range.startOffset,
+            activeNode, dataIndex, range
+        };
+
+    }    
+    
+    function getLineIndex(el) {
+        if (!el) return -1;
+        // data-line-index 값을 읽어서 숫자로 변환
+        const index = el.getAttribute('data-line-index');
+        return index !== null ? parseInt(index, 10) : -1;
+    }          
+
+    function getInsertionAbsolutePosition(context) {
+        const { lineIndex, container, cursorOffset, parentDom } = context;
+        let absoluteOffset = 0;
+        const walker = document.createTreeWalker(parentDom, NodeFilter.SHOW_TEXT, null, false);
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node === container) {
+                absoluteOffset += cursorOffset;
+                break;
+            }
+            absoluteOffset += node.textContent.length;
+        }
+        return { lineIndex, absoluteOffset };
+    }    
+
+    return { getDomSelection, getSelectionPosition, getSelectionContext, getInsertionAbsolutePosition };
 }

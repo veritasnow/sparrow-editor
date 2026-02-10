@@ -3,9 +3,9 @@ import { createRangeService } from "./service/rangeService.js";
 import { createRestoreCursorService } from "./service/restoreCursorService.js";
 
 
-export function createSelectionService({ root }) {
-    let lastValidPos  = null;
-    let lastActiveKey = null;
+export function createSelectionApplication({ root }) {
+    let lastValidPos    = null;
+    let lastActiveKey   = null;
     let cacheActiveKeys = null;
 
     // 외부 서비스 주입
@@ -37,50 +37,13 @@ export function createSelectionService({ root }) {
         return (activeKey ? document.getElementById(activeKey) : null) || root;
     }
 
-    /**
-     * 2. 셀 전체 선택 시 누락 방지 및 중첩 구조 인덱스 보정 포함
-     */
     function getDomSelection(targetKey) {
         return rangeService.getDomSelection(targetKey, getActiveKey());
     }
 
-    /**
-     * 3. 커서 컨텍스트 추출
-     */
     function getSelectionContext() {
-        const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return null;
-
-        const range = sel.getRangeAt(0);
-        const container = range.startContainer;
-        const el = container.nodeType === Node.TEXT_NODE ? container.parentElement : container;
-
-        const activeContainer = el.closest('td[id], th[id]') || getActiveContainer();
-        if (!activeContainer) return null;
-
-        const parentDom = el.closest('.text-block');
-        if (!parentDom || !activeContainer.contains(parentDom)) return null;
-
-        const lineIndex = getLineIndex(parentDom);
-        if (lineIndex < 0) return null;
-
-        const rawActiveNode = el.closest('[data-index]');
-        const activeNode = rawActiveNode && activeContainer.contains(rawActiveNode) ? rawActiveNode : null;
-        const dataIndex = activeNode?.dataset.index !== undefined ? parseInt(activeNode.dataset.index, 10) : null;
-
-        return {
-            activeContainer, containerId: activeContainer.id, lineIndex,
-            parentDom, container, cursorOffset: range.startOffset,
-            activeNode, dataIndex, range
-        };
+        return rangeService.getSelectionContext(getActiveContainer());
     }
-
-    function getLineIndex(el) {
-        if (!el) return -1;
-        // data-line-index 값을 읽어서 숫자로 변환
-        const index = el.getAttribute('data-line-index');
-        return index !== null ? parseInt(index, 10) : -1;
-    }       
 
     function getSelectionPosition() {
         const context = getSelectionContext(); 
@@ -90,39 +53,23 @@ export function createSelectionService({ root }) {
 
     function getInsertionAbsolutePosition() {
         const context = getSelectionContext();
-        if (!context) return null;
-        const { lineIndex, container, cursorOffset, parentDom } = context;
-        let absoluteOffset = 0;
-        const walker = document.createTreeWalker(parentDom, NodeFilter.SHOW_TEXT, null, false);
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            if (node === container) {
-                absoluteOffset += cursorOffset;
-                break;
-            }
-            absoluteOffset += node.textContent.length;
-        }
-        return { lineIndex, absoluteOffset };
+        if (!context) return null;        
+        return rangeService.getInsertionAbsolutePosition(context);
     }
 
     function getSelectionMode() {
         const activeKey = getActiveKey();
-        //console.log('[SelectionMode] activeKey =', activeKey);
         if (!activeKey) {
-            //console.log('[SelectionMode] no active key → none');
             return 'none';
         }
 
         const ranges = getDomSelection(activeKey);
-        //console.log('[SelectionMode] ranges =', ranges);
         if (!ranges || ranges.length === 0) {
-            //console.log('[SelectionMode] no ranges → none');
             return 'none';
         }
 
         // 1️⃣ 커서만 있는 상태
         if (ranges.length === 1 && ranges[0].startIndex === ranges[0].endIndex) {
-            //console.log('[SelectionMode] cursor only → cursor');
             return 'cursor';
         }
 
@@ -133,12 +80,8 @@ export function createSelectionService({ root }) {
             container.classList.contains('is-selected') &&
             ranges.every(r => r.startIndex === 0)
         ) {
-            //console.log('[SelectionMode] cell selected → cell');
             return 'cell';
         }
-
-        // 3️⃣ 텍스트 범위 선택
-        //console.log('[SelectionMode] text range → range');
         return 'range';
     }
 
@@ -155,11 +98,14 @@ export function createSelectionService({ root }) {
         getLastActiveKey: () => lastActiveKey,
         getInsertionAbsolutePosition,
         updateLastValidPosition: () => {
-            const pos = getSelectionPosition();
+            const context = getSelectionContext(); 
+            if (!context) return;
+
+            const pos = rangeService.getSelectionPosition(context);
             if (pos) {
                 lastValidPos = { 
-                    lineIndex: pos.lineIndex, 
-                    absoluteOffset: getInsertionAbsolutePosition().absoluteOffset || 0 
+                    lineIndex     : pos.lineIndex, 
+                    absoluteOffset: rangeService.getInsertionAbsolutePosition(context).absoluteOffset || 0 
                 };
                 lastActiveKey = pos.containerId;
             }
