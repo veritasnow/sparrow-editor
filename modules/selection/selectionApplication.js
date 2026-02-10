@@ -85,7 +85,11 @@ export function createSelectionApplication({ root }) {
         return 'range';
     }
 
-    const restoreService = createRestoreCursorService(getActiveContainer, root);    
+    const restoreService = createRestoreCursorService(root);    
+
+    function restoreCursor(cursorData) {
+        return restoreService.restoreCursor(cursorData, getActiveContainer());
+    }
     
     return { 
         getActiveKeys,
@@ -112,7 +116,7 @@ export function createSelectionApplication({ root }) {
         },
         getLastValidPosition: () => lastValidPos,
         getSelectionContext, 
-        restoreCursor: (cursorData) => restoreService.restoreCursor(cursorData),
+        restoreCursor,
         getDomSelection,
         getSelectionMode,
     };

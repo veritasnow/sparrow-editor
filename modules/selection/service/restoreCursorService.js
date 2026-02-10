@@ -1,7 +1,7 @@
 /**
  * 가상 스크롤 및 중첩 컨테이너(테이블 등) 대응 커서 복원 서비스
  */
-export function createRestoreCursorService(getActiveContainer, root) {
+export function createRestoreCursorService(root) {
     
     let isRestoringCursor = false;
 
@@ -68,10 +68,10 @@ export function createRestoreCursorService(getActiveContainer, root) {
     /**
      * 2. 단일 커서 복원 (핵심 수정됨)
      */
-    function restoreCursor(cursorData) {
+    function restoreCursor(cursorData, activeContainer) {
         if (!cursorData) return;
         const { containerId, anchor, lineIndex } = cursorData;
-        const targetContainer = containerId ? document.getElementById(containerId) : getActiveContainer();
+        const targetContainer = containerId ? document.getElementById(containerId) : activeContainer;
         if (!targetContainer) return;
 
         if (document.activeElement !== targetContainer) {

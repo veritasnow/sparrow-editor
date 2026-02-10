@@ -130,7 +130,6 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         // Case 2: DOM Rebuild (구조 변경 감지)
         if (!result) {
             const rebuild = uiAPI.parseLineDOM(parentDom, currentLine.chunks, container, cursorOffset, lineIndex);
-            console.log("rebuildrebuild : ", rebuild);
 
             if (rebuild.shouldSplit) {
                 const separatedLines = splitChunksByTable(rebuild.newChunks, currentLine.align);

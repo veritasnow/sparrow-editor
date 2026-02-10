@@ -1,4 +1,4 @@
-import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../../constants/styleConstants.js';
+import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 
 export function createAnalyzeService(stateAPI, selectionAPI) {
   

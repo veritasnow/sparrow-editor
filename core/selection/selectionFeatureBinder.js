@@ -1,7 +1,7 @@
-import { createAnalyzeService } from './service/binderSerivce/analyzeService.js';
-import { createSelectionUIService } from './service/binderSerivce/selectionUiService.js';
-import { createRangeService } from './service/binderSerivce/rangeService.js';
-import { createDragService } from './service/binderSerivce/dragService.js';
+import { createAnalyzeService } from './service/analyzeService.js';
+import { createSelectionUIService } from './service/selectionUiService.js';
+import { createRangeService } from './service/rangeService.js';
+import { createDragService } from './service/dragService.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
 export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarElements) {
