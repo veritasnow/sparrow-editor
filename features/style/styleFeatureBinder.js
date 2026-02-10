@@ -5,22 +5,32 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements, sync) 
 
     // 공통 핸들러 로직
     const handleEvent = (e) => {
-        const target = e.currentTarget; // 위임이 아니므로 closest 대신 currentTarget 사용
-        const { command, value } = target.dataset;
+        // e.currentTarget은 리스너가 걸린 버튼/셀렉트 자체
+        // e.target은 실제 이벤트가 발생한 정밀한 요소 (컬러 input 등)
+        const currentEl          = e.currentTarget;
+        const { command, value } = currentEl.dataset;
 
         if (e.type === 'click') {
             if (command === 'color-trigger') {
-                target.querySelector('.color-input')?.click();
+                currentEl.querySelector('.color-input')?.click();
             } else if (value) {
                 applyStyle(command, value);
             }
         } 
         else if (e.type === 'change' || e.type === 'input') {
-            if (command === 'color-input') {
-                const preview = target.closest('.color-btn')?.querySelector('.color-preview');
-                if (preview) preview.style.background = e.target.value;
-                applyStyleValue('color', e.target.value);
+            // 컬러 input에서 발생한 이벤트인 경우
+            if (e.target.dataset.command === 'color-input') {
+                const color     = e.target.value;
+                // 실제 값이 바뀐 e.target(input)에서 type을 가져옴
+                const styleProp = e.target.dataset.type; 
+
+                // 미리보기 업데이트 (버튼 안의 span 찾기)
+                const preview = currentEl.querySelector('.color-preview');
+                if (preview) preview.style.background = color;
+
+                applyStyleValue(styleProp, color);
             } else {
+                // 일반 select 박스 등
                 applyStyleValue(command, e.target.value);
             }
         }

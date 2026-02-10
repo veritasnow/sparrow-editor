@@ -131,7 +131,8 @@ export function createEditorFactory() {
           underLineBtn    : document.getElementById(`${rootId}-underLineBtn`),
           fontSizeSelect  : document.getElementById(`${rootId}-fontSizeSelect`),
           fontFamilySelect: document.getElementById(`${rootId}-fontFamilySelect`),
-          textColorBtn    : document.getElementById(`${rootId}-textColorBtn`)
+          textColorBtn    : document.getElementById(`${rootId}-textColorBtn`),
+          bgColorBtn      : document.getElementById(`${rootId}-bgColorBtn`)          
         };
 
         const alignToolbar = {
