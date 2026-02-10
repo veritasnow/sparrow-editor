@@ -15,19 +15,19 @@ export function createEditorLayoutBuilder(rootId) {
 
     root.innerHTML = `
       <div class="sparrow-toolbar">
-        <button id="${rootId}-boldBtn" title="굵게"><b>B</b></button>
-        <button id="${rootId}-italicBtn" title="기울이기"><i>I</i></button>
-        <button id="${rootId}-underLineBtn" title="밑줄"><u>U</u></button>
+        <button id="${rootId}-boldBtn" data-command="fontWeight" data-value="bold" title="굵게"><b>B</b></button>
+        <button id="${rootId}-italicBtn" data-command="fontStyle" data-value="italic" title="기울이기"><i>I</i></button>
+        <button id="${rootId}-underLineBtn" data-command="textDecoration" data-value="underline"title="밑줄"><u>U</u></button>
 
         <!-- 글자 색상 -->
-        <button id="${rootId}-textColorBtn" title="글자 색상" class="color-btn">
+        <button id="${rootId}-textColorBtn" data-command="color-trigger" title="글자 색상" class="color-btn">
           <span class="color-preview"></span>
           <span class="color-text">C</span>
-          <input type="color" id="${rootId}-textColorInput" class="color-input" />
+          <input type="color" id="${rootId}-textColorInput" data-command="color-input" class="color-input" />
         </button>
 
         <!-- 글자 크기 -->
-        <select id="${rootId}-fontSizeSelect" class="font-size-select" title="글자 크기">
+        <select id="${rootId}-fontSizeSelect" class="font-size-select" data-command="fontSize" title="글자 크기">
           <option value="10px">10</option>
           <option value="12px">12</option>
           <option value="14px" selected>14</option>
@@ -37,34 +37,34 @@ export function createEditorLayoutBuilder(rootId) {
           <option value="24px">24</option>
         </select>
 
-        <select id="${rootId}-fontFamilySelect" class="font-family-select" title="글꼴 변경">
+        <select id="${rootId}-fontFamilySelect" data-command="fontFamily" class="font-family-select" title="글꼴 변경">
           ${fontOptions}
-        </select>        
+        </select>      
 
         <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
 
         <!-- 표 삽입 버튼 -->
-        <button id="${rootId}-addTableBtn" class="table-btn" title="표 삽입">
+        <button id="${rootId}-addTableBtn" data-command="addTable" class="table-btn" title="표 삽입">
           <span>▦</span>
         </button>
 
-        <button id="${rootId}-alignLeftBtn" title="왼쪽 정렬">
+        <button id="${rootId}-alignLeftBtn" data-command="textAlign" data-value="left" title="왼쪽 정렬">
           <div class="align-icon align-left"><div></div><div></div><div></div><div></div></div>
         </button>
 
-        <button id="${rootId}-alignCenterBtn" title="가운데 정렬">
+        <button id="${rootId}-alignCenterBtn" data-command="textAlign" data-value="center" title="가운데 정렬">
           <div class="align-icon align-center"><div></div><div></div><div></div><div></div></div>
         </button>
 
-        <button id="${rootId}-alignRightBtn" title="오른쪽 정렬">
+        <button id="${rootId}-alignRightBtn" data-command="textAlign" data-value="right" title="오른쪽 정렬">
           <div class="align-icon align-right"><div></div><div></div><div></div><div></div></div>
         </button>
 
-        <button id="${rootId}-addVideoBtn" title="동영상 추가">
+        <button id="${rootId}-addVideoBtn" data-command="addVideo" title="동영상 추가">
           <div class="video-icon"></div>
         </button>
 
-        <button id="${rootId}-addImageBtn" title="이미지 추가">
+        <button id="${rootId}-addImageBtn" data-command="addImage" title="이미지 추가">
           <div class="image-icon"></div>
         </button>
       </div>

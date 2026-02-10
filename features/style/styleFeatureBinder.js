@@ -1,5 +1,58 @@
 import { createEditorStyleService } from "./editorStyleService.js";
 
+export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements, sync) {
+    const { applyStyle, applyStyleValue } = createEditorStyleService(stateAPI, uiAPI, selectionAPI, sync);
+
+    // 공통 핸들러 로직
+    const handleEvent = (e) => {
+        const target = e.currentTarget; // 위임이 아니므로 closest 대신 currentTarget 사용
+        const { command, value } = target.dataset;
+
+        if (e.type === 'click') {
+            if (command === 'color-trigger') {
+                target.querySelector('.color-input')?.click();
+            } else if (value) {
+                applyStyle(command, value);
+            }
+        } 
+        else if (e.type === 'change' || e.type === 'input') {
+            if (command === 'color-input') {
+                const preview = target.closest('.color-btn')?.querySelector('.color-preview');
+                if (preview) preview.style.background = e.target.value;
+                applyStyleValue('color', e.target.value);
+            } else {
+                applyStyleValue(command, e.target.value);
+            }
+        }
+    };
+
+    // ───────────────── 바인딩 실행 ─────────────────
+    // 넘겨받은 객체의 DOM 요소들만 순회하며 이벤트 등록
+    Object.values(elements).forEach(el => {
+        if (!el) return;
+
+        // 1. 기본적으로 클릭 이벤트 등록
+        el.addEventListener("click", handleEvent);
+
+        // 2. Select 박스나 컬러 인풋이 포함된 경우 change/input 추가 등록
+        if (el.tagName === 'SELECT' || el.querySelector('input[type="color"]')) {
+            el.addEventListener("change", handleEvent);
+            el.addEventListener("input", handleEvent);
+        }
+    });
+
+    // ───────────────── 디스포저 (청소) ─────────────────
+    return function destroy() {
+        Object.values(elements).forEach(el => {
+            if (!el) return;
+            el.removeEventListener("click", handleEvent);
+            el.removeEventListener("change", handleEvent);
+            el.removeEventListener("input", handleEvent);
+        });
+    };
+}
+/*
+옛날방식, 혹시 몰라서 남겨둠. 이 방식은 기능확장할때마다 변경을 너무 많이 해야되서 사용하지 않는게 좋을거 가틈
 export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
     const {
         boldBtn,
@@ -106,3 +159,4 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
         }
     };
 }
+*/

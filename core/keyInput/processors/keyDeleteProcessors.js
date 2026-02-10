@@ -22,6 +22,7 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
     const isSelection = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
 
     // 1. [검증] 삭제 방지 가드 (마지막 라인 끝, 테이블 셀 경계 등)
+    // TODO 액티브키 필요 없을거 같음.
     if (shouldPreventDeletion(activeKey, currentState, firstDomRange, isSelection, e)) return;
 
     // 2. [위치 파악] 삭제할 위치(lineIndex, offset) 도출
@@ -32,7 +33,7 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
     if (result.newState === currentState) return;
 
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applyDeleteResult(activeKey, result, { state, uiAPI, selectionAPI });
+    applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
 }
 
 /**

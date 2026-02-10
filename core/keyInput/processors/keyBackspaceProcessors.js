@@ -32,7 +32,7 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     if (result.newState === currentState) return;
 
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applyBackspaceResult(activeKey, result, { state, uiAPI, selectionAPI });
+    applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
 }
 
 /**
