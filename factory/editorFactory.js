@@ -4,6 +4,7 @@ import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
 import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
+import { unorderedListRenderer } from '../extensions/unorderedList/components/unorderedListRenderer.js';
 
 import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
@@ -49,10 +50,11 @@ export function createEditorFactory() {
         rootId,
         contentKey: MAIN_CONTENT_KEY,
         rendererRegistry: {
-            text : textRenderer,
-            video: videoRenderer,
-            image: imageRenderer,
-            table: tableRenderer
+            text         : textRenderer,
+            video        : videoRenderer,
+            image        : imageRenderer,
+            table        : tableRenderer,
+            unorderedList: unorderedListRenderer
         }
     });
 
@@ -63,6 +65,7 @@ export function createEditorFactory() {
       state,
       ui,
       domSelection,
+      MAIN_CONTENT_KEY
     });
 
     // inputProcessor 생성 시 MAIN_CONTENT_KEY 전달
@@ -71,9 +74,10 @@ export function createEditorFactory() {
     const editorAPI = {
       getToolbarButton(name) {
         const buttonIds = {
-          video: `${rootId}-addVideoBtn`,
-          image: `${rootId}-addImageBtn`,
-          table: `${rootId}-addTableBtn`,
+          video        : `${rootId}-addVideoBtn`,
+          image        : `${rootId}-addImageBtn`,
+          table        : `${rootId}-addTableBtn`,
+          unorderedList: `${rootId}-unorderedListBtn`
         };
         return document.getElementById(buttonIds[name] || name);
       }

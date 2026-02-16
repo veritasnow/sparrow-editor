@@ -14,7 +14,7 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
         if (!rows || !cols) return false;
 
         // 1. 현재 타겟팅된 컨테이너(본문 혹은 부모 셀) 확보
-        const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
+        const activeKey   = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
         if (!activeKey) return false;
 
         const editorState = stateAPI.get(activeKey);
@@ -25,7 +25,7 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
         if (!pos) {
             const lastLineIdx = Math.max(0, editorState.length - 1);
             pos = {
-                lineIndex: lastLineIdx,
+                lineIndex     : lastLineIdx,
                 absoluteOffset: editorState[lastLineIdx]?.chunks.reduce((sum, c) => sum + (c.text?.length || 0), 0) || 0
             };
         }
@@ -52,15 +52,16 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
 
         // 5. 부모 컨테이너 상태 저장
         stateAPI.save(activeKey, newState);
+        console.log("newStatenewStatenewStatenewState : ", newState);
 
         // 6. 커서 위치 정보 구성
         const nextCursorPos = {
             containerId: activeKey, 
-            lineIndex: restoreLineIndex,
+            lineIndex  : restoreLineIndex,
             anchor: {
                 chunkIndex: restoreChunkIndex,
-                type: 'text',
-                offset: restoreOffset
+                type      : 'text',
+                offset    : restoreOffset
             }
         };
         

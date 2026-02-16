@@ -3,14 +3,20 @@ import { createRangeService } from "./service/rangeService.js";
 import { createRestoreCursorService } from "./service/restoreCursorService.js";
 
 
-export function createSelectionApplication({ root }) {
+export function createSelectionApplication({ rootId }) {
     let lastValidPos    = null;
     let lastActiveKey   = null;
     let cacheActiveKeys = null;
+    
+    const root           = document.getElementById(rootId);
 
     // 외부 서비스 주입
     const keyService     = createKeyService(root);
     const rangeService   = createRangeService(root);
+
+    function getMainKey() {
+        return `${rootId}-content`;
+    }
 
     function getActiveKeys() {
         return cacheActiveKeys;
@@ -26,6 +32,11 @@ export function createSelectionApplication({ root }) {
         }
         return cacheActiveKeys || [];
     }
+
+
+    function setCachedActiveKey(key) {
+        cacheActiveKeys = [key];
+    }    
 
     function getActiveKey() {
         const keys = ensureActiveKeys();
@@ -88,7 +99,10 @@ export function createSelectionApplication({ root }) {
     const restoreService = createRestoreCursorService(root);    
 
     function restoreCursor(cursorData) {
-        return restoreService.restoreCursor(cursorData, getActiveContainer());
+        restoreService.restoreCursor(cursorData, getActiveContainer());
+        if(cursorData && cursorData.containerId !== null && cursorData.containerId !== '') {
+            setCachedActiveKey(cursorData.containerId);
+        }
     }
     
     return { 
@@ -106,6 +120,7 @@ export function createSelectionApplication({ root }) {
             if (!context) return;
 
             const pos = rangeService.getSelectionPosition(context);
+            console.log("pospospospos : ", pos);
             if (pos) {
                 lastValidPos = { 
                     lineIndex     : pos.lineIndex, 
@@ -119,5 +134,6 @@ export function createSelectionApplication({ root }) {
         restoreCursor,
         getDomSelection,
         getSelectionMode,
+        getMainKey,
     };
 }

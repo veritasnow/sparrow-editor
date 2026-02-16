@@ -14,7 +14,6 @@ export function createRangeService() {
             const startLine   = normalized.ranges[0].lineIndex;
             const endLine     = normalized.ranges[normalized.ranges.length - 1].lineIndex;
             const targetLines = stateAPI.getLineRange(startLine, endLine, normalized.containerId);
-            console.log("targetLinestargetLinestargetLines : ", targetLines);
             
             // 2. 재귀 호출 (stateAPI를 함께 넘겨서 내부 셀들도 조회하며 수집)
             const finalSelectedIds = new Set();

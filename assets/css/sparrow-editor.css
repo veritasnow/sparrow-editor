@@ -1,5 +1,5 @@
   /* ───────── 기본 에디터 영역 ───────── */
-  .sparrow-contents {
+.sparrow-contents {
   border: 1px solid #ccc;
   padding: 10px;
   min-height: 200px;
@@ -590,4 +590,72 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ───────── 툴바 리스트 아이콘 (o- 3줄 형태) ───────── */
+.sparrow-toolbar .sparrow-toolbar-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 18px;
+}
+
+.sparrow-toolbar .sparrow-toolbar-list-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* 닷지 (o) */
+.sparrow-toolbar .sparrow-toolbar-list-dot {
+  width: 3px;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 선 (-) */
+.sparrow-toolbar .sparrow-toolbar-list-line {
+  width: 12px;
+  height: 1.5px;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+/* ───────── 에디터 내부 실제 ul li 스타일 ───────── */
+.sparrow-contents ul {
+  margin: 10px 0 10px 25px;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.sparrow-contents li {
+  min-height: 24px;
+  line-height: 1.6;
+  margin-bottom: 2px;
 }

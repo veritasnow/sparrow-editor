@@ -69,6 +69,10 @@ export function createRestoreCursorService(root) {
      * 2. 단일 커서 복원 (핵심 수정됨)
      */
     function restoreCursor(cursorData, activeContainer) {
+
+        console.log("restoreCursor called with:", cursorData);
+        console.log("activeContainer called with:", activeContainer);
+
         if (!cursorData) return;
         const { containerId, anchor, lineIndex } = cursorData;
         const targetContainer = containerId ? document.getElementById(containerId) : activeContainer;

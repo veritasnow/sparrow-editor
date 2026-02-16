@@ -14,12 +14,21 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
 
     // 현재 커서가 있는 실제 컨테이너(에디터 혹은 TD) 정보를 가져옵니다.
     const selection   = selectionAPI.getSelectionContext();
-    const containerId = selection?.containerId || activeKey;
+    const containerId = selection.containerId || activeKey;
+
+    // ✅ 리스트 내부 엔터인지 확인
+    if (containerId.startsWith('list-')) {
+        return executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId, activeKey });
+    }    
 
     // 해당 컨테이너의 상태와 선택 범위를 가져옵니다.
     const currentState = stateAPI.get(containerId);
     const domRanges    = selectionAPI.getDomSelection(containerId);
     
+    console.log("endter currentState : ", currentState);
+    console.log("endter domRanges : ", domRanges);
+
+
     if (!domRanges || domRanges.length === 0 || !currentState) return;
 
     // 1. [위치 파악]
@@ -162,4 +171,78 @@ function applyEnterResult(targetContainerId, result, { stateAPI, uiAPI, selectio
     }
 
     movingTablePool.length = 0;
+}
+
+
+
+/**
+ * 리스트 전용 엔터 핸들러
+ */
+function executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
+    console.group("🚀 [List Enter Process]");
+
+    // 1. 리스트 내부 상태 가져오기
+    const listState = stateAPI.get(containerId);
+    const domRanges = selectionAPI.getDomSelection(containerId);
+
+    console.log("enter containerId : ", containerId);
+    console.log("listStatelistStatelistStatelistStatelistState : ", listState);
+    console.log("domRangesdomRangesdomRangesdomRangesdomRanges : ", domRanges);
+
+    if (!listState || !domRanges) {
+        console.groupEnd();
+        return;
+    }
+
+    const { lineIndex, offset } = resolveEnterPosition(listState, domRanges);
+
+    // 2. 리스트 내부 행 분할 (중요: 여기서 이미 newState는 [Line0, Line1] 처럼 늘어남)
+    const result = calculateEnterState(listState, lineIndex, offset, containerId);
+
+    console.log("enter resultresultresult : ", result);
+
+    // 3. 리스트 상태 저장
+    stateAPI.save(containerId, result.newState); 
+
+    // 4. UI 렌더링
+    // 리스트는 내부 구조(LI 개수)가 변한 것이므로, 
+    // 리스트를 포함하고 있는 "진짜 부모(메인 에디터)"의 해당 라인을 다시 그려야 합니다.
+    // 하지만, 만약 리스트 내부 UI만 갱신하고 싶다면 리스트 렌더러를 직접 호출해야 합니다.
+    
+    const mainKey   = selectionAPI.getMainKey();
+    console.log("mainKeymainKeymainKeymainKey : ", mainKey)
+    const mainState = stateAPI.get(mainKey);
+    
+    // 메인 에디터에서 이 리스트를 들고 있는 '부모 라인'을 찾습니다.
+    const parentLineIndexInMain = mainState.findIndex(line => 
+        line.chunks?.some(c => c.id === containerId)
+    );
+
+    if (parentLineIndexInMain !== -1) {
+        // 부모 청크의 데이터 구조 업데이트 (아이템 개수 동기화)
+        const listChunk = mainState[parentLineIndexInMain].chunks.find(c => c.id === containerId);
+        
+        // 💡 리스트 아이템(LI)의 개수를 상태와 맞춰줍니다.
+        listChunk.data = result.newState.map((line, idx) => ({
+            index: idx,
+            line: line
+        }));
+
+        stateAPI.save(mainKey, mainState);
+
+        // 렌더링 실행
+        uiAPI.renderLine(parentLineIndexInMain, mainState[parentLineIndexInMain], {
+            key: mainKey
+        });
+    }
+
+    // 5. 커서 복원 (containerId는 그대로 list-xxx 사용)
+    const finalPos = normalizeCursorData(result.newPos, containerId);
+    if (finalPos) {
+        stateAPI.saveCursor(finalPos);
+        requestAnimationFrame(() => {
+            selectionAPI.restoreCursor(finalPos);
+            console.groupEnd();
+        });
+    }
 }

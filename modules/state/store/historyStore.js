@@ -64,6 +64,26 @@ export function createHistoryStore(initialState = {}) {
       }
     },
 
+    deleteLine: (key, lineIndex, options = { saveHistory: true }) => {
+      const prevMap = history[currentIndex];
+      const currLines = prevMap[key];
+      
+      if (!currLines || !currLines[lineIndex]) return;
+
+      // 1. 해당 라인을 제외한 새로운 배열 생성 (불변성 유지)
+      const nextLines = currLines.filter((_, i) => i !== lineIndex);
+      const nextMap = { ...prevMap, [key]: nextLines };
+
+      if (options.saveHistory) {
+        history = history.slice(0, currentIndex + 1);
+        history.push(nextMap);
+        if (history.length > MAX_HISTORY) history.shift();
+        else currentIndex++;
+      } else {
+        history[currentIndex] = nextMap;
+      }
+    },    
+
     applyPatch: (key, patch, reducer, options = { saveHistory: true }) => {
       const prevMap = history[currentIndex];
       const currentData = prevMap[key] || [];
@@ -160,6 +180,64 @@ export function createHistoryStore(initialState = {}) {
     reset: () => {
       history = [{ ...initialState }];
       currentIndex = 0;
-    }
+    },
+
+    deleteKey: (key, options = { saveHistory: true }) => {
+      const prevMap = history[currentIndex];
+      
+      // 이미 해당 키가 없다면 처리 중단
+      if (!(key in prevMap)) return;
+
+      // 1. 새로운 맵을 생성하되, 해당 키만 제외 (구조적 공유 파괴 최소화)
+      const nextMap = { ...prevMap };
+      delete nextMap[key];
+
+      if (options.saveHistory) {
+        // 히스토리 타임라인 생성 (Undo 가능)
+        history = history.slice(0, currentIndex + 1);
+        history.push(nextMap);
+
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          currentIndex++;
+        }
+      } else {
+        // Silent 방식: 현재 타임라인에서 즉시 삭제
+        history[currentIndex] = nextMap;
+      }
+      
+      console.log(`Key removed: ${key}`, history);
+    },
+
+    // ----------------------------
+    // (보너스) 배치 삭제 기능 (여러 리스트를 한 번에 날릴 때 대비)
+    // ----------------------------
+    deleteKeys: (keys, options = { saveHistory: true }) => {
+      const prevMap = history[currentIndex];
+      let nextMap = { ...prevMap };
+      let isChanged = false;
+
+      keys.forEach(key => {
+        if (key in nextMap) {
+          delete nextMap[key];
+          isChanged = true;
+        }
+      });
+
+      if (!isChanged) return;
+
+      if (options.saveHistory) {
+        history = history.slice(0, currentIndex + 1);
+        history.push(nextMap);
+        if (history.length > MAX_HISTORY) {
+          history.shift();
+        } else {
+          currentIndex++;
+        }
+      } else {
+        history[currentIndex] = nextMap;
+      }
+    },    
   };
 }

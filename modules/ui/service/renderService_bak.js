@@ -1,18 +1,9 @@
 export function createRenderService({ rootId, rendererRegistry }) { 
 
     // 1. 라인 데이터에 따른 태그 결정 (테이블 포함 시 DIV, 아니면 P)
-    const getTagNameForLine = (lineData, targetKey) => {
+    const getTagNameForLine = (lineData) => {
         if (!lineData || !lineData.chunks) return "P";
-        
-        if (targetKey && targetKey.startsWith('list-')) {
-            return "LI";
-        }
-        
-        const firstChunk = lineData.chunks[0];
-        if (firstChunk?.type === 'unorderedList') return "UL"; // 리스트면 UL 반환
-        if (lineData.chunks.some(c => c.type === 'table')) return "DIV";
-        
-        return "P";
+        return lineData.chunks.some(c => c.type === 'table') ? "DIV" : "P";
     };
 
     // 2. 공통 라인 엘리먼트 생성
@@ -68,9 +59,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             lineEl = Array.from(container.children).find(el => !el.hasAttribute('data-line-index'));
         }        
         
-        console.log("lineDatalineDatalineDatalineData : ", lineData);
-        const requiredTag = getTagNameForLine(lineData, targetKey);
-        console.log("requiredTagrequiredTagrequiredTagrequiredTag : ", requiredTag);
+        const requiredTag = getTagNameForLine(lineData);
 
         if (!lineEl) {
             lineEl = createLineElement(lineData, lineIndex);
@@ -87,30 +76,19 @@ export function createRenderService({ rootId, rendererRegistry }) {
         const tablePool = externalPool || Array.from(lineEl.getElementsByClassName('chunk-table'));
         
         lineEl.style.textAlign = lineData.align || "left";
+        lineEl.innerHTML = ""; 
 
-        if (requiredTag === "UL") {
-            // 리스트면 내부를 싹 비우고 그리는 renderListIntoElement를 실행
-            const listChunk = lineData.chunks[0];
-            console.log("lineDatalineDatalineDatalineData :", lineData);
-            console.log("lineIndexlineIndexlineIndexlineIndex :", lineIndex);            
-            renderListIntoElement(listChunk, lineIndex, lineEl);
-        } else {
-            lineEl.innerHTML = ""; 
-
-            if (!lineData.chunks || lineData.chunks.length === 0) {
-                const br = document.createElement("br");
-                br.dataset.marker = "empty";
-                lineEl.appendChild(br);
-            } else {        
-                this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
-            }
-
-            if (!skipSync) {
-                syncLineIndexes(container);
-            }
-
+        if (!lineData.chunks || lineData.chunks.length === 0) {
+            const br = document.createElement("br");
+            br.dataset.marker = "empty";
+            lineEl.appendChild(br);
+        } else {        
+            this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
         }
 
+        if (!skipSync) {
+            syncLineIndexes(container);
+        }
     }
 
     /**
@@ -165,78 +143,26 @@ export function createRenderService({ rootId, rendererRegistry }) {
      * 7. 인덱스 동기화
      */
     function syncLineIndexes(container) {
-        if (!container) return;
+        if (!container || !container.children.length) return;
 
-        //const directLines = container.querySelectorAll(':scope > [data-line-index]');
-        const directLines = container.querySelectorAll(':scope > .text-block');
-        
-        directLines.forEach((line, idx) => {
-            const newIdx = idx.toString();
-            line.dataset.lineIndex = newIdx; // 여기서 새 라인에도 인덱스가 생김!
+        // 🔥 직계 자식 중 text-block만 필터링
+        const lines = Array.from(container.children).filter(el => el.classList.contains('text-block'));
+        if (lines.length === 0) return;
 
-            if (line.tagName === 'UL') return; 
+        let baseIndex = parseInt(lines[0].dataset.lineIndex);
+        if (isNaN(baseIndex)) baseIndex = 0;
 
-            // 내부 청크 동기화
-            const chunks = line.querySelectorAll(':scope > [data-line-index]');
-            chunks.forEach(chunk => {
-                chunk.dataset.lineIndex = newIdx;
-            });
-        });
-    }
+        lines.forEach((lineEl, i) => {
+            const currentLineIndex = baseIndex + i;
+            lineEl.dataset.lineIndex = currentLineIndex;
 
-    function renderListIntoElement(chunk, lineIndex, ulEl) {
-        console.group(`🎨 Rendering List: ${chunk.id}`);
-        console.log("UL Target Index (Parent Level):", lineIndex);
-
-        ulEl.id                = chunk.id;
-        ulEl.dataset.type      = "unorderedList";
-        ulEl.dataset.lineIndex = lineIndex; 
-        ulEl.innerHTML         = ""; 
-        console.log("UL Element after clear:", ulEl);
-
-        const items = chunk.data ?? []; 
-        
-        items.forEach((itemData, internalIdx) => {
-            const li = document.createElement("li");
-            li.className = "se-list-item text-block";
-            
-            li.dataset.containerId = chunk.id; 
-            
-            // 🔍 [체크포인트 1] internalIdx가 실제 0, 1, 2 순서대로 오는지 확인
-            li.dataset.lineIndex = internalIdx;
-            console.log(`  [LI ${internalIdx}] Assigned Index:`, li.dataset.lineIndex);
-
-            const liLineModel = itemData.line;
-
-            if (liLineModel && liLineModel.chunks) {
-                liLineModel.chunks.forEach((c, cIdx) => {
-                    const span = document.createElement("span");
-                    span.className = "chunk-text";
-                    span.dataset.index = cIdx;
-                    
-                    // 🔍 [체크포인트 2] span에 들어가는 인덱스 확인
-                    span.dataset.lineIndex = internalIdx; 
-                    
-                    if (c.style) Object.assign(span.style, c.style);
-                    span.textContent = "\u200B" + (c.text || "");
-                    li.appendChild(span);
-                });
-            } else {
-                console.warn(`  [LI ${internalIdx}] No line data found, rendering empty.`);
-                const emptySpan = document.createElement("span");
-                emptySpan.className = "chunk-text";
-                emptySpan.dataset.index = "0";
-                emptySpan.dataset.lineIndex = internalIdx; // 여기도 추가해서 확인
-                emptySpan.textContent = "\u200B";
-                li.appendChild(emptySpan);
+            for (const child of lineEl.children) {
+                if (child.dataset) {
+                    child.dataset.lineIndex = currentLineIndex;
+                    // chunkIndex는 렌더링 시 부여된 값을 유지하거나 필요 시 여기서 재계산
+                }
             }
-            
-            ulEl.appendChild(li);
-            
-            // 🔍 [체크포인트 3] Append 직후 실제 DOM 상태 확인
-            console.log(`  [LI ${internalIdx}] Final DOM Index after append:`, li.getAttribute('data-line-index'));
         });
-        console.groupEnd();
     }
 
     return {

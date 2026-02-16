@@ -70,6 +70,7 @@ export function calculateDeleteSelectionState(editorState, ranges) {
             }
         },
         deletedLineIndex: deleteCount > 0 ? { start: startLineIdx + 1, count: deleteCount } : null,
-        updatedLineIndex: startLineIdx
+        updatedLineIndex: startLineIdx,
+        isListLineMerge : false        
     };
 }

@@ -8,7 +8,7 @@ export function applyTableBlock(editorState, rows, cols, currentLineIndex, curso
     if (!currentLine) return { newState: editorState };
 
     const tableHandler = chunkRegistry.get('table');
-    const textHandler = chunkRegistry.get('text');
+    //const textHandler = chunkRegistry.get('text');
     
     // 1. 테이블 청크 생성
     const tableChunk = tableHandler.create(rows, cols);
@@ -18,7 +18,7 @@ export function applyTableBlock(editorState, rows, cols, currentLineIndex, curso
 
     // 3. 유효성 검사 (내용이 있는지 확인)
     const hasBeforeContent = beforeChunks.some(c => c.type !== 'text' || c.text.trim() !== '');
-    const hasAfterContent = afterChunks.some(c => c.type !== 'text' || c.text.trim() !== '');
+    //const hasAfterContent = afterChunks.some(c => c.type !== 'text' || c.text.trim() !== '');
 
     const newState = [...editorState];
     const insertedLines = [];

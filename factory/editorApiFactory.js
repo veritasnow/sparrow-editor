@@ -4,6 +4,7 @@ export function createEditorAPI({
   state,
   ui,
   domSelection,
+  MAIN_CONTENT_KEY
 }) {
 
     /* ─────────────────────────────
@@ -14,6 +15,15 @@ export function createEditorAPI({
         save          : (key, data, options = { saveHistory: true }) => {
             state.saveEditorState(data === undefined ? MAIN_CONTENT_KEY : key, data, options);
         },
+        delete        : (key = MAIN_CONTENT_KEY, options = { saveHistory: true }) => {
+            state.deleteEditorState(key, options);
+        },
+        deleteBatch   : (keys, options = { saveHistory: true }) => {
+            state.deleteEditorBatchState(keys, options);
+        },        
+        deleteLine    : (lineIndex, key = MAIN_CONTENT_KEY, options) => {
+            state.deleteEditorLine(key, lineIndex, options);
+        },        
         saveBatch     : (updates, options = { saveHistory: true }) => state.saveEditorBatchState(updates, options),      
         saveCursor    : (cursor) => state.saveCursorState(cursor),
         getCursor     : () => state.getCursor(),
@@ -34,7 +44,7 @@ export function createEditorAPI({
         render: function(data, key = MAIN_CONTENT_KEY, shouldRenderSub = true) {
             ui.render(data, key);
             if(shouldRenderSub) {
-                this._renderSubTables(data);
+                this._renderSubDom(data);
             }
         },
 
@@ -52,19 +62,18 @@ export function createEditorAPI({
 
             // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
             if(shouldRenderSub) {
-                this._renderSubTables([lineData]);
+                this._renderSubDom([lineData]);
             }
         },
 
         /**
          * 내부 헬퍼: 라인 목록을 순회하며 하위 테이블 셀들을 재귀 렌더링
          */
-        _renderSubTables: function(lines) {
-            console.log("sssssssssssssssssss");
+        _renderSubDom: function(lines) {
             if (!lines || !Array.isArray(lines)) return;
 
             lines.forEach(line => {
-                line.chunks?.forEach(chunk => {
+                line.chunks.forEach(chunk => {
                     if (chunk.type === 'table' && chunk.data) {
                         // 테이블의 모든 셀(td)을 1차원 배열로 펼쳐서 순회
                         chunk.data.flat().forEach(cell => {
@@ -76,6 +85,16 @@ export function createEditorAPI({
                                 }
                             }
                         });
+                    } else if (chunk.type === 'unorderedList' && chunk.data) {
+                        const lineState = stateAPI.get(chunk.id);
+                        if (Array.isArray(lineState)) {
+                            lineState.forEach((item, index) => {
+                                this.renderLine(index, item, { 
+                                    key             : chunk.id, 
+                                    shouldRenderSub : false 
+                                });
+                            });
+                        }
                     }
                 });
             });
@@ -112,6 +131,7 @@ export function createEditorAPI({
         setIsRestoring              : (val) => domSelection.setIsRestoring(val),
         refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
         getSelectionMode            : () => domSelection.getSelectionMode(),
+        getMainKey                  : () => domSelection.getMainKey(),
     };
 
   return { stateAPI, uiAPI, selectionAPI };

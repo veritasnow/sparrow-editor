@@ -12,14 +12,30 @@ import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
  */
 export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     const activeKey = selectionAPI.getActiveKey();
+    console.log("activeKeyactiveKeyactiveKeyactiveKeyactiveKey : ", activeKey);
     if (!activeKey) return;
 
     const currentState = stateAPI.get(activeKey);
+
+    // 리스트 삭제 특수 로직
+    if (activeKey.startsWith('list-') && currentState.length === 1) {
+        const container = document.getElementById(activeKey);
+        if (container) {
+            // 함수 호출 시 필요한 인자들을 정확히 전달
+            const removed = removeList(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey, container);
+            if (removed) return; // 삭제 처리되었으면 종료
+        }
+    }
+
+
     const domRanges = selectionAPI.getDomSelection(activeKey);
     if (!domRanges || domRanges.length === 0) return;
 
     const firstDomRange = domRanges[0];
-    const isSelection = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
+    const isSelection   = domRanges.length > 1 || firstDomRange.startIndex !== firstDomRange.endIndex;
+
+    console.log("firstDomRange:", firstDomRange);
+    console.log("isSelection:", isSelection);
 
     // 1. [검증] 삭제 방지 가드 (테이블 셀 보호 등)
     if (shouldPreventDeletion(activeKey, firstDomRange, isSelection, e)) return;
@@ -28,11 +44,18 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
 
     // 3. [상태 계산] 비즈니스 로직 수행
-    const result = calculateBackspaceState(currentState, lineIndex, offset, ranges);
+    const result = calculateBackspaceState(currentState, lineIndex, offset, ranges, stateAPI);
     if (result.newState === currentState) return;
 
+
+
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+
+    if (result.isListLineMerge) {
+        applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+    } else {
+        applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+    }
 }
 
 /**
@@ -42,7 +65,7 @@ function shouldPreventDeletion(activeKey, firstDomRange, isSelection, e) {
     if (isSelection) return false;
 
     const activeContainer = document.getElementById(activeKey);
-    const isCell = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
+    const isCell          = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
     
     // 테이블 셀 내부의 맨 첫 칸(0행 0열)에서 밖으로 나가는 삭제 방지
     if (isCell && firstDomRange.lineIndex === 0 && firstDomRange.endIndex === 0) {
@@ -71,7 +94,7 @@ function resolveTargetPosition(currentState, selectionAPI, domRanges, isSelectio
 
     // 커서가 0인데 Atomic 청크 뒤에 있는 경우 offset 보정
     const context = selectionAPI.getSelectionContext();
-    if (context?.dataIndex !== null && currentLine) {
+    if (context.dataIndex !== null && currentLine) {
         const targetChunk = currentLine.chunks[context.dataIndex];
         const handler = chunkRegistry.get(targetChunk?.type);
         if (handler && !handler.canSplit && offset === 0) {
@@ -90,15 +113,25 @@ function resolveTargetPosition(currentState, selectionAPI, domRanges, isSelectio
 /**
  * [Step 3] 실제 데이터 상태(State)를 계산하는 핵심 로직
  */
-function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
+function calculateBackspaceState(currentState, lineIndex, offset, ranges = [], stateAPI) {
     // 1. 선택 영역 삭제
-    if (ranges?.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
+    if (ranges.length > 0 && (ranges.length > 1 || ranges[0].startIndex !== ranges[0].endIndex)) {
         return calculateDeleteSelectionState(currentState, ranges);
     }
 
     // 2. 줄 병합 (줄의 맨 앞에서 삭제 시)
     if (offset === 0 && lineIndex > 0) {
-        return performLineMerge(currentState, lineIndex);
+        // 2-1. 전 라인이 리스트인 경우(전 라인이 root인지 검증하는 로직이 필요할 수도?)
+        const prevLineType = currentState[lineIndex - 1].chunks[0].type;
+        if(prevLineType === 'unorderedList') {
+            const lineActiveKey = currentState[lineIndex - 1].chunks[0].id;
+            const prevLineState = stateAPI.get(lineActiveKey);
+            return performListLineMerge(currentState, lineIndex, prevLineState, lineActiveKey);
+        }else {
+            // 2-2. 그 외인 경우
+            return performLineMerge(currentState, lineIndex);
+        }
+
     }
 
     // 3. 현재 줄 내부 삭제
@@ -109,12 +142,12 @@ function calculateBackspaceState(currentState, lineIndex, offset, ranges = []) {
  * 줄 병합 세부 처리
  */
 function performLineMerge(currentState, lineIndex) {
-    const nextState = [...currentState];
-    const prevLine = nextState[lineIndex - 1];
-    const currentLine = nextState[lineIndex];
-
+    const nextState    = [...currentState];
+    const prevLine     = nextState[lineIndex - 1];
+    const currentLine  = nextState[lineIndex];
+    
     const lastChunkIdx = Math.max(0, prevLine.chunks.length - 1);
-    const lastChunk = prevLine.chunks[lastChunkIdx];
+    const lastChunk    = prevLine.chunks[lastChunkIdx];
     const lastChunkLen = chunkRegistry.get(lastChunk.type).getLength(lastChunk);
 
     const mergedChunks = [
@@ -132,7 +165,8 @@ function performLineMerge(currentState, lineIndex) {
             anchor: { chunkIndex: lastChunkIdx, type: lastChunk.type, offset: lastChunkLen }
         },
         deletedLineIndex: lineIndex,
-        updatedLineIndex: lineIndex - 1
+        updatedLineIndex: lineIndex - 1,
+        isListLineMerge : false        
     };
 }
 
@@ -189,7 +223,8 @@ function performInternalDelete(currentState, lineIndex, offset) {
     return {
         newState: nextState,
         newPos: { lineIndex, anchor: targetAnchor },
-        updatedLineIndex: lineIndex
+        updatedLineIndex: lineIndex,
+        isListLineMerge : false
     };
 }
 
@@ -215,44 +250,41 @@ function applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI
     const container = document.getElementById(activeKey);
     if (!container) return;
 
-    // 2. 🔥 [핵심 최적화] 삭제될 라인들에서 재사용할 테이블 Pool 미리 확보
-    // 줄이 합쳐질 때 아래 줄에 있던 테이블 DOM을 추출하여 메모리에 잠시 보관합니다.
     let movingTablePool = [];
     
+    // 2. [라인 삭제] 해당 인덱스의 줄(LI 또는 P)을 DOM에서 제거
     if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
         const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
         const count = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
         
         for (let i = 0; i < count; i++) {
-            // querySelectorAll 대신 children index로 접근 (O(1))
+            // ✅ 중요: container.children[startIdx]는 리스트일 땐 <li>, 일반일 땐 <p>를 가리킴
             const lineEl = container.children[startIdx]; 
             if (lineEl) {
-                // 삭제 전, 이 라인에 포함된 테이블 DOM들을 풀에 담음
+                // 삭제 전 테이블 보관
                 const tables = Array.from(lineEl.getElementsByClassName('chunk-table'));
                 if (tables.length > 0) movingTablePool.push(...tables);
                 
-                // DOM에서 라인 삭제
+                // DOM에서 줄 삭제 (li든 p든 통째로 날림)
                 uiAPI.removeLine(startIdx, activeKey);
             }
         }
     }
 
-    // 3. 🔥 [핵심 최적화] 업데이트된 라인에 테이블 풀 주입
-    // 병합된 윗줄을 다시 그릴 때, 아까 확보한 movingTablePool을 전달합니다.
+    // 3. [라인 업데이트] 업데이트된 데이터를 기반으로 다시 렌더링
     if (updatedLineIndex !== null && newState[updatedLineIndex]) {
-        // 만약 단순 텍스트 삭제(isSimpleTextUpdate) 플래그가 있다면 renderChunk를 쓰고, 
-        // 줄 병합 등 구조 변경이 있다면 renderLine을 호출합니다.
-        if (result.isSimpleTextUpdate && result.chunkIndex !== undefined) {
-            uiAPI.renderChunk(updatedLineIndex, result.chunkIndex, newState[updatedLineIndex].chunks[result.chunkIndex], activeKey);
-        } else {
-            uiAPI.renderLine(updatedLineIndex, newState[updatedLineIndex], {
-                key: activeKey,
-                pool: movingTablePool
-            });
-        }
+        // 기존 엘리먼트 찾기
+        const targetElement = container.children[updatedLineIndex];
+        // ✅ 줄 병합 등 구조 변경 시: uiAPI.renderLine이 
+        // activeKey가 리스트면 <li>를, 아니면 <p>를 생성하도록 설계되어 있어야 함
+        uiAPI.renderLine(updatedLineIndex, newState[updatedLineIndex], {
+            key: activeKey,
+            targetElement: targetElement, // 기존 줄이 있으면 교체, 없으면 삽입
+            pool: movingTablePool
+        });
     }
 
-    // 4. 공통 마무리 (비어있는 에디터 방지 및 커서 복구)
+    // 4. 공통 마무리
     uiAPI.ensureFirstLine(activeKey);
     
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
@@ -261,6 +293,215 @@ function applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI
         selectionAPI.restoreCursor(finalPos);
     }
 
-    // 5. 메모리 참조 해제 (GC 지원)
+    movingTablePool.length = 0;
+}
+
+
+
+
+
+
+
+
+/**
+ * 줄 병합 세부 처리
+ */
+function performListLineMerge(currentState, lineIndex, prevLineState, lineActiveKey) {
+    console.log("currentStatecurrentStatecurrentStatecurrentState : ", currentState);
+    const nextState     = [...currentState];
+    const currentLine   = nextState[lineIndex];
+
+    const nextLineState = [...prevLineState];
+    const prevLine      = nextLineState[nextLineState.length - 1];
+
+    console.log("performListLineMerge - prevLine", prevLine);
+    console.log("performListLineMerge - currentLine", currentLine);
+    
+    const lastChunkIdx = Math.max(0, prevLine.chunks.length - 1);
+    const lastChunk    = prevLine.chunks[lastChunkIdx];
+    const lastChunkLen = chunkRegistry.get(lastChunk.type).getLength(lastChunk);
+
+    const mergedChunks = [
+        ...prevLine.chunks.map(cloneChunk), 
+        ...currentLine.chunks.map(cloneChunk)
+    ];
+
+    nextLineState[nextLineState.length - 1] = EditorLineModel(prevLine.align, normalizeLineChunks(mergedChunks));
+    nextState.splice(lineIndex, 1);
+
+    return {
+        newState     : nextState,
+        nextLineState: nextLineState,
+        lineActiveKey : lineActiveKey,
+        newPos: {
+            lineIndex: lineIndex - 1,
+            anchor: { chunkIndex: lastChunkIdx, type: lastChunk.type, offset: lastChunkLen }
+        },
+        deletedLineIndex: lineIndex,
+        updatedLineIndex: lineIndex - 1,
+        isListLineMerge : true
+    };
+}
+
+
+
+
+
+
+function removeList(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey, container) {
+
+    // 1. 기본 검사 (✅ 수정된 부분)
+    const rawText = (currentState[0]?.chunks || [])
+        .filter(chunk => chunk.type === 'text')
+        .map(chunk => chunk.text || '')
+        .join('');
+
+    // zero-width 문자 제거
+    const cleanedText = rawText.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
+    const lineLen     = cleanedText.length;
+    const isEmptyLine = lineLen === 0;
+
+    if (!isEmptyLine) {
+        return false; // 삭제 조건이 아니면 false 반환
+    }
+
+    // 2. 테이블 Pool 수거
+    const movingTablePool = [];
+    const tables = Array.from(container.getElementsByClassName('chunk-table'));
+    if (tables.length > 0) {
+        movingTablePool.push(...tables);
+    }
+
+    const lineIndexInParent = parseInt(container.getAttribute('data-line-index'));
+    const parentKey         = selectionAPI.getMainKey();
+
+    // 3. 데이터 처리
+    stateAPI.deleteLine(lineIndexInParent, parentKey, { saveHistory: false });
+    stateAPI.delete(activeKey, { saveHistory: true });
+
+    // 4. DOM 처리
+    uiAPI.removeLine(lineIndexInParent, parentKey);
+
+    // 5. 리렌더링
+    const mainEditor         = document.getElementById(parentKey);
+    const updatedParentState = stateAPI.get(parentKey);
+
+    if (mainEditor) {
+        Array.from(mainEditor.children).forEach((child, idx) => {
+            child.setAttribute('data-line-index', idx);
+            if (idx === lineIndexInParent && updatedParentState[idx]) {
+                uiAPI.renderLine(idx, updatedParentState[idx], {
+                    key: parentKey,
+                    targetElement: child,
+                    pool: movingTablePool
+                });
+            }
+        });
+    }
+
+    // 6. 커서 복구 위치 계산
+    let targetPos;
+
+    if (updatedParentState[lineIndexInParent]) {
+        targetPos = { lineIndex: lineIndexInParent, offset: 0 };
+    } else {
+        const prevIdx     = Math.max(0, lineIndexInParent - 1);
+        const prevLine    = updatedParentState[prevIdx];
+        const prevRawText = (prevLine?.chunks || [])
+            .filter(c => c.type === 'text')
+            .map(c => c.text || '')
+            .join('')
+            .replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
+
+        targetPos = {
+            lineIndex: prevIdx,
+            offset: prevRawText.length
+        };
+    }
+
+    // 7. 마무리
+    uiAPI.ensureFirstLine(parentKey);
+    const finalPos = normalizeCursorData(
+        { ...targetPos, containerId: parentKey },
+        parentKey
+    );
+
+    selectionAPI.refreshActiveKeys();
+    if (finalPos) {
+        stateAPI.saveCursor(finalPos);
+        selectionAPI.restoreCursor(finalPos);
+    }
+
+    movingTablePool.length = 0;
+    e.preventDefault();
+    return true;
+}
+
+
+function applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
+    const { 
+        newState,       // 메인 에디터의 새 상태 (라인이 하나 삭제된 상태)
+        nextLineState,  // 리스트의 새 상태 (마지막 LI에 텍스트가 추가된 상태)
+        newPos, 
+        deletedLineIndex, 
+        lineActiveKey   // 업데이트될 리스트의 ID (예: 'list-123')
+    } = result;
+
+    console.log("applyBackspaceLineResult - lineActiveKey:", lineActiveKey);
+    console.log("applyBackspaceLineResult - newState:", newState);
+    console.log("applyBackspaceLineResult - nextLineState:", nextLineState);
+
+
+    // 1. [데이터 저장] 두 컨테이너의 상태를 각각 저장
+    stateAPI.save(activeKey, newState);
+    stateAPI.save(lineActiveKey, nextLineState);
+
+    const mainContainer = document.getElementById(activeKey);
+    const listContainer = document.getElementById(lineActiveKey);
+    if (!mainContainer || !listContainer) return;
+
+    let movingTablePool = [];
+
+    // 2. [라인 삭제] 메인 에디터에서 리스트 뒤에 붙어버린 그 라인을 DOM에서 제거
+    if (deletedLineIndex !== null) {
+        const lineEl = mainContainer.children[deletedLineIndex];
+        if (lineEl) {
+            // 삭제 전 테이블 수거 (리스트 마지막 LI로 옮겨주기 위함)
+            const tables = Array.from(lineEl.getElementsByClassName('chunk-table'));
+            if (tables.length > 0) movingTablePool.push(...tables);
+            
+            uiAPI.removeLine(deletedLineIndex, activeKey);
+        }
+    }
+
+    // 3. [리스트 렌더링] 데이터가 합쳐진 리스트의 마지막 LI를 다시 그림
+    const lastLiIndex = nextLineState.length - 1;
+    const targetLi = listContainer.children[lastLiIndex];
+    
+    uiAPI.renderLine(lastLiIndex, nextLineState[lastLiIndex], {
+        key: lineActiveKey,
+        targetElement: targetLi, // 기존 마지막 LI 교체
+        pool: movingTablePool    // 수거한 테이블 주입
+    });
+
+    // 4. [메인 인덱스 동기화] 라인이 삭제되었으므로 뒤따르는 라인들의 data-index 갱신
+    Array.from(mainContainer.children).forEach((child, idx) => {
+        child.setAttribute('data-line-index', idx);
+    });
+
+    // 5. [커서 복구] 이제 커서는 메인이 아니라 '리스트 내부'로 들어가야 함
+    // newPos에 containerId를 리스트 키로 명시해줘야 합니다.
+    const finalPos = normalizeCursorData({ 
+        ...newPos, 
+        lineIndex: lastLiIndex, // 리스트의 마지막 줄
+        containerId: lineActiveKey 
+    }, lineActiveKey);
+
+    if (finalPos) {
+        stateAPI.saveCursor(finalPos);
+        selectionAPI.refreshActiveKeys(); // 활성 키를 리스트로 전환
+        selectionAPI.restoreCursor(finalPos);
+    }
+
     movingTablePool.length = 0;
 }

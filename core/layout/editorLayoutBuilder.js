@@ -64,6 +64,24 @@ export function createEditorLayoutBuilder(rootId) {
           <span>▦</span>
         </button>
 
+        <!-- 순서가 없는 길머리 기호 버튼 -->
+        <button id="${rootId}-unorderedListBtn" data-command="insertUnorderedList" title="글머리 기호">
+          <div class="sparrow-toolbar-list-wrapper">
+            <div class="sparrow-toolbar-list-row">
+              <div class="sparrow-toolbar-list-dot"></div>
+              <div class="sparrow-toolbar-list-line"></div>
+            </div>
+            <div class="sparrow-toolbar-list-row">
+              <div class="sparrow-toolbar-list-dot"></div>
+              <div class="sparrow-toolbar-list-line"></div>
+            </div>
+            <div class="sparrow-toolbar-list-row">
+              <div class="sparrow-toolbar-list-dot"></div>
+              <div class="sparrow-toolbar-list-line"></div>
+            </div>
+          </div>
+        </button>
+
         <button id="${rootId}-alignLeftBtn" data-command="textAlign" data-value="left" title="왼쪽 정렬">
           <div class="align-icon align-left"><div></div><div></div><div></div><div></div></div>
         </button>

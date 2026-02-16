@@ -15,7 +15,7 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
     if (!activeKey) return;
 
     const currentState = stateAPI.get(activeKey);
-    const domRanges = selectionAPI.getDomSelection(activeKey);
+    const domRanges    = selectionAPI.getDomSelection(activeKey);
     if (!domRanges || domRanges.length === 0) return;
 
     const firstDomRange = domRanges[0];
@@ -23,7 +23,7 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
 
     // 1. [검증] 삭제 방지 가드 (마지막 라인 끝, 테이블 셀 경계 등)
     // TODO 액티브키 필요 없을거 같음.
-    if (shouldPreventDeletion(activeKey, currentState, firstDomRange, isSelection, e)) return;
+    if (shouldPreventDeletion(currentState, firstDomRange, isSelection, e)) return;
 
     // 2. [위치 파악] 삭제할 위치(lineIndex, offset) 도출
     const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, domRanges, isSelection);
@@ -39,15 +39,12 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
 /**
  * [Step 1] 삭제 동작 차단 가드 로직
  */
-function shouldPreventDeletion(activeKey, currentState, firstDomRange, isSelection, e) {
+function shouldPreventDeletion(currentState, firstDomRange, isSelection, e) {
     if (isSelection) return false;
 
     const { lineIndex, startIndex: offset } = firstDomRange;
-    const currentLine = currentState[lineIndex];
-    const lineLen = getLineLengthFromState(currentLine);
-    
-    //const activeContainer = document.getElementById(activeKey);
-   // const isCell = activeContainer?.tagName === 'TD' || activeContainer?.tagName === 'TH';
+    const currentLine    = currentState[lineIndex];
+    const lineLen        = getLineLengthFromState(currentLine);
     const isLastPosition = lineIndex === currentState.length - 1 && offset === lineLen;
 
     // 마지막 라인 끝이거나 테이블 셀 마지막 칸에서 Delete 방지

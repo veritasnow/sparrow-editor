@@ -37,7 +37,7 @@ export function createEditorBootstrap({ rootId, contentKey, rendererRegistry }) 
     });
 
     // 4. 선택(Selection) 애플리케이션 생성
-    const domSelection = createSelectionApplication({ root: editorEl });
+    const domSelection = createSelectionApplication({ rootId: rootId });
     
     // 5. API 애플리케이션 생성 (새로 추가된 통신 모듈)
     const restApi      = createApiApplication();

@@ -9,8 +9,17 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
      */
     function processInput(skipRender = false) {
         const activeKey = selectionAPI.getActiveKey() || defaultKey;
+        console.log("selectionAPI.getActiveKey()selectionAPI.getActiveKey() : ", selectionAPI.getActiveKey());
         const selection = selectionAPI.getSelectionContext();
         if (!selection || selection.lineIndex < 0) return;
+        // 🔍 [로그 1] 현재 선택 영역이 어디를 가리키는지 확인
+        console.group("🚩 Input Process Start");
+        console.log("ActiveKey(Main):", activeKey);
+        console.log("Selection Context:", {
+            containerId: selection?.containerId, // 'list-xxx' 인지 확인
+            lineIndex: selection?.lineIndex,     // 리스트 내부라면 0, 1, 2... 인지 확인
+            dataIndex: selection?.dataIndex      // 몇 번째 텍스트 덩어리인지
+        });
 
         // 테이블 셀 내부인 경우 containerId가 다를 수 있으므로 보정
         const containerId = selection.containerId || activeKey;
@@ -18,10 +27,16 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         uiAPI.ensureFirstLine(activeKey); 
 
         const currentState = stateAPI.get(activeKey); 
+        
         const currentLine = currentState[selection.lineIndex] || EditorLineModel();
-
+        console.log("Current State From StateAPI:", currentState);
+        console.log("Target Line Data:", currentState[selection.lineIndex]);
         const result = calculateUpdate(currentLine, selection, activeKey);
-        if (!result || !result.flags?.hasChange) return;
+        if (!result || !result.flags?.hasChange) {
+            console.log("No Change Detected");
+            console.groupEnd();
+            return;
+        }
 
         // 라인 분할(Split) 발생 시 처리
         if (result.isSplit) {
@@ -31,8 +46,13 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
         // 결과 데이터에 컨테이너 정보 주입
         const restoreDataWithId = { ...result.restoreData, containerId };
+        console.log("Final Save Call:", {
+            saveToKey: activeKey, 
+            lineIndex: selection.lineIndex,
+            updatedLine: result.updatedLine
+        });        
         saveFinalState(activeKey, selection.lineIndex, result.updatedLine, restoreDataWithId);
-        
+        console.groupEnd();
         if (skipRender) return;
 
         const finalRestoreData = normalizeCursorData(restoreDataWithId, activeKey);
@@ -69,15 +89,15 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             // 2. 0번 데이터(텍스트)를 기존 라인(originalLineEl)에 렌더링합니다.
             // 이제 originalLineEl은 텍스트 라인이 됩니다.
             uiAPI.renderLine(lineIndex, separatedLines[0], { 
-                key: activeKey, 
-                shouldRenderSub: false 
+                key                 : activeKey, 
+                shouldRenderTableSub: false 
             });
 
             // 3. 1번 데이터(테이블)를 방금 만든 새 라인(tableLineEl)에 렌더링합니다.
             uiAPI.renderLine(lineIndex + 1, separatedLines[1], { 
-                key: activeKey, 
-                pool: movingTablePool, 
-                shouldRenderSub: false 
+                key                 : activeKey, 
+                pool                : movingTablePool, 
+                shouldRenderTableSub: false 
             });
         } else {
             // [CASE] 테이블 뒤에서 입력 (테이블 + 텍스트)
@@ -85,19 +105,20 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             uiAPI.renderLine(lineIndex, separatedLines[0], { 
                 key: activeKey, 
                 pool: movingTablePool, 
-                shouldRenderSub: false 
+                shouldRenderTableSub: false 
             });
 
             // 2. 새 텍스트(1번 데이터)를 기존 노드 "뒤"에 삽입
             uiAPI.insertLineAfter(originalLineEl, lineIndex + 1, separatedLines[1].align, activeKey);
             uiAPI.renderLine(lineIndex + 1, separatedLines[1], { 
                 key: activeKey, 
-                shouldRenderSub: false 
+                shouldRenderTableSub: false 
             });
         }
         movingTablePool.length = 0; 
 
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);
+        console.log("파이널 포커스...!!! : ", finalRestoreData);
         if (finalRestoreData) {
             // 새 DOM 노드가 안정화된 후 커서 복원
             requestAnimationFrame(() => {
@@ -244,7 +265,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             uiAPI.renderLine(lineIndex, updatedLine, { 
                 key: targetContainerId, 
                 pool: tablePool, 
-                shouldRenderSub: false 
+                shouldRenderTableSub: false 
             });
             if (restoreData) selectionAPI.restoreCursor(restoreData);
         } else if (flags.isChunkRendering && restoreData) {
@@ -254,7 +275,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             uiAPI.renderLine(lineIndex, updatedLine, { 
                 key: targetContainerId, 
                 pool: tablePool, 
-                shouldRenderSub: false 
+                shouldRenderTableSub: false 
             });
             } else {
                 uiAPI.renderChunk(lineIndex, chunkIndex, chunk, targetContainerId);

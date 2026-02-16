@@ -44,6 +44,17 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
                 update.affectedLineIndices.forEach((lineIndex) => {
                     const lineData = update.newState[lineIndex];
                     
+                    // 💡 [중요] 만약 현재 컨테이너가 메인 에디터인데, 
+                    // 하위 리스트(activeKeys에 포함된)가 이 라인에 들어있다면 스킵합니다.
+                    // 왜냐하면 하위 리스트 루프에서 어차피 개별적으로 그릴 것이기 때문입니다.
+                    const isListInMain = update.key === selectionAPI.getMainKey() && 
+                                        lineData.chunks.some(c => c.type === 'unorderedList' && targets.includes(c.id));
+                    
+                    if (isListInMain) {
+                        console.log(`Skipping parent render for list: ${lineIndex} (Will render in its own loop)`);
+                        return; 
+                    }
+
                     // 🚩 :scope > 를 사용하여 현재 컨테이너(update.key)의 직계 라인만 찾습니다.
                     // 테이블 셀 안의 텍스트 수정 시, 바깥쪽 에디터의 동일 인덱스 라인을 건드리지 않습니다.
                     const lineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
