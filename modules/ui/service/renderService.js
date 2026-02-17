@@ -68,9 +68,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             lineEl = Array.from(container.children).find(el => !el.hasAttribute('data-line-index'));
         }        
         
-        console.log("lineDatalineDatalineDatalineData : ", lineData);
         const requiredTag = getTagNameForLine(lineData, targetKey);
-        console.log("requiredTagrequiredTagrequiredTagrequiredTag : ", requiredTag);
 
         if (!lineEl) {
             lineEl = createLineElement(lineData, lineIndex);
@@ -143,13 +141,11 @@ export function createRenderService({ rootId, rendererRegistry }) {
     function renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
         const container = getTargetElement(targetKey);
         // 🔥 [중요] :scope > 적용
-        const lineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+        const lineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
 
         if (!lineEl) return;
 
-        const chunkEl = Array.from(lineEl.children).find(
-            el => el.dataset.chunkIndex == chunkIndex
-        );
+        const chunkEl = Array.from(lineEl.children).find(el => el.dataset.chunkIndex == chunkIndex);
 
         if (chunkEl && chunkData.type === 'text') {
             if (chunkEl.textContent !== chunkData.text) {
@@ -278,13 +274,12 @@ export function createRenderService({ rootId, rendererRegistry }) {
             } else {
                 container.appendChild(newEl);
             }
-
             syncLineIndexes(container);
         },
 
         insertLineAfter(refEl, newIndex, align, targetKey) {
-            const container = getTargetElement(targetKey);
-            const newEl = createLineElement();
+            const container       = getTargetElement(targetKey);
+            const newEl           = createLineElement();
             newEl.style.textAlign = align;
             newEl.setAttribute('data-line-index', newIndex);
 
@@ -300,8 +295,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
         removeLine(lineIndex, targetKey) {
             const container = getTargetElement(targetKey);
-            // 🔥 :scope > 적용
-            const target = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+            const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
             if (target) {
                 container.removeChild(target);
             }

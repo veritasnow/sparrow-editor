@@ -20,19 +20,14 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             lineIndex: selection?.lineIndex,     // 리스트 내부라면 0, 1, 2... 인지 확인
             dataIndex: selection?.dataIndex      // 몇 번째 텍스트 덩어리인지
         });
-
-        // 테이블 셀 내부인 경우 containerId가 다를 수 있으므로 보정
-        const containerId = selection.containerId || activeKey;
-
         uiAPI.ensureFirstLine(activeKey); 
 
         const currentState = stateAPI.get(activeKey); 
-        
-        const currentLine = currentState[selection.lineIndex] || EditorLineModel();
+        const currentLine  = currentState[selection.lineIndex] || EditorLineModel();
         console.log("Current State From StateAPI:", currentState);
         console.log("Target Line Data:", currentState[selection.lineIndex]);
         const result = calculateUpdate(currentLine, selection, activeKey);
-        if (!result || !result.flags?.hasChange) {
+        if (!result || !result.flags.hasChange) {
             console.log("No Change Detected");
             console.groupEnd();
             return;
@@ -45,17 +40,12 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         }
 
         // 결과 데이터에 컨테이너 정보 주입
-        const restoreDataWithId = { ...result.restoreData, containerId };
-        console.log("Final Save Call:", {
-            saveToKey: activeKey, 
-            lineIndex: selection.lineIndex,
-            updatedLine: result.updatedLine
-        });        
-        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, restoreDataWithId);
-        console.groupEnd();
+        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, result.restoreData);
+        
         if (skipRender) return;
 
-        const finalRestoreData = normalizeCursorData(restoreDataWithId, activeKey);
+        // 7. 정규화된 커서 데이터 생성 및 렌더링 실행
+        const finalRestoreData = normalizeCursorData(result.restoreData, activeKey);        
         executeRendering(result.updatedLine, selection.lineIndex, result.flags, finalRestoreData, activeKey);
     }
 
