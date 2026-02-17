@@ -9,27 +9,16 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
      */
     function processInput(skipRender = false) {
         const activeKey = selectionAPI.getActiveKey() || defaultKey;
-        console.log("selectionAPI.getActiveKey()selectionAPI.getActiveKey() : ", selectionAPI.getActiveKey());
         const selection = selectionAPI.getSelectionContext();
         if (!selection || selection.lineIndex < 0) return;
         // 🔍 [로그 1] 현재 선택 영역이 어디를 가리키는지 확인
-        console.group("🚩 Input Process Start");
-        console.log("ActiveKey(Main):", activeKey);
-        console.log("Selection Context:", {
-            containerId: selection?.containerId, // 'list-xxx' 인지 확인
-            lineIndex: selection?.lineIndex,     // 리스트 내부라면 0, 1, 2... 인지 확인
-            dataIndex: selection?.dataIndex      // 몇 번째 텍스트 덩어리인지
-        });
         uiAPI.ensureFirstLine(activeKey); 
 
         const currentState = stateAPI.get(activeKey); 
         const currentLine  = currentState[selection.lineIndex] || EditorLineModel();
-        console.log("Current State From StateAPI:", currentState);
-        console.log("Target Line Data:", currentState[selection.lineIndex]);
         const result = calculateUpdate(currentLine, selection, activeKey);
         if (!result || !result.flags.hasChange) {
             console.log("No Change Detected");
-            console.groupEnd();
             return;
         }
 
@@ -46,7 +35,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
         // 7. 정규화된 커서 데이터 생성 및 렌더링 실행
         const finalRestoreData = normalizeCursorData(result.restoreData, activeKey);        
-        executeRendering(result.updatedLine, selection.lineIndex, result.flags, finalRestoreData, activeKey);
+        executeRendering(result.updatedLine, selection.lineIndex, result.flags, finalRestoreData);
     }
 
     /**
@@ -60,15 +49,18 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         stateAPI.save(activeKey, nextState);
 
         const container = document.getElementById(activeKey);
-        // :scope를 사용하여 현재 에디터 레벨의 직계 자식만 타겟팅 (중첩 인덱스 방지)
+        if (!container) return;
+
+        // :scope로 직계자식만..!!
         const originalLineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
         
         const movingTablePool = originalLineEl 
-            ? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
+            ? Array.from(originalLineEl.querySelectorAll(':scope > .chunk-table, :scope > .se-table')) 
+            //? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
             : [];
 
         
-        const isTableShifted = separatedLines[1]?.chunks[0]?.type === 'table';         
+        const isTableShifted = separatedLines[1].chunks[0].type === 'table';         
         if (isTableShifted) {
             // [CASE A] 테이블 앞에서 입력 (텍스트 + 테이블)
             
@@ -123,7 +115,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
     function calculateUpdate(currentLine, selection, activeKey) {
         const { dataIndex, activeNode, cursorOffset, lineIndex, container, range, parentDom } = selection;
         let result = null;
-        let flags = { isNewChunk: false, isChunkRendering: false };
+        let flags  = { isNewChunk: false, isChunkRendering: false };
 
         if (activeNode && activeNode.nodeType === Node.TEXT_NODE) {
             if (currentLine.chunks[dataIndex]?.text === activeNode.textContent) {
@@ -132,9 +124,9 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         }
 
         // Case 1: 단순 텍스트 업데이트
-        if (dataIndex !== null && activeNode && currentLine.chunks[dataIndex]?.type === 'text') {
+        if (dataIndex !== null && activeNode && currentLine.chunks[dataIndex].type === 'text') {
             const safeText = getSafeTextFromRange(range);
-            result = inputModelService.updateTextChunk(currentLine, dataIndex, safeText, cursorOffset, lineIndex, activeKey);
+            result         = inputModelService.updateTextChunk(currentLine, dataIndex, safeText, cursorOffset, lineIndex, activeKey);
             if (result) flags.isChunkRendering = true;
         }
 
@@ -143,20 +135,20 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             const rebuild = uiAPI.parseLineDOM(parentDom, currentLine.chunks, container, cursorOffset, lineIndex);
 
             if (rebuild.shouldSplit) {
-                const separatedLines = splitChunksByTable(rebuild.newChunks, currentLine.align);
-                const tableIndex = rebuild.newChunks.findIndex(chunk => chunk.type === 'table');
+                const separatedLines   = splitChunksByTable(rebuild.newChunks, currentLine.align);
+                const tableIndex       = rebuild.newChunks.findIndex(chunk => chunk.type === 'table');
                 const cursorChunkIndex = rebuild.restoreData.chunkIndex;
 
                 if (tableIndex !== -1 && cursorChunkIndex > tableIndex) {
-                    rebuild.restoreData.lineIndex = rebuild.restoreData.lineIndex + 1;
+                    rebuild.restoreData.lineIndex  = rebuild.restoreData.lineIndex + 1;
                     rebuild.restoreData.chunkIndex = 0;
                 } 
 
                 return {
-                    isSplit: true,
+                    isSplit    : true,
                     separatedLines,
                     restoreData: { ...rebuild.restoreData, containerId: selection.containerId || activeKey },
-                    flags: { hasChange: true }
+                    flags      : { hasChange: true }
                 };
             }
 
@@ -178,7 +170,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
      */
     function splitChunksByTable(chunks, align) {
         const lines = [];
-        let temp = [];
+        let temp    = [];
 
         const flushTemp = () => {
             if (temp.length > 0) {
@@ -221,10 +213,12 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
     }
 
     function saveFinalState(key, lineIndex, updatedLine, restoreData) {
-        const currentState = stateAPI.get(key);
-        const nextState = [...currentState];
+        const currentState   = stateAPI.get(key);
+        const nextState      = [...currentState];
         nextState[lineIndex] = updatedLine;
+
         stateAPI.save(key, nextState);
+
         const normalized = normalizeCursorData(restoreData, key);
         if (normalized) stateAPI.saveCursor(normalized);
     }
@@ -232,10 +226,10 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
     /**
      * 최종 렌더링 실행
      */
-    function executeRendering(updatedLine, lineIndex, flags, restoreData, targetKey) {
+    function executeRendering(updatedLine, lineIndex, flags, restoreData) {
         // 복원 데이터의 컨테이너(에디터 혹은 TD)를 타겟으로 설정
-        const targetContainerId = restoreData?.containerId || targetKey;
-        const container = document.getElementById(targetContainerId);
+        const targetContainerId = restoreData.containerId;
+        const container         = document.getElementById(targetContainerId);
         
         // 해당 컨테이너의 직계 자식 라인만 타겟팅
         const lineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);

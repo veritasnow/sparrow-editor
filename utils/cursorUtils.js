@@ -42,8 +42,8 @@ export function normalizeCursorData(restoreData, defaultContainerId) {
 
     // 2. 단일 커서 위치인 경우 (객체로 들어옴)
     const containerId = restoreData.containerId || defaultContainerId;
-    const lineIndex = restoreData.lineIndex;
-    const anchor = restoreData.anchor || restoreData;
+    const lineIndex   = restoreData.lineIndex;
+    const anchor      = restoreData.anchor || restoreData;
 
     return {
         containerId,
