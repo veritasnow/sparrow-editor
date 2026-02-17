@@ -228,8 +228,8 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
      */
     function executeRendering(updatedLine, lineIndex, flags, restoreData) {
         // 복원 데이터의 컨테이너(에디터 혹은 TD)를 타겟으로 설정
-        const targetContainerId = restoreData.containerId;
-        const container         = document.getElementById(targetContainerId);
+        const targetKey = restoreData.containerId;  
+        const container = document.getElementById(targetKey);
         
         // 해당 컨테이너의 직계 자식 라인만 타겟팅
         const lineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
@@ -247,7 +247,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
         if (flags.isNewChunk) {
             uiAPI.renderLine(lineIndex, updatedLine, { 
-                key: targetContainerId, 
+                key: targetKey, 
                 pool: tablePool, 
                 shouldRenderTableSub: false 
             });
@@ -257,12 +257,12 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             const chunk = updatedLine.chunks[chunkIndex];
             if (!chunk || chunk.type !== 'text') {
             uiAPI.renderLine(lineIndex, updatedLine, { 
-                key: targetContainerId, 
+                key: targetKey, 
                 pool: tablePool, 
                 shouldRenderTableSub: false 
             });
             } else {
-                uiAPI.renderChunk(lineIndex, chunkIndex, chunk, targetContainerId);
+                uiAPI.renderChunk(lineIndex, chunkIndex, chunk, targetKey);
             }
             selectionAPI.restoreCursor(restoreData);
         }
