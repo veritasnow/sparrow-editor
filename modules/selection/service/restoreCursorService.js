@@ -9,14 +9,14 @@ export function createRestoreCursorService(root) {
      * 1. 멀티 블록(드래그 영역) 복원
      */
     function restoreMultiBlockCursor(positions) {
-        if (!positions?.length) return;
+        if (!positions.length) return;
         isRestoringCursor = true;
         const sel = window.getSelection();
         sel.removeAllRanges();
         
         const isBackwards = positions.isBackwards || positions[0]?.isBackwards;
-        let allPoints = [];
-        const posIds = new Set(positions.map(p => p.containerId));
+        let allPoints     = [];
+        const posIds      = new Set(positions.map(p => p.containerId));
 
         for (const pos of positions) {
             const container = document.getElementById(pos.containerId);
@@ -31,6 +31,7 @@ export function createRestoreCursorService(root) {
                 if (!lineEl) continue;
 
                 // 중첩 컨테이너(테이블 등) 자체를 선택하는 경우 제외 로직
+                // TODO 스킵 추가해야할지 고민 필요...!!
                 if (lineEl.querySelector('[data-container-id]') && rangeInfo.startIndex === 0 && rangeInfo.endIndex === 1) continue;
 
                 const sPos = findNodeAndOffset(lineEl, rangeInfo.startIndex);
@@ -47,7 +48,7 @@ export function createRestoreCursorService(root) {
             });
 
             const start = allPoints[0];
-            const end = allPoints[allPoints.length - 1];
+            const end   = allPoints[allPoints.length - 1];
             
             try {
                 isBackwards 
@@ -103,8 +104,8 @@ export function createRestoreCursorService(root) {
                 // Case 1: 테이블 셀 내부 (td)
                 if (anchor.type === 'table' && anchor.detail) {
                     const table = chunkEl.querySelector(':scope > table, :scope > .se-table');
-                    const rows = table?.rows;
-                    const td = rows?.[anchor.detail.rowIndex]?.cells[anchor.detail.colIndex];
+                    const rows  = table.rows;
+                    const td    = rows[anchor.detail.rowIndex].cells[anchor.detail.colIndex];
                     if (td) {
                         targetNode = findFirstTextNode(td) || td.appendChild(document.createTextNode(''));
                         targetOffset = Math.min(anchor.detail.offset, targetNode.length);

@@ -55,8 +55,9 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         const originalLineEl = container?.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
         
         const movingTablePool = originalLineEl 
-            ? Array.from(originalLineEl.querySelectorAll(':scope > .chunk-table, :scope > .se-table')) 
-            //? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
+            //TODO 테스트 후 스코프 걸어도 문제 없으면 스코프로 바꿀 것
+            //? Array.from(originalLineEl.querySelectorAll(':scope > .chunk-table, :scope > .se-table')) 
+            ? Array.from(originalLineEl.querySelectorAll('.chunk-table')) 
             : [];
 
         
@@ -243,24 +244,27 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             }
         }
 
+        // TODO 가상스크롤리이랑 좀 다르게 했는데 scope걸어도 될거 같으면 스코프로 바꿀 것
         const tablePool = lineEl ? Array.from(lineEl.querySelectorAll('.chunk-table')) : null;
+        // const tablePool = lineEl ? Array.from(lineEl.querySelectorAll(':scope > .chunk-table')) : null;
 
         if (flags.isNewChunk) {
             uiAPI.renderLine(lineIndex, updatedLine, { 
-                key: targetKey, 
+                key : targetKey, 
                 pool: tablePool, 
                 shouldRenderTableSub: false 
             });
             if (restoreData) selectionAPI.restoreCursor(restoreData);
         } else if (flags.isChunkRendering && restoreData) {
             const chunkIndex = restoreData.anchor.chunkIndex;
-            const chunk = updatedLine.chunks[chunkIndex];
+            const chunk      = updatedLine.chunks[chunkIndex];
+
             if (!chunk || chunk.type !== 'text') {
-            uiAPI.renderLine(lineIndex, updatedLine, { 
-                key: targetKey, 
-                pool: tablePool, 
-                shouldRenderTableSub: false 
-            });
+                uiAPI.renderLine(lineIndex, updatedLine, { 
+                    key : targetKey, 
+                    pool: tablePool, 
+                    shouldRenderTableSub: false 
+                });
             } else {
                 uiAPI.renderChunk(lineIndex, chunkIndex, chunk, targetKey);
             }

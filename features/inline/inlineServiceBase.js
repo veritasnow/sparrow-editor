@@ -7,7 +7,7 @@ import { normalizeCursorData } from "../../utils/cursorUtils.js";
 export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
     function applyInline(updateFn, options = { saveCursor: true }) {
         const activeKeys = selectionAPI.getActiveKeys();
-        const targets = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
+        const targets    = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
 
         const updates = [];
@@ -20,7 +20,9 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
             const domRanges = selectionAPI.getDomSelection(activeKey);
             if (!domRanges || domRanges.length === 0) return;
 
-            const ranges = getRanges(currentState, domRanges);
+            const ranges   = getRanges(currentState, domRanges);
+            console.log("domRangesdomRangesdomRangesdomRanges : ", domRanges);
+            console.log("rangesrangesrangesranges : ", ranges);            
             const newState = updateFn(currentState, ranges);
 
             if (newState && newState !== currentState) {
@@ -32,6 +34,7 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
             allNormalizedPositions.push(normalized);
         });
 
+        console.log("updatesupdatesupdatesupdatesupdates : ", updates);     
         // 3. 일괄 업데이트 실행 및 렌더링
         if (updates.length > 0) {
             stateAPI.saveBatch(updates, { saveHistory: true });
