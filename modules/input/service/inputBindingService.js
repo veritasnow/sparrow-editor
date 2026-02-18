@@ -1,10 +1,12 @@
+import { EXCLUDED_INPUT_TYPES } from '../constants/excludedInputTypes.js';
+
 export function createInputBindingService(editorEl) {
     if (!editorEl) throw new Error("Editor element required.");
     
-    let composing = false;
+    let composing          = false;
     let lastCompositionEnd = 0;
-    let destroyed = false;
-    let bound = false;
+    let destroyed          = false;
+    let bound              = false;
 
     let onCompositionStart, onCompositionEnd, onInput;
 
@@ -23,7 +25,9 @@ export function createInputBindingService(editorEl) {
             };
 
             onInput = (e) => {
-                if (e.inputType === 'insertParagraph') return;
+                if (EXCLUDED_INPUT_TYPES.includes(e.inputType)) {
+                    return; // 특수 입력은 KeyBindingService에서 처리하므로 여기선 무시
+                }                
 
                 const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
                 const inputData = e.data || '';
