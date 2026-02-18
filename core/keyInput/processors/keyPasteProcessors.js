@@ -27,9 +27,9 @@ export function executePaste(e, { stateAPI, uiAPI, selectionAPI }) {
 
     // 2. 현재 상태와 커서 위치 파악
     const currentLines = [...stateAPI.get(activeKey)];
-    const domRanges = selectionAPI.getDomSelection(activeKey);
+    const domRanges    = selectionAPI.getDomSelection(activeKey);
     const { lineIndex, endIndex: offset } = domRanges[0];
-    const targetLine = currentLines[lineIndex];
+    const targetLine   = currentLines[lineIndex];
 
     // 3. 현재 라인을 커서 기준으로 분할
     const { left, right } = splitLineAtOffset(targetLine, offset);
@@ -74,7 +74,7 @@ export function executePaste(e, { stateAPI, uiAPI, selectionAPI }) {
     // 7. 렌더링
     uiAPI.render(nextState, activeKey);
     
-    // 💡 다음 스텝: 붙여넣기 후 커서를 마지막 위치로 이동시키는 로직 호출 가능
+    // 다음 스텝: 붙여넣기 후 커서를 마지막 위치로 이동시키는 로직 호출 가능
     // focusAtLastPasted(domSelection, lineIndex, newLines);
 }
 
@@ -86,7 +86,7 @@ function splitLineAtOffset(line, offset) {
     const { beforeChunks, afterChunks } = splitLineChunks(line.chunks, offset);
 
     return {
-        left: EditorLineModel(line.align, beforeChunks),
+        left : EditorLineModel(line.align, beforeChunks),
         right: EditorLineModel(line.align, afterChunks)
     };
 }

@@ -16,7 +16,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
         const currentState = stateAPI.get(activeKey); 
         const currentLine  = currentState[selection.lineIndex] || EditorLineModel();
-        const result = calculateUpdate(currentLine, selection, activeKey);
+        const result       = calculateUpdate(currentLine, selection, activeKey);
         if (!result || !result.flags.hasChange) {
             console.log("No Change Detected");
             return;
@@ -101,7 +101,6 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         movingTablePool.length = 0; 
 
         const finalRestoreData = normalizeCursorData(restoreData, activeKey);
-        console.log("파이널 포커스...!!! : ", finalRestoreData);
         if (finalRestoreData) {
             // 새 DOM 노드가 안정화된 후 커서 복원
             requestAnimationFrame(() => {
@@ -126,8 +125,10 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
         // Case 1: 단순 텍스트 업데이트
         if (dataIndex !== null && activeNode && currentLine.chunks[dataIndex].type === 'text') {
-            const safeText = getSafeTextFromRange(range);
-            result         = inputModelService.updateTextChunk(currentLine, dataIndex, safeText, cursorOffset, lineIndex, activeKey);
+            const safeText  = getSafeTextFromRange(range);
+            // 상태 저장 전에 해당 라인에는 값 입력이 발생했으므로 유령 문자를 날린다.
+            const cleanText = safeText.replace(/\u200B/g, '');
+            result          = inputModelService.updateTextChunk(currentLine, dataIndex, cleanText, cursorOffset, lineIndex, activeKey);
             if (result) flags.isChunkRendering = true;
         }
 

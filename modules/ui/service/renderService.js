@@ -9,7 +9,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
         }
         
         const firstChunk = lineData.chunks[0];
-        if (firstChunk?.type === 'unorderedList') return "UL"; // 리스트면 UL 반환
+        if (firstChunk.type === 'unorderedList') return "UL"; // 리스트면 UL 반환
         if (lineData.chunks.some(c => c.type === 'table')) return "DIV";
         
         return "P";
@@ -90,9 +90,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
         if (requiredTag === "UL") {
             // 리스트면 내부를 싹 비우고 그리는 renderListIntoElement를 실행
             const listChunk = lineData.chunks[0];
-            console.log("lineDatalineDatalineDatalineData :", lineData);
-            console.log("lineIndexlineIndexlineIndexlineIndex :", lineIndex);            
-            renderListIntoElement(listChunk, lineIndex, lineEl);
+            const renderer  = rendererRegistry['unorderedList'];
+            if (!renderer) return;
+            renderer.render(listChunk, lineIndex, lineEl);            
         } else {
             lineEl.innerHTML = ""; 
 
@@ -181,61 +181,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
         });
     }
 
-    function renderListIntoElement(chunk, lineIndex, ulEl) {
-        console.group(`🎨 Rendering List: ${chunk.id}`);
-        console.log("UL Target Index (Parent Level):", lineIndex);
-
-        ulEl.id                = chunk.id;
-        ulEl.dataset.type      = "unorderedList";
-        ulEl.dataset.lineIndex = lineIndex; 
-        ulEl.innerHTML         = ""; 
-        console.log("UL Element after clear:", ulEl);
-
-        const items = chunk.data ?? []; 
-        
-        items.forEach((itemData, internalIdx) => {
-            const li = document.createElement("li");
-            li.className = "se-list-item text-block";
-            
-            li.dataset.containerId = chunk.id; 
-            
-            // 🔍 [체크포인트 1] internalIdx가 실제 0, 1, 2 순서대로 오는지 확인
-            li.dataset.lineIndex = internalIdx;
-            console.log(`  [LI ${internalIdx}] Assigned Index:`, li.dataset.lineIndex);
-
-            const liLineModel = itemData.line;
-
-            if (liLineModel && liLineModel.chunks) {
-                liLineModel.chunks.forEach((c, cIdx) => {
-                    const span = document.createElement("span");
-                    span.className = "chunk-text";
-                    span.dataset.index = cIdx;
-                    
-                    // 🔍 [체크포인트 2] span에 들어가는 인덱스 확인
-                    span.dataset.lineIndex = internalIdx; 
-                    
-                    if (c.style) Object.assign(span.style, c.style);
-                    span.textContent = "\u200B" + (c.text || "");
-                    li.appendChild(span);
-                });
-            } else {
-                console.warn(`  [LI ${internalIdx}] No line data found, rendering empty.`);
-                const emptySpan = document.createElement("span");
-                emptySpan.className = "chunk-text";
-                emptySpan.dataset.index = "0";
-                emptySpan.dataset.lineIndex = internalIdx; // 여기도 추가해서 확인
-                emptySpan.textContent = "\u200B";
-                li.appendChild(emptySpan);
-            }
-            
-            ulEl.appendChild(li);
-            
-            // 🔍 [체크포인트 3] Append 직후 실제 DOM 상태 확인
-            console.log(`  [LI ${internalIdx}] Final DOM Index after append:`, li.getAttribute('data-line-index'));
-        });
-        console.groupEnd();
-    }
-
     return {
         render(state, targetKey) {
             syncParagraphCount(state, targetKey);
@@ -266,9 +211,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
             // :scope > 를 사용해 현재 container의 '직계 자식'인 lineIndex를 찾습니다.
             // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
             const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
-
-            console.log("targettarget : ", target);
-            console.log("newElnewEl : ", newEl);
 
             if (target) {
                 container.insertBefore(newEl, target);
