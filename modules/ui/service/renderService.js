@@ -58,7 +58,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
      */
     function renderLine(lineIndex, lineData, targetKey, externalPool = null, skipSync = false) {
         const container = getTargetElement(targetKey);
-        console.log("targetKeytargetKeytargetKey : ", targetKey);
         if (!container) return;
 
         // 🔥 [중요] :scope > 를 사용하여 현재 컨테이너의 직계 자식인 라인만 찾음

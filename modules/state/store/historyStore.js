@@ -3,7 +3,7 @@ import { MAX_HISTORY } from '../constatns/stateConstants.js';
 export function createHistoryStore(initialState = {}) {
 
   // 1. 초기 상태 설정 (불필요한 전체 딥클론 제거, 얕은 복사만)
-  let history = [{ ...initialState }];
+  let history      = [{ ...initialState }];
   let currentIndex = 0;
 
   return {
@@ -109,7 +109,7 @@ export function createHistoryStore(initialState = {}) {
         history[currentIndex] = nextMap;
       }
 
-      console.log('history:', history);
+      //console.log('history:', history);
 
     },
 

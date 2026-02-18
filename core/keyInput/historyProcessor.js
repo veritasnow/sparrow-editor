@@ -1,7 +1,7 @@
 /**
  * 히스토리(Undo/Redo) 실행 프로세서
  */
-export function executeHistory(type, { stateAPI, ui, selectionAPI }) {
+export function executeHistory(type, { stateAPI, uiAPI, selectionAPI }) {
     // 1. 현재(이동 전)의 정확한 커서 정보 미리 확보
     const cursor = stateAPI.getCursor();
     
@@ -14,7 +14,7 @@ export function executeHistory(type, { stateAPI, ui, selectionAPI }) {
     // 3. 전체 UI 렌더링 (각 컨테이너별 동기화)
     Object.entries(newStateMap).forEach(([targetKey, lineDataArray]) => {
         try {
-            ui.render(lineDataArray, targetKey);
+            uiAPI.render(lineDataArray, targetKey);
         } catch (error) {
             console.warn(`[History] Render failed for ${targetKey}:`, error);
         }

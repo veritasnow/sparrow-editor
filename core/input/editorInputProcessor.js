@@ -7,7 +7,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
     /**
      * [Main Entry] 입력 이벤트 발생 시 호출
      */
-    function processInput(skipRender = false) {
+    function processInput(skipRender = false, skipHistory = true) {
         const activeKey = selectionAPI.getActiveKey() || defaultKey;
         const selection = selectionAPI.getSelectionContext();
         if (!selection || selection.lineIndex < 0) return;
@@ -29,7 +29,7 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         }
 
         // 결과 데이터에 컨테이너 정보 주입
-        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, result.restoreData);
+        saveFinalState(activeKey, selection.lineIndex, result.updatedLine, result.restoreData, skipHistory);
         
         if (skipRender) return;
 
@@ -214,12 +214,14 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
         return node.nodeType === Node.TEXT_NODE ? (node.nodeValue ?? '') : '';
     }
 
-    function saveFinalState(key, lineIndex, updatedLine, restoreData) {
+    function saveFinalState(key, lineIndex, updatedLine, restoreData, skipHistory) {
         const currentState   = stateAPI.get(key);
         const nextState      = [...currentState];
         nextState[lineIndex] = updatedLine;
 
-        stateAPI.save(key, nextState);
+        stateAPI.save(key, nextState, { 
+            saveHistory: skipHistory 
+        });
 
         const normalized = normalizeCursorData(restoreData, key);
         if (normalized) stateAPI.saveCursor(normalized);
@@ -275,6 +277,6 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
 
     return { 
         processInput,
-        syncInput: () => processInput(true) 
+        syncInput: () => processInput(true, false) 
     };
 }

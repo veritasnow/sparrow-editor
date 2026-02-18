@@ -15,7 +15,7 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
     // 현재 커서가 있는 실제 컨테이너(에디터 혹은 TD) 정보를 가져옵니다.
     const selection   = selectionAPI.getSelectionContext();
     const containerId = selection.containerId || activeKey;
-
+    
     // ✅ 리스트 내부 엔터인지 확인
     if (containerId.startsWith('list-')) {
         return executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId, activeKey });
@@ -24,10 +24,6 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
     // 해당 컨테이너의 상태와 선택 범위를 가져옵니다.
     const currentState = stateAPI.get(containerId);
     const domRanges    = selectionAPI.getDomSelection(containerId);
-    
-    console.log("endter currentState : ", currentState);
-    console.log("endter domRanges : ", domRanges);
-
 
     if (!domRanges || domRanges.length === 0 || !currentState) return;
 
@@ -126,6 +122,8 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
 function applyEnterResult(targetContainerId, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, newLineData, lineIndex } = result;
 
+    console.log("몇번 타니????????????????");
+
     // 1. 상태 저장 (정확한 대상 컨테이너에 저장)
     stateAPI.save(targetContainerId, newState);
 
@@ -158,7 +156,6 @@ function applyEnterResult(targetContainerId, result, { stateAPI, uiAPI, selectio
         
         // 6. 커서 복원 (가상 스크롤 및 DOM 안정화 대응)
         const finalPos = normalizeCursorData(newPos, targetContainerId);
-        console.log("finalPos : ", finalPos);
         if (finalPos) {
             stateAPI.saveCursor(finalPos);
             // RAF를 사용하여 브라우저가 신규 <p> 태그의 인덱스를 완전히 인지한 후 커서 고정
@@ -185,10 +182,6 @@ function executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
     const listState = stateAPI.get(containerId);
     const domRanges = selectionAPI.getDomSelection(containerId);
 
-    console.log("enter containerId : ", containerId);
-    console.log("listStatelistStatelistStatelistStatelistState : ", listState);
-    console.log("domRangesdomRangesdomRangesdomRangesdomRanges : ", domRanges);
-
     if (!listState || !domRanges) {
         console.groupEnd();
         return;
@@ -199,8 +192,6 @@ function executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
     // 2. 리스트 내부 행 분할 (중요: 여기서 이미 newState는 [Line0, Line1] 처럼 늘어남)
     const result = calculateEnterState(listState, lineIndex, offset, containerId);
 
-    console.log("enter resultresultresult : ", result);
-
     // 3. 리스트 상태 저장
     stateAPI.save(containerId, result.newState); 
 
@@ -210,7 +201,6 @@ function executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
     // 하지만, 만약 리스트 내부 UI만 갱신하고 싶다면 리스트 렌더러를 직접 호출해야 합니다.
     
     const mainKey   = selectionAPI.getMainKey();
-    console.log("mainKeymainKeymainKeymainKey : ", mainKey)
     const mainState = stateAPI.get(mainKey);
     
     // 메인 에디터에서 이 리스트를 들고 있는 '부모 라인'을 찾습니다.

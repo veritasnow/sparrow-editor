@@ -8,7 +8,9 @@ export function createInputBindingService(editorEl) {
     let destroyed          = false;
     let bound              = false;
 
-    let onCompositionStart, onCompositionEnd, onInput;
+    let onCompositionStart;
+    let onCompositionEnd;
+    let onInput;
 
     return {
         bindEvents(processInputCallback) {
@@ -29,7 +31,7 @@ export function createInputBindingService(editorEl) {
             onInput = (e) => {
                 if (EXCLUDED_INPUT_TYPES.includes(e.inputType)) {
                     return; // 특수 입력은 KeyBindingService에서 처리하므로 여기선 무시
-                }                
+                }
 
                 const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
                 const inputData               = e.data || '';
