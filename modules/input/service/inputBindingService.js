@@ -1,4 +1,4 @@
-import { EXCLUDED_INPUT_TYPES } from '../constants/excludedInputTypes.js';
+import { EXCLUDED_INPUT_TYPES, PUNCTUATION_MARKS } from '../constants/excludedInputTypes.js';
 
 export function createInputBindingService(editorEl) {
     if (!editorEl) throw new Error("Editor element required.");
@@ -15,10 +15,12 @@ export function createInputBindingService(editorEl) {
             if (bound) return;
             bound = true;
 
-            onCompositionStart = () => { composing = true; };
+            onCompositionStart = () => { 
+                composing = true; 
+            };
 
-            onCompositionEnd = () => {
-                composing = false;
+            onCompositionEnd   = () => {
+                composing          = false;
                 lastCompositionEnd = Date.now();
                 // 💡 IME 종료 시에도 skipRender: true를 전달하여 불필요한 재렌더링 방지
                 processInputCallback(true); 
@@ -30,9 +32,8 @@ export function createInputBindingService(editorEl) {
                 }                
 
                 const timeSinceCompositionEnd = Date.now() - lastCompositionEnd;
-                const inputData = e.data || '';
-                const PUNCTUATION_MARKS = ['.', ' ', '?', '!', ',', ':', ';', '"', "'"];
-                const isPunctuationOrSpace = e.inputType === 'insertText' && PUNCTUATION_MARKS.includes(inputData);
+                const inputData               = e.data || '';
+                const isPunctuationOrSpace    = e.inputType === 'insertText' && PUNCTUATION_MARKS.includes(inputData);
 
                 if (!isPunctuationOrSpace && timeSinceCompositionEnd < 50) return;
 
@@ -42,16 +43,16 @@ export function createInputBindingService(editorEl) {
             };
 
             editorEl.addEventListener('compositionstart', onCompositionStart);
-            editorEl.addEventListener('compositionend', onCompositionEnd);
-            editorEl.addEventListener('input', onInput);
+            editorEl.addEventListener('compositionend'  , onCompositionEnd);
+            editorEl.addEventListener('input'           , onInput);
         },
 
         destroy() {
             if (destroyed) return;
             destroyed = true;
             editorEl.removeEventListener('compositionstart', onCompositionStart);
-            editorEl.removeEventListener('compositionend', onCompositionEnd);
-            editorEl.removeEventListener('input', onInput);
+            editorEl.removeEventListener('compositionend'  , onCompositionEnd);
+            editorEl.removeEventListener('input'           , onInput);
         },
 
         isComposing() {

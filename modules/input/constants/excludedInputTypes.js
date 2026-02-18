@@ -8,3 +8,5 @@ export const EXCLUDED_INPUT_TYPES = [
     'historyUndo',          // Undo
     'historyRedo'           // Redo
 ];
+
+export const PUNCTUATION_MARKS = ['.', ' ', '?', '!', ',', ':', ';', '"', "'"];
