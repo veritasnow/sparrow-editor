@@ -52,7 +52,6 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
 
         // 5. 부모 컨테이너 상태 저장
         stateAPI.save(activeKey, newState);
-        console.log("newStatenewStatenewStatenewState : ", newState);
 
         // 6. 커서 위치 정보 구성
         const nextCursorPos = {

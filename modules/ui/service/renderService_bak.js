@@ -196,9 +196,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
             // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
             const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
 
-            console.log("targettarget : ", target);
-            console.log("newElnewEl : ", newEl);
-
             if (target) {
                 container.insertBefore(newEl, target);
             } else {

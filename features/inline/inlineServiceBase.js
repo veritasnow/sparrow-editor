@@ -21,8 +21,6 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
             if (!domRanges || domRanges.length === 0) return;
 
             const ranges   = getRanges(currentState, domRanges);
-            console.log("domRangesdomRangesdomRangesdomRanges : ", domRanges);
-            console.log("rangesrangesrangesranges : ", ranges);            
             const newState = updateFn(currentState, ranges);
 
             if (newState && newState !== currentState) {
@@ -34,7 +32,6 @@ export function createInlineServiceBase(stateAPI, uiAPI, selectionAPI) {
             allNormalizedPositions.push(normalized);
         });
 
-        console.log("updatesupdatesupdatesupdatesupdates : ", updates);     
         // 3. 일괄 업데이트 실행 및 렌더링
         if (updates.length > 0) {
             stateAPI.saveBatch(updates, { saveHistory: true });

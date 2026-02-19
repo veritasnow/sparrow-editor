@@ -120,7 +120,6 @@ export function createSelectionApplication({ rootId }) {
             if (!context) return;
 
             const pos = rangeService.getSelectionPosition(context);
-            console.log("pospospospos : ", pos);
             if (pos) {
                 lastValidPos = { 
                     lineIndex     : pos.lineIndex, 

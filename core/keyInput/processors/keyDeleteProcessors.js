@@ -137,9 +137,9 @@ function performNextLineMerge(currentState, lineIndex) {
  */
 function performInternalDelete(currentState, lineIndex, offset) {
     const currentLine = currentState[lineIndex];
-    const { chunks } = currentLine;
-    let targetIndex = -1;
-    let acc = 0;
+    const { chunks }  = currentLine;
+    let targetIndex   = -1;
+    let acc           = 0;
 
     // 타겟 청크 탐색 (offset 위치를 포함하는 청크)
     for (let i = 0; i < chunks.length; i++) {
@@ -153,10 +153,10 @@ function performInternalDelete(currentState, lineIndex, offset) {
 
     if (targetIndex === -1) return { newState: currentState };
 
-    const newChunks = [];
+    const newChunks  = [];
     let targetAnchor = null;
-    let deleted = false;
-    let currentAcc = 0;
+    let deleted      = false;
+    let currentAcc   = 0;
 
     chunks.forEach((chunk, i) => {
         const handler = chunkRegistry.get(chunk.type);

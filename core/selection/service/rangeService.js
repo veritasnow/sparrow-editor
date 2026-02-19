@@ -43,7 +43,6 @@ export function createRangeService() {
                 newSelectedCells = [...selectedCells];
             }
         }
-        console.log("newSelectedCellsnewSelectedCells : ", newSelectedCells);
 
         // 셀판정
         const isMultiSelection = checkIsMultiSelection(newSelectedCells);

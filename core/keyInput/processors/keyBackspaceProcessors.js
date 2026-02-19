@@ -438,11 +438,6 @@ function applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectio
         lineActiveKey   // 업데이트될 리스트의 ID (예: 'list-123')
     } = result;
 
-    console.log("applyBackspaceLineResult - lineActiveKey:", lineActiveKey);
-    console.log("applyBackspaceLineResult - newState:", newState);
-    console.log("applyBackspaceLineResult - nextLineState:", nextLineState);
-
-
     // 1. [데이터 저장] 두 컨테이너의 상태를 각각 저장
     stateAPI.save(activeKey, newState);
     stateAPI.save(lineActiveKey, nextLineState);

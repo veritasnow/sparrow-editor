@@ -122,8 +122,6 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
 function applyEnterResult(targetContainerId, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, newLineData, lineIndex } = result;
 
-    console.log("몇번 타니????????????????");
-
     // 1. 상태 저장 (정확한 대상 컨테이너에 저장)
     stateAPI.save(targetContainerId, newState);
 
