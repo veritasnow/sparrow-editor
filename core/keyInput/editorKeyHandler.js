@@ -1,5 +1,5 @@
 import { executePaste } from './processors/keyPasteProcessors.js';
-import { executeEnter } from '../../core/keyInput/processors/keyEnterProcessors.js';
+import { executeEnter } from '../../core/keyInput/enter/processors/keyEnterProcessors.js';
 import { executeDelete } from './processors/keyDeleteProcessors.js';
 import { executeBackspace } from './processors/keyBackspaceProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';

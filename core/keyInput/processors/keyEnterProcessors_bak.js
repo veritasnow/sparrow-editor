@@ -138,32 +138,28 @@ function applyEnterResult(targetContainerId, result, { stateAPI, uiAPI, selectio
         ? Array.from(currentLineEl.getElementsByClassName('chunk-table')) 
         : [];
 
-    try {
-        // 3. UI 반영: 반드시 targetContainerId를 넘겨 부모-자식 관계 명시
-        uiAPI.insertLine(lineIndex + 1, newLineData.align, targetContainerId, newLineData); 
+    // 3. UI 반영: 반드시 targetContainerId를 넘겨 부모-자식 관계 명시
+    uiAPI.insertLine(lineIndex + 1, newLineData.align, targetContainerId, newLineData); 
 
-        // 4. 기존 줄 업데이트
-        uiAPI.renderLine(lineIndex, newState[lineIndex], { 
-            key: targetContainerId 
-        });
+    // 4. 기존 줄 업데이트
+    uiAPI.renderLine(lineIndex, newState[lineIndex], { 
+        key: targetContainerId 
+    });
 
-        // 5. 새 줄 업데이트 (추출한 테이블 주입)
-        uiAPI.renderLine(lineIndex + 1, newState[lineIndex + 1], { 
-            key: targetContainerId, 
-            pool: movingTablePool 
+    // 5. 새 줄 업데이트 (추출한 테이블 주입)
+    uiAPI.renderLine(lineIndex + 1, newState[lineIndex + 1], { 
+        key: targetContainerId, 
+        pool: movingTablePool 
+    });
+    
+    // 6. 커서 복원 (가상 스크롤 및 DOM 안정화 대응)
+    const finalPos = normalizeCursorData(newPos, targetContainerId);
+    if (finalPos) {
+        stateAPI.saveCursor(finalPos);
+        // RAF를 사용하여 브라우저가 신규 <p> 태그의 인덱스를 완전히 인지한 후 커서 고정
+        requestAnimationFrame(() => {
+            selectionAPI.restoreCursor(finalPos);
         });
-        
-        // 6. 커서 복원 (가상 스크롤 및 DOM 안정화 대응)
-        const finalPos = normalizeCursorData(newPos, targetContainerId);
-        if (finalPos) {
-            stateAPI.saveCursor(finalPos);
-            // RAF를 사용하여 브라우저가 신규 <p> 태그의 인덱스를 완전히 인지한 후 커서 고정
-            requestAnimationFrame(() => {
-                selectionAPI.restoreCursor(finalPos);
-            });
-        }
-    } catch (e) {
-        console.error("Enter process failed - DOM mismatch:", e);
     }
 
     movingTablePool.length = 0;
