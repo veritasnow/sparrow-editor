@@ -109,7 +109,7 @@ export function createHistoryStore(initialState = {}) {
         history[currentIndex] = nextMap;
       }
 
-      //console.log('history:', history);
+      console.log('history:', history);
 
     },
 

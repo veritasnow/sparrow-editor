@@ -1,6 +1,7 @@
 // /core/keyInput/processors/keyEnterProcessors.js
 import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
 import { getLineLengthFromState } from '../../../utils/editorStateUtils.js';
+import { isLineEmpty } from '../../../utils/emptyUtils.js';
 import { normalizeCursorData } from '../../../utils/cursorUtils.js';
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { chunkRegistry } from '../../chunk/chunkRegistry.js';
@@ -43,7 +44,7 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
 function resolveEnterPosition(currentState, domRanges) {
     const { lineIndex, endIndex: domOffset } = domRanges[0];
     const lineState = currentState[lineIndex];
-    const lineLen = lineState ? getLineLengthFromState(lineState) : 0;
+    const lineLen   = lineState ? getLineLengthFromState(lineState) : 0;
     
     return {
         lineIndex,
@@ -55,13 +56,13 @@ function resolveEnterPosition(currentState, domRanges) {
  * [Step 2] 현재 라인을 분할하여 새로운 상태(State) 계산
  */
 function calculateEnterState(currentState, lineIndex, offset, containerId) {
-    const currentLine = currentState[lineIndex];
+    const currentLine  = currentState[lineIndex];
     const beforeChunks = [];
-    const afterChunks = [];
+    const afterChunks  = [];
     let acc = 0;
 
     currentLine.chunks.forEach(chunk => {
-        const handler = chunkRegistry.get(chunk.type);
+        const handler  = chunkRegistry.get(chunk.type);
         const chunkLen = handler ? handler.getLength(chunk) : (chunk.text?.length || 0);
         
         if (handler && !handler.canSplit) {
@@ -72,7 +73,7 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
             }
         } else {
             const start = acc;
-            const end = acc + chunkLen;
+            const end   = acc + chunkLen;
 
             if (offset <= start) {
                 afterChunks.push(cloneChunk(chunk));
@@ -81,7 +82,7 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
             } else {
                 const cut = offset - start;
                 const beforeText = chunk.text.slice(0, cut);
-                const afterText = chunk.text.slice(cut);
+                const afterText  = chunk.text.slice(cut);
                 
                 if (beforeText) {
                     beforeChunks.push(handler ? handler.create(beforeText, chunk.style) : { type: 'text', text: beforeText, style: chunk.style });
@@ -95,12 +96,12 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
     });
 
     const finalBeforeChunks = normalizeLineChunks(beforeChunks);
-    const finalAfterChunks = normalizeLineChunks(afterChunks);
+    const finalAfterChunks  = normalizeLineChunks(afterChunks);
 
-    const nextState = [...currentState];
+    const nextState      = [...currentState];
     nextState[lineIndex] = EditorLineModel(currentLine.align, finalBeforeChunks);
     
-    const newLineData = EditorLineModel(currentLine.align, finalAfterChunks);
+    const newLineData    = EditorLineModel(currentLine.align, finalAfterChunks);
     nextState.splice(lineIndex + 1, 0, newLineData);
 
     const newPos = {
@@ -108,8 +109,8 @@ function calculateEnterState(currentState, lineIndex, offset, containerId) {
         lineIndex: lineIndex + 1,
         anchor: {
             chunkIndex: 0,
-            type: 'text',
-            offset: 0
+            type      : 'text',
+            offset    : 0
         }
     };
 
@@ -186,51 +187,95 @@ function executeListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
     }
 
     const { lineIndex, offset } = resolveEnterPosition(listState, domRanges);
+    if(isLineEmpty(listState[lineIndex])) {
+        const parentId        = selectionAPI.findParentContainerId(containerId);
+        const parentState     = [...stateAPI.get(parentId)];
+        const listEl          = document.getElementById(containerId);
+        const parentLineIndex = selectionAPI.getLineIndex(listEl);
 
-    // 2. 리스트 내부 행 분할 (중요: 여기서 이미 newState는 [Line0, Line1] 처럼 늘어남)
-    const result = calculateEnterState(listState, lineIndex, offset, containerId);
+        // 1. 리스트 내부 상태에서 현재 빈 줄 제거 (진짜 탈출)
+        const updatedListState = [...listState];
+        updatedListState.splice(lineIndex, 1);
 
-    // 3. 리스트 상태 저장
-    stateAPI.save(containerId, result.newState); 
+        // 2. 새 일반 라인 모델 생성
+        const newEmptyLine = EditorLineModel('left', [{ 
+            type: 'text', 
+            text: '', 
+            style: { fontSize: '14px', fontFamily: 'Pretendard, sans-serif' } 
+        }]);
 
-    // 4. UI 렌더링
-    // 리스트는 내부 구조(LI 개수)가 변한 것이므로, 
-    // 리스트를 포함하고 있는 "진짜 부모(메인 에디터)"의 해당 라인을 다시 그려야 합니다.
-    // 하지만, 만약 리스트 내부 UI만 갱신하고 싶다면 리스트 렌더러를 직접 호출해야 합니다.
-    
-    const mainKey   = selectionAPI.getMainKey();
-    const mainState = stateAPI.get(mainKey);
-    
-    // 메인 에디터에서 이 리스트를 들고 있는 '부모 라인'을 찾습니다.
-    const parentLineIndexInMain = mainState.findIndex(line => 
-        line.chunks?.some(c => c.id === containerId)
-    );
+        // 상태 업데이트
+        parentState.splice(parentLineIndex + 1, 0, newEmptyLine); // 삽입!
+        stateAPI.save(parentId, parentState);
 
-    if (parentLineIndexInMain !== -1) {
-        // 부모 청크의 데이터 구조 업데이트 (아이템 개수 동기화)
-        const listChunk = mainState[parentLineIndexInMain].chunks.find(c => c.id === containerId);
+        // --- UI 반영 순서 ---
+        // 1. 리스트 줄 업데이트 (li가 하나 줄어든 상태로 다시 그림)
+        uiAPI.renderLine(parentLineIndex, parentState[parentLineIndex], { key: parentId });
+
+        // 2. 새 일반 라인 삽입 (기존 로직과 동일)
+        uiAPI.insertLine(parentLineIndex + 1, newEmptyLine.align, parentId, newEmptyLine);
+
+        // 3. 새 줄 렌더링 (필요시)
+        uiAPI.renderLine(parentLineIndex + 1, newEmptyLine, { key: parentId });
+
+        // 5. 커서 이동
+        const finalPos = {
+            containerId: parentId,
+            lineIndex: updatedListState.length === 0 ? parentLineIndex : parentLineIndex + 1,
+            anchor: { chunkIndex: 0, type: 'text', offset: 0 }
+        };
         
-        // 💡 리스트 아이템(LI)의 개수를 상태와 맞춰줍니다.
-        listChunk.data = result.newState.map((line, idx) => ({
-            index: idx,
-            line: line
-        }));
-
-        stateAPI.save(mainKey, mainState);
-
-        // 렌더링 실행
-        uiAPI.renderLine(parentLineIndexInMain, mainState[parentLineIndexInMain], {
-            key: mainKey
-        });
-    }
-
-    // 5. 커서 복원 (containerId는 그대로 list-xxx 사용)
-    const finalPos = normalizeCursorData(result.newPos, containerId);
-    if (finalPos) {
         stateAPI.saveCursor(finalPos);
         requestAnimationFrame(() => {
             selectionAPI.restoreCursor(finalPos);
-            console.groupEnd();
         });
+    } else {
+        // 2. 리스트 내부 행 분할 (중요: 여기서 이미 newState는 [Line0, Line1] 처럼 늘어남)
+        const result = calculateEnterState(listState, lineIndex, offset, containerId);
+
+        // 3. 리스트 상태 저장
+        stateAPI.save(containerId, result.newState); 
+
+        // 4. UI 렌더링
+        // 리스트는 내부 구조(LI 개수)가 변한 것이므로, 
+        // 리스트를 포함하고 있는 "진짜 부모(메인 에디터)"의 해당 라인을 다시 그려야 합니다.
+        // 하지만, 만약 리스트 내부 UI만 갱신하고 싶다면 리스트 렌더러를 직접 호출해야 합니다.
+        
+        const mainKey   = selectionAPI.getMainKey();
+        const mainState = stateAPI.get(mainKey);
+        
+        // 메인 에디터에서 이 리스트를 들고 있는 '부모 라인'을 찾습니다.
+        const parentLineIndexInMain = mainState.findIndex(line => 
+            line.chunks?.some(c => c.id === containerId)
+        );
+
+        if (parentLineIndexInMain !== -1) {
+            // 부모 청크의 데이터 구조 업데이트 (아이템 개수 동기화)
+            const listChunk = mainState[parentLineIndexInMain].chunks.find(c => c.id === containerId);
+            
+            // 💡 리스트 아이템(LI)의 개수를 상태와 맞춰줍니다.
+            listChunk.data = result.newState.map((line, idx) => ({
+                index: idx,
+                line: line
+            }));
+
+            stateAPI.save(mainKey, mainState);
+
+            // 렌더링 실행
+            uiAPI.renderLine(parentLineIndexInMain, mainState[parentLineIndexInMain], {
+                key: mainKey
+            });
+        }
+
+        // 5. 커서 복원 (containerId는 그대로 list-xxx 사용)
+        const finalPos = normalizeCursorData(result.newPos, containerId);
+        if (finalPos) {
+            stateAPI.saveCursor(finalPos);
+            requestAnimationFrame(() => {
+                selectionAPI.restoreCursor(finalPos);
+                console.groupEnd();
+            });
+        }
+
     }
 }

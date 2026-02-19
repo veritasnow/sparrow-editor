@@ -132,6 +132,8 @@ export function createEditorAPI({
         refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
         getSelectionMode            : () => domSelection.getSelectionMode(),
         getMainKey                  : () => domSelection.getMainKey(),
+        findParentContainerId       : (containerId) => domSelection.findParentContainerId(containerId),
+        getLineIndex                : (el) => domSelection.getLineIndex(el)
     };
 
   return { stateAPI, uiAPI, selectionAPI };

@@ -2,14 +2,12 @@ import { createKeyService } from "./service/keyService.js";
 import { createRangeService } from "./service/rangeService.js";
 import { createRestoreCursorService } from "./service/restoreCursorService.js";
 
-
 export function createSelectionApplication({ rootId }) {
-    let lastValidPos    = null;
-    let lastActiveKey   = null;
-    let cacheActiveKeys = null;
+    let lastValidPos     = null;
+    let lastActiveKey    = null;
+    let cacheActiveKeys  = null;
     
     const root           = document.getElementById(rootId);
-
     // 외부 서비스 주입
     const keyService     = createKeyService(root);
     const rangeService   = createRangeService(root);
@@ -32,7 +30,6 @@ export function createSelectionApplication({ rootId }) {
         }
         return cacheActiveKeys || [];
     }
-
 
     function setCachedActiveKey(key) {
         cacheActiveKeys = [key];
@@ -66,6 +63,10 @@ export function createSelectionApplication({ rootId }) {
         const context = getSelectionContext();
         if (!context) return null;        
         return rangeService.getInsertionAbsolutePosition(context);
+    }
+
+    function getLineIndex(el) {
+        return rangeService.getLineIndex(el);
     }
 
     function getSelectionMode() {
@@ -104,6 +105,10 @@ export function createSelectionApplication({ rootId }) {
             setCachedActiveKey(cursorData.containerId);
         }
     }
+
+    function findParentContainerId(containerId) {
+        return keyService.findParentContainerId(containerId);
+    }
     
     return { 
         getActiveKeys,
@@ -134,5 +139,7 @@ export function createSelectionApplication({ rootId }) {
         getDomSelection,
         getSelectionMode,
         getMainKey,
+        findParentContainerId,
+        getLineIndex,
     };
 }

@@ -70,5 +70,12 @@ export function createKeyService(root) {
         return [lastActiveKey].filter(Boolean);
     }
 
-    return { syncActiveKeys };
+    function findParentContainerId(containerId) {
+        const currentEl = document.getElementById(containerId);
+        if (!currentEl) return null;
+        const parentContainer = currentEl.parentElement?.closest('[data-container-id]');
+        return parentContainer ? parentContainer.getAttribute('data-container-id') : null;
+    }    
+
+    return { syncActiveKeys, findParentContainerId };
 }

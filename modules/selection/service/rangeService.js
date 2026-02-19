@@ -189,5 +189,5 @@ export function createRangeService(root) {
         return { lineIndex, absoluteOffset };
     }    
 
-    return { getDomSelection, getSelectionPosition, getSelectionContext, getInsertionAbsolutePosition };
+    return { getDomSelection, getSelectionPosition, getSelectionContext, getInsertionAbsolutePosition, getLineIndex };
 }
