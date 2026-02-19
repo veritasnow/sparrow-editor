@@ -1,7 +1,7 @@
 // /core/keyInput/serivce/keyCommonService.js
-import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { splitChunkByOffset, cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
-import { chunkRegistry } from '../../chunk/chunkRegistry.js'; // 레지스트리 도입
+import { EditorLineModel } from '../../../../model/editorLineModel.js';
+import { splitChunkByOffset, cloneChunk, normalizeLineChunks } from '../../../../utils/mergeUtils.js';
+import { chunkRegistry } from '../../../chunk/chunkRegistry.js'; // 레지스트리 도입
 
 /**
  * 선택 영역(Range) 삭제 상태 계산

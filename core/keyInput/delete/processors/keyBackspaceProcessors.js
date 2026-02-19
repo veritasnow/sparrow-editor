@@ -1,11 +1,11 @@
 // /core/keyInput/processors/keyBackspaceProcessors.js
-import { getLineLengthFromState } from '../../../utils/editorStateUtils.js';
-import { getRanges } from "../../../utils/rangeUtils.js";
-import { chunkRegistry } from '../../chunk/chunkRegistry.js';
-import { normalizeCursorData } from '../../../utils/cursorUtils.js';
-import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { calculateDeleteSelectionState } from '../service/keyCommonService.js'
-import { cloneChunk, normalizeLineChunks } from '../../../utils/mergeUtils.js';
+import { getLineLengthFromState } from '../../../../utils/editorStateUtils.js';
+import { getRanges } from "../../../../utils/rangeUtils.js";
+import { chunkRegistry } from '../../../chunk/chunkRegistry.js';
+import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
+import { EditorLineModel } from '../../../../model/editorLineModel.js';
+import { calculateDeleteSelectionState } from '../service/calculateDeleteService.js'
+import { cloneChunk, normalizeLineChunks } from '../../../../utils/mergeUtils.js';
 
 /**
  * ⌫ 백스페이스 키 실행 메인 함수
