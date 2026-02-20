@@ -1,0 +1,107 @@
+/* ───────── 표 스타일 ───────── */
+.sparrow-contents table{
+  display: inline-table; 
+  vertical-align: middle; /* 텍스트와 높이 맞춤 */
+  margin: 0 5px;          /* 앞뒤 텍스트와 간격 확보 */      
+}
+
+.sparrow-contents table.sparrow-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 15px;
+  table-layout: fixed; /* 셀 크기 균일 */
+}
+
+/* 테두리 + 색상 */
+.sparrow-contents table.sparrow-table td,
+.sparrow-contents table.sparrow-table th {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  vertical-align: middle;
+  background: #fff;
+  min-width: 40px;
+}
+
+/* 헤더 스타일 */
+.sparrow-contents table.sparrow-table th {
+  background: #f3f3f3;
+  font-weight: 600;
+}
+
+/* 선택 시 (셀 클릭 느낌) */
+.sparrow-contents table.sparrow-table td:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: -2px;
+}
+
+/* 마우스 오버 */
+.sparrow-contents table.sparrow-table td:hover {
+  background: #fafafa;
+}
+
+/* 셀에서 Enter 줄바꿈 가능 */
+.sparrow-contents table.sparrow-table td {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 줄 사이 여백 보다는 딱 붙는 느낌 */
+.sparrow-contents table.sparrow-table tr + tr td {
+  border-top-color: #ccc;
+}
+
+/* 표 전체 선택 시 (나중을 위한 클래스) */
+.sparrow-contents .table-selected {
+  box-shadow: 0 0 0 2px #4a90e280;
+  border-radius: 4px;
+}
+
+/* 셀 편집 시 caret 손실 방지 */
+.sparrow-contents table.sparrow-table td {
+  position: relative;
+}
+
+/* 팝업 표시 애니메이션 */
+@keyframes popup-fade-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+
+
+
+    
+/* 1. 선택된 셀 디자인 */
+.sparrow-contents .se-table-cell {
+  background-color: white;
+}
+
+.sparrow-contents .se-table-cell.is-selected {
+    background-color: rgba(35, 131, 226, 0.12) !important; /* 부드러운 파스텔 블루 */
+    position: relative;
+    outline: 1.5px solid rgba(35, 131, 226, 0.5) !important; /* 얇고 세련된 라인 */
+    outline-offset: -1.5px;
+    z-index: 10;
+    transition: background-color 0.1s ease;
+}
+
+/* 2. 텍스트 반전 숨기기 */
+.sparrow-contents .se-table-cell.is-selected *::selection {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+.sparrow-contents .se-table-cell.is-selected *::-moz-selection {
+    background-color: transparent !important;
+}
+
+/* 3. 내부 디테일 (은은한 안쪽 테두리) */
+.sparrow-contents .se-table-cell.is-selected::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    box-shadow: inset 0 0 0 1px rgba(35, 131, 226, 0.1);
+    pointer-events: none;
+    z-index: 11;
+}

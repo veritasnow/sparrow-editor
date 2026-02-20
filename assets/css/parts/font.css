@@ -1,0 +1,51 @@
+
+/* --- 폰트 등록 (Pretendard) --- */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('../fonts/pretendard/Pretendard-Regular.subset.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  src: url('../fonts/Pretendard-Bold.subset.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- 폰트 등록 (나눔스퀘어라운드) --- */
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('../fonts/nanum-square-round/NanumSquareRoundR.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('../fonts/nanum-square-round/NanumSquareRoundB.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- 폰트 등록 (메이플스토리) --- */
+@font-face {
+  font-family: 'MapleStory';
+  src: url('../fonts/maple/MaplestoryLight.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MapleStory';
+  src: url('../fonts/maple/MaplestoryBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

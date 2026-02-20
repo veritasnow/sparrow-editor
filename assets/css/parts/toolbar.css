@@ -1,0 +1,384 @@
+/* ───────── 툴바 스타일 ───────── */
+.sparrow-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.sparrow-toolbar button {
+  border: 1px solid #dfdfdf;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 6px 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  position: relative;
+}
+
+.sparrow-toolbar button:hover {
+  background: #e2e2e2;
+}
+
+.sparrow-toolbar button.active {
+  background-color: #757575;
+  color: white;
+}
+
+.sparrow-toolbar .font-size-select {
+  height: 32px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sparrow-toolbar .font-size-select:hover {
+  background: #f2f2f2;
+}    
+
+/* ───────── 정렬 버튼 아이콘 ───────── */
+.sparrow-toolbar .align-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  width: 16px;
+  height: 16px;
+}
+
+.sparrow-toolbar .align-icon div {
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.sparrow-toolbar .align-left div:nth-child(1) { width: 14px; }
+.sparrow-toolbar .align-left div:nth-child(2) { width: 10px; }
+.sparrow-toolbar .align-left div:nth-child(3) { width: 14px; }
+.sparrow-toolbar .align-left div:nth-child(4) { width: 8px; }
+
+.sparrow-toolbar .align-center { align-items: center; }
+.sparrow-toolbar .align-center div:nth-child(1) { width: 12px; }
+.sparrow-toolbar .align-center div:nth-child(2) { width: 16px; }
+.sparrow-toolbar .align-center div:nth-child(3) { width: 10px; }
+.sparrow-toolbar .align-center div:nth-child(4) { width: 14px; }
+
+.sparrow-toolbar .align-right { align-items: flex-end; }
+.sparrow-toolbar .align-right div:nth-child(1) { width: 8px; }
+.sparrow-toolbar .align-right div:nth-child(2) { width: 12px; }
+.sparrow-toolbar .align-right div:nth-child(3) { width: 14px; }
+.sparrow-toolbar .align-right div:nth-child(4) { width: 10px; }
+
+/* ───────── 툴바 내 select 박스 공통 스타일 ───────── */
+.sparrow-toolbar .font-family-select {
+  width: 100px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background-color: white;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ───────── 동영상 추가 버튼 아이콘 ───────── */
+.sparrow-toolbar .video-icon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.sparrow-toolbar .video-icon::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  border-left: 6px solid white;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+/* ───────── YouTube URL 입력창 ───────── */
+.sparrow-toolbar .video-input-popup {
+  display: none; /* 기본은 숨김 */
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  z-index: 10;
+  width: 300px; /* 조금 더 여유 있게 조정 */
+
+  /* 추가된 속성: 팝업이 켜졌을 때 내부 요소 정렬 */
+  gap: 6px;
+  align-items: center;
+}
+
+/* 팝업이 활성화되었을 때 적용할 클래스 */
+.sparrow-toolbar .video-input-popup.show {
+  display: flex !important; /* 자바스크립트에서 이 클래스를 add 하세요 */
+}
+
+.sparrow-toolbar .video-input-popup input {
+  flex: 1; /* width: calc 대신 사용. 남는 공간을 다 차지함 */
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+}
+
+.sparrow-toolbar .video-input-popup button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap; /* 버튼 글자가 줄바꿈되지 않게 방지 */
+}
+
+.sparrow-toolbar .video-input-popup button:hover {
+  background: #0056b3;
+}
+/* ───────── 이미지 추가 버튼 아이콘 (사진 느낌 강화) ───────── */
+/* 메인 프레임 */
+.sparrow-toolbar .image-icon {
+  position: relative;
+  width: 18px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  box-sizing: border-box;
+  background: transparent;
+  overflow: hidden; /* 산이 프레임 밖으로 나가지 않게 차단 */
+}
+
+/* 앞쪽 산 (더 크고 뾰족하게) */
+.sparrow-toolbar .image-icon::before {
+  content: "";
+  position: absolute;
+  bottom: -1px; /* 바닥에 딱 붙임 */
+  left: 1px;
+  width: 10px;
+  height: 7px;
+  background: currentColor;
+  /* 뾰족한 삼각형 모양을 만드는 더 깔끔한 방법 */
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+/* 뒤쪽 산 (약간 작게) */
+.sparrow-toolbar .image-icon::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 7px;
+  width: 8px;
+  height: 5px;
+  background: currentColor;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  opacity: 0.6; /* 원근감을 위해 조금 더 흐리게 조정 */
+}
+
+/* 해 (오른쪽 상단) */
+.sparrow-toolbar .image-icon span {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 3px;
+  height: 3px;
+  background: currentColor;
+  border-radius: 50%;
+}
+/* ───────── 컬러 버튼 (툴바) ───────── */
+.sparrow-toolbar .color-btn {
+  position: relative;
+}
+
+.sparrow-toolbar .color-btn .color-preview {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: #000;
+}
+
+.sparrow-toolbar .color-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sparrow-toolbar .color-item:hover {
+  transform: scale(1.1);
+  border-color: #555;
+}
+
+/* ───────── 이미지 URL + 파일 업로드 팝업 ───────── */
+.sparrow-toolbar .image-input-popup {
+  display: none;
+  position: absolute;
+  top: 50px;
+  left: 10px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  z-index: 10;
+  width: 260px;
+  animation: popup-fade-in 0.12s ease-out;
+}
+
+/* URL 입력 영역 */
+.sparrow-toolbar .image-input-popup .image-url-input {
+  width: calc(100% - 60px);
+  padding: 5px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* "파일 선택" 버튼 */
+.sparrow-toolbar .image-input-popup .image-upload-btn {
+  background: #f8f8f8;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 6px;
+  width: 95px;
+  transition: 0.15s;
+}
+
+.sparrow-toolbar .image-input-popup .image-upload-btn:hover {
+  background: #ececec;
+}
+
+/* "추가" 버튼 */
+.sparrow-toolbar .image-input-popup .image-confirm-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  margin-top: 6px;
+  cursor: pointer;
+  width: 95px;
+  transition: 0.15s;
+}
+
+.sparrow-toolbar .image-input-popup .image-confirm-btn:hover {
+  background: #0056b3;
+}
+
+/* ───────── 표 삽입 버튼 아이콘 (▦ 문자 기반, 중앙정렬 완성版) ───────── */
+.sparrow-toolbar .table-btn span {
+  display: flex;             /* 내부에서도 flex 사용 */
+  align-items: center;       /* 세로 중앙 */
+  justify-content: center;   /* 가로 중앙 */
+  width: 100%;               /* flex 정렬이 확실히 적용되도록 */
+  height: 100%;              /* 버튼 영역 안에서 정확히 가운데 */
+  font-size: 20px;
+  line-height: 1;
+  transform: translateY(0);  /* 보정 제거 */
+}
+
+/* popup 컨테이너 */
+.sparrow-toolbar .table-input-popup {
+  position: absolute;
+  display: none;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 6px;
+  z-index: 200;
+}
+
+/* grid */
+.sparrow-toolbar .table-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 18px);
+  grid-template-rows: repeat(10, 18px);
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.sparrow-toolbar .table-cell {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* 선택됐을 때 표시 */
+.sparrow-toolbar .table-cell.selected {
+  background: #007bff33;
+  border-color: #007bff;
+}
+
+.sparrow-toolbar .table-size-text {
+  font-size: 12px;
+  color: #333;
+}
+
+/* ───────── 툴바 리스트 아이콘 (o- 3줄 형태) ───────── */
+.sparrow-toolbar .sparrow-toolbar-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 18px;
+}
+
+.sparrow-toolbar .sparrow-toolbar-list-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* 닷지 (o) */
+.sparrow-toolbar .sparrow-toolbar-list-dot {
+  width: 3px;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 선 (-) */
+.sparrow-toolbar .sparrow-toolbar-list-line {
+  width: 12px;
+  height: 1.5px;
+  background-color: currentColor;
+  border-radius: 1px;
+}

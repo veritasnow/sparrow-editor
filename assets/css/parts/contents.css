@@ -1,0 +1,60 @@
+/* ───────── 기본 에디터 영역 ───────── */
+.sparrow-contents {
+  border: 1px solid #ccc;
+  padding: 10px;
+  min-height: 200px;
+  height: 500px;
+  outline: none;
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+
+  /* 👇 추가 */
+  overflow-y: auto;     /* 세로 스크롤 자동 생성 */
+  overflow-x: hidden;   /* 가로 스크롤은 숨김 */
+  scrollbar-width: thin; /* (선택) 파이어폭스용 얇은 스크롤바 */
+}
+  
+/* 에디터 안에 있는 영상 wrapper 공통 스타일 */
+  .sparrow-contents .video-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+  .sparrow-contents .video-wrapper iframe {
+  border-radius: 8px;
+  display: inline-block;
+  border: none;
+}
+
+/* 영상도 선택 불가로 (커서 방해 방지) */
+  .sparrow-contents .video-wrapper iframe {
+  pointer-events: none;
+}
+
+.sparrow-contents .cursor {
+  width: 2px;
+  background-color: black;
+  position: absolute;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.sparrow-contents .text-block {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  min-height: 24px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.sparrow-contents .text-block span{
+  height: 24px;
+}

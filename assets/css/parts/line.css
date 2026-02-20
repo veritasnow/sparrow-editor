@@ -1,0 +1,12 @@
+/* ───────── 에디터 내부 실제 ul li 스타일 ───────── */
+.sparrow-contents ul {
+  margin: 10px 0 10px 25px;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.sparrow-contents li {
+  min-height: 24px;
+  line-height: 1.6;
+  margin-bottom: 2px;
+}

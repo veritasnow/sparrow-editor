@@ -1,0 +1,114 @@
+/* 배경 어둡게 처리 */
+.sparrow-modal-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 10000; /* 에디터 툴바보다 높게 */
+}
+
+/* 2. 모달이 노출될 때 배경 스크롤 방지 및 정렬을 위한 보완 */
+.sparrow-modal-layer .modal-overlay {
+  position: fixed; /* 브라우저 전체 화면 기준 */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10001; /* layer보다 1 높게 */
+  backdrop-filter: blur(2px);
+  /* 에디터 외부로 나가지 않게 하려면 fixed가 맞습니다 */
+}
+
+.sparrow-modal-layer .modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* 반투명 검정 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    backdrop-filter: blur(2px); /* 배경 살짝 흐리게 */
+  }
+
+  /* 알림창 본체 */
+ .sparrow-modal-layer .modal-alert {
+    width: 360px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  /* 상단 아이콘 */
+ .sparrow-modal-layer .modal-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: bold;
+    margin: 0 auto 20px;
+  }
+  
+ .sparrow-modal-layer .alert-warning { background: #eaedfb; color: #8780ff; }
+ .sparrow-modal-layer .alert-success { background: #e8f5e9; color: #4caf50; }
+ .sparrow-modal-layer .alert-error { background: #ffebee; color: #f44336; }
+
+ .sparrow-modal-layer .modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 10px 0;
+  }
+
+ .sparrow-modal-layer .modal-desc {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 25px;
+  }
+
+  /* 버튼 영역 */
+.sparrow-modal-layer  .modal-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+.sparrow-modal-layer  .modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+ .sparrow-modal-layer .btn-secondary { background: #f0f0f0; color: #666; }
+ .sparrow-modal-layer .btn-secondary:hover { background: #e5e5e5; }
+
+ .sparrow-modal-layer .btn-primary { background: #5148de; color: #fff; }
+ .sparrow-modal-layer .btn-primary:hover { background: #661ec4; }
+
+ /* 3. 애니메이션 정의 (없으면 섭섭하죠!) */
+@keyframes modalPop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
