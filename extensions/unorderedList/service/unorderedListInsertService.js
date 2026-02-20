@@ -1,6 +1,7 @@
 import { applyListBlock } from '../utils/unorderedListBlockUtil.js';
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
+import { showEditorAlert } from '../../../core/layout/components/editorModal.js';
 
 /**
  * 리스트(ul/li) 삽입 및 전환 서비스
@@ -61,7 +62,12 @@ export function createUnorderedListInsertService(stateAPI, uiAPI, selectionAPI) 
                 selectionAPI.restoreCursor(nextCursorPos);
             }, 0);
         } else {
-            alert("리스트는 메인에만 생성가능");            
+            const creatEditorId = selectionAPI.getMainKey();
+            showEditorAlert(
+                creatEditorId.replace("-content", ""), 
+                "테이블에는 글머리기호 삽입이<br/> 불가능합니다.", 
+                "기본 영역에만 삽입이 가능합니다."
+            );  
         }
 
     }

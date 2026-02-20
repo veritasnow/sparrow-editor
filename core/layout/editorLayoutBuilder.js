@@ -14,6 +14,8 @@ export function createEditorLayoutBuilder(rootId) {
     ).join('');
 
     root.innerHTML = `
+      <div class="sparrow-modal-layer" id="${rootId}-modal-layer"></div>
+
       <div class="sparrow-toolbar">
         <button id="${rootId}-boldBtn" data-command="fontWeight" data-value="bold" title="굵게"><b>B</b></button>
         <button id="${rootId}-italicBtn" data-command="fontStyle" data-value="italic" title="기울이기"><i>I</i></button>

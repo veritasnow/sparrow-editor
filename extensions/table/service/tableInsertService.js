@@ -3,6 +3,7 @@ import { applyTableBlock } from '../utils/tableBlockUtil.js';
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
 import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
+import { showEditorAlert } from '../../../core/layout/components/editorModal.js';
 
 /**
  * 테이블 삽입 서비스
@@ -14,7 +15,7 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
         if (!rows || !cols) return false;
 
         // 1. 현재 타겟팅된 컨테이너(본문 혹은 부모 셀) 확보
-        const activeKey   = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
+        const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
         if(!activeKey.includes("list-")) {
             if (!activeKey) return false;
 
@@ -80,7 +81,12 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
                 selectionAPI.restoreCursor(nextCursorPos);
             }, 0);
         } else {
-            alert("리스트 안에 테이블 등록 불가");
+            const creatEditorId = selectionAPI.getMainKey();
+            showEditorAlert(
+                creatEditorId.replace("-content", ""), 
+                "글머리 기호에는 테이블 삽입이<br/> 불가능합니다.", 
+                "기본 영역 혹은 테이블 안에서만 삽입이 가능합니다."
+            );
         }
     }
 
