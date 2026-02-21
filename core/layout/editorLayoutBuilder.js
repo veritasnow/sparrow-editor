@@ -31,6 +31,18 @@ export function createEditorLayoutBuilder(rootId) {
                 data-type="color" 
                 class="color-input" />
         </button>
+        
+        <!-- 하이라이트 -->
+        <button id="${rootId}-bgColorBtn" data-command="color-trigger" title="배경 색상" class="color-btn">
+          <span class="color-preview" style="background: white;"></span>
+          <span class="color-text">H</span>
+          <input type="color" 
+                id="${rootId}-bgColorInput" 
+                data-command="color-input" 
+                data-type="backgroundColor" 
+                class="color-input" 
+                value="#ffffff" />
+        </button>
 
         <!-- 글자 크기 -->
         <select id="${rootId}-fontSizeSelect" class="font-size-select" data-command="fontSize" title="글자 크기">
@@ -46,18 +58,6 @@ export function createEditorLayoutBuilder(rootId) {
         <select id="${rootId}-fontFamilySelect" data-command="fontFamily" class="font-family-select" title="글꼴 변경">
           ${fontOptions}
         </select>      
-
-        <!-- 하이라이트 -->
-        <button id="${rootId}-bgColorBtn" data-command="color-trigger" title="배경 색상" class="color-btn">
-          <span class="color-preview" style="background: white;"></span>
-          <span class="color-text">H</span>
-          <input type="color" 
-                id="${rootId}-bgColorInput" 
-                data-command="color-input" 
-                data-type="backgroundColor" 
-                class="color-input" 
-                value="#ffffff" />
-        </button>
 
         <div style="width:1px; height:20px; background:#ddd; margin:0 6px;"></div>
 
