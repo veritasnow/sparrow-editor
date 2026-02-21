@@ -2,12 +2,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
     // 1. 라인 데이터에 따른 태그 결정 (테이블 포함 시 DIV, 아니면 P)
     const getTagNameForLine = (lineData, targetKey) => {
-        console.log("lineDatalineDatalineData 123123123 : ", lineData);
-        console.log("targetKeytargetKeytargetKey 123123123 : ", targetKey);        
         if (!lineData || !lineData.chunks) return "P";
         
         if (targetKey && (targetKey.startsWith('list-') || targetKey.includes('list'))) {
-            console.log("냠냠 테스트!!!!!!!!");
             return "LI";
         }
         

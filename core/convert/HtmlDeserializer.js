@@ -89,38 +89,49 @@ export const HtmlDeserializer = {
 
     parseList(listNode, context) {
         const listId = this.generateId('list', context);
-        const listLines = []; // 💡 실제 데이터(EditorLineModel)만 담는 배열
+        const listLines = [];
 
         Array.from(listNode.querySelectorAll('li')).forEach((li, index) => {
-            const chunks = [];
-            li.childNodes.forEach(child => {
-                chunks.push(...this.collectInlineChunks(child, {}, context));
-            });
+            let chunks = [];
             
-            // 💡 1. 추가 상태(DB역할)에는 순수한 LineModel만 저장합니다.
+            // 💡 해결책: li 내부의 모든 노드를 순회하며 인라인 요소만 추출
+            // 만약 li 내부에 p가 있다면, 그 p 내부의 자식들을 가져옵니다.
+            const processNode = (node) => {
+                node.childNodes.forEach(child => {
+                    // p나 div 같은 블록 요소라면 그 내부를 다시 탐색 (재귀)
+                    if (child.nodeType === 1 && (child.tagName === 'P' || child.tagName === 'DIV')) {
+                        processNode(child);
+                    } else {
+                        // 인라인 요소나 텍스트라면 청크로 변환
+                        chunks.push(...this.collectInlineChunks(child, {}, context));
+                    }
+                });
+            };
+
+            processNode(li);
+
+            // 사이냅 특유의 불필요한 제로 너비 공백(\u200B)이나 
+            // 리스트 마커용 span(se-list-type) 등이 섞여 들어올 수 있으므로 필터링이 필요할 수 있습니다.
+            chunks = chunks.filter(c => !(c.type === 'text' && c.text === '●')); // 마커 텍스트 제거 예시
+
             listLines.push(
                 EditorLineModel('left', chunks.length > 0 ? chunks : [TextChunkModel('text', '\u200B')])
             );
         });
 
-        // additionalState 저장 (이제 [ {align, chunks}, ... ] 형태가 됨)
         context.additionalState[listId] = listLines;
 
-        // 메인 라인에 들어갈 청크 모델 생성
-        const listModel = UnorderedListModel(); 
+        const listModel = UnorderedListModel();
         listModel.id = listId;
         
-        // 💡 2. 메인 상태의 data 필드 구조 정의
-        // 렌더러가 루프를 돌 수 있도록 '껍데기'만 정의해줍니다.
+        // 💡 렌더러가 즉시 그릴 수 있도록 line 주입 구조 유지
         listModel.data = listLines.map((line, idx) => ({
-            index: idx
-            // 여기서 line을 포함시킬지 말지는 렌더러의 정책에 따르지만, 
-            // 보통은 상태 최적화를 위해 index만 두거나, 렌더링 직전에만 주입합니다.
+            index: idx,
+            line: line // 렌더러가 바로 참조할 수 있게 주입
         }));
         
         listModel.length = listLines.length;
-
-        context.mainLines.push(EditorLineModel('left', [listModel])); 
+        context.mainLines.push(EditorLineModel('left', [listModel]));
     },
 
     parseTable(node, context) {
