@@ -11,27 +11,28 @@ export function createEditorAPI({
     * stateAPI (생략 없음)
     * ───────────────────────────── */
     const stateAPI = {
-        get           : (key = MAIN_CONTENT_KEY) => state.getState(key),
-        save          : (key, data, options = { saveHistory: true }) => {
+        get             : (key = MAIN_CONTENT_KEY) => state.getState(key),
+        getHistoryStatus: () => state.getHistoryStatus(),
+        save            : (key, data, options = { saveHistory: true }) => {
             state.saveEditorState(data === undefined ? MAIN_CONTENT_KEY : key, data, options);
         },
-        delete        : (key = MAIN_CONTENT_KEY, options = { saveHistory: true }) => {
+        delete          : (key = MAIN_CONTENT_KEY, options = { saveHistory: true }) => {
             state.deleteEditorState(key, options);
         },
-        deleteBatch   : (keys, options = { saveHistory: true }) => {
+        deleteBatch     : (keys, options = { saveHistory: true }) => {
             state.deleteEditorBatchState(keys, options);
         },        
-        deleteLine    : (lineIndex, key = MAIN_CONTENT_KEY, options) => {
+        deleteLine      : (lineIndex, key = MAIN_CONTENT_KEY, options) => {
             state.deleteEditorLine(key, lineIndex, options);
         },        
-        saveBatch     : (updates, options = { saveHistory: true }) => state.saveEditorBatchState(updates, options),      
-        saveCursor    : (cursor) => state.saveCursorState(cursor),
-        getCursor     : () => state.getCursor(),
-        undo          : () => state.undo(),
-        redo          : () => state.redo(),
-        isLineChanged : (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
-        getLines      : (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
-        getLineRange  : (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
+        saveBatch       : (updates, options = { saveHistory: true }) => state.saveEditorBatchState(updates, options),      
+        saveCursor      : (cursor) => state.saveCursorState(cursor),
+        getCursor       : () => state.getCursor(),
+        undo            : () => state.undo(),
+        redo            : () => state.redo(),
+        isLineChanged   : (lineIndex, key = MAIN_CONTENT_KEY) => state.isLineChanged(key, lineIndex),
+        getLines        : (idxs, key = MAIN_CONTENT_KEY) => state.getLines(key, idxs),
+        getLineRange    : (start, end, key = MAIN_CONTENT_KEY) => state.getLineRange(key, start, end),
     };
 
     /* ─────────────────────────────
@@ -45,7 +46,7 @@ export function createEditorAPI({
             ui.render(data, key);
             if(shouldRenderSub) {
                 this._renderSubDom(data);
-            }
+            }      
         },
 
         /**
@@ -59,7 +60,6 @@ export function createEditorAPI({
         //renderLine: function(lineIndex, lineData, key = MAIN_CONTENT_KEY, pool = null, shouldRenderSub = true) {
             // 해당 라인 기본 렌더링 실행
             ui.renderLine(lineIndex, lineData, key, pool);
-
             // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
             if(shouldRenderSub) {
                 this._renderSubDom([lineData]);
@@ -71,6 +71,8 @@ export function createEditorAPI({
          */
         _renderSubDom: function(lines) {
             if (!lines || !Array.isArray(lines)) return;
+
+            console.log("lineslineslines : ", lines);
 
             lines.forEach(line => {
                 line.chunks.forEach(chunk => {
@@ -86,7 +88,10 @@ export function createEditorAPI({
                             }
                         });
                     } else if (chunk.type === 'unorderedList' && chunk.data) {
+                        console.log("여기 들어왔냐????");
                         const lineState = stateAPI.get(chunk.id);
+                        console.log("lineStatelineStatelineState : ", lineState);
+
                         if (Array.isArray(lineState)) {
                             lineState.forEach((item, index) => {
                                 this.renderLine(index, item, { 

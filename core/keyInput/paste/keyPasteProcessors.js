@@ -19,7 +19,7 @@ export function executePaste(e, { stateAPI, uiAPI, selectionAPI }) {
     const text = e.clipboardData.getData('text/plain');
 
     let { mainLines, additionalState } = html 
-        ? HtmlDeserializer.deserialize(html)
+        ? HtmlDeserializer.deserialize(html, stateAPI)
         : { 
             mainLines: text.split(/\r?\n/).map(t => EditorLineModel('left', [TextChunkModel('text', t)])),
             additionalState: {} 

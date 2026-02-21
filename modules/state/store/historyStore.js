@@ -62,6 +62,7 @@ export function createHistoryStore(initialState = {}) {
         // 현재 칸을 덮어씀 (Silent)
         history[currentIndex] = nextMap;
       }
+      console.log("history -batch : ", history);
     },
 
     deleteLine: (key, lineIndex, options = { saveHistory: true }) => {

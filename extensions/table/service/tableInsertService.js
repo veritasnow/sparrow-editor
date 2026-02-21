@@ -16,8 +16,10 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
 
         // 1. 현재 타겟팅된 컨테이너(본문 혹은 부모 셀) 확보
         const activeKey = selectionAPI.getActiveKey() || selectionAPI.getLastActiveKey();
+        if (!activeKey) return false;
+        
         if(!activeKey.includes("list-")) {
-            if (!activeKey) return false;
+
 
             const editorState = stateAPI.get(activeKey);
             if (!editorState) return false;
