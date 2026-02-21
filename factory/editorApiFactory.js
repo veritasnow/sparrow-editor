@@ -88,10 +88,7 @@ export function createEditorAPI({
                             }
                         });
                     } else if (chunk.type === 'unorderedList' && chunk.data) {
-                        console.log("여기 들어왔냐????");
                         const lineState = stateAPI.get(chunk.id);
-                        console.log("lineStatelineStatelineState : ", lineState);
-
                         if (Array.isArray(lineState)) {
                             lineState.forEach((item, index) => {
                                 this.renderLine(index, item, { 
