@@ -71,28 +71,35 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
             // 히스토리 및 복원용 커서 저장
             stateAPI.saveCursor(nextCursorPos);
 
-            // 7. UI 렌더링
-            //uiAPI.render(newState, activeKey);
+            const oldLength = editorState.length;
+            const newLength = newState.length;
+            const diff      = newLength - oldLength; // 늘어난 라인 수 확인
+
+            // (A) 현재 라인 업데이트 (기존 DOM 재활용)
+            // 테이블이 포함되었으므로 shouldRenderSub를 true로 설정하여 테이블 내부 렌더링 트리거
+            const hasTableInCurrent = newState[lineIndex].chunks.some(c => c.type === 'table');
             uiAPI.renderLine(lineIndex, newState[lineIndex], { 
-                key: activeKey, 
-                shouldRenderSub: false 
+                key            : activeKey, 
+                shouldRenderSub: hasTableInCurrent 
             });
 
-            // Case 2: 테이블 라인부터 복구 라인까지 새 줄 삽입 및 렌더링
-            // applyTableBlock 결과에 따라 lineIndex 이후에 1개 또는 2개의 라인이 추가됨
-            for (let i = lineIndex + 1; i <= restoreLineIndex; i++) {
-                if (!newState[i]) continue;
+            // (B) 늘어난 라인만큼만 물리적 Insert 실행 (Split 발생 시)
+            if (diff > 0) {
+                for (let i = 1; i <= diff; i++) {
+                    const targetIdx = lineIndex + i;
+                    if (!newState[targetIdx]) continue;
 
-                // (A) 물리적 DOM 라인 생성 및 인덱스 동기화
-                uiAPI.insertLine(i, newState[i].align, activeKey);
+                    // 새 물리 노드 생성 및 뒤쪽 인덱스 밀기
+                    uiAPI.insertLine(targetIdx, newState[targetIdx].align, activeKey);
 
-                // (B) 해당 라인 렌더링 (i가 테이블을 포함한 줄이면 하위 셀까지 렌더링)
-                const isTableLine = newState[i].chunks.some(c => c.type === 'table');
-                uiAPI.renderLine(i, newState[i], { 
-                    key: activeKey, 
-                    shouldRenderSub: isTableLine // 테이블일 때만 하위 렌더링 true
-                });
-            }            
+                    // 새 라인 내용 렌더링
+                    const hasTableInNew = newState[targetIdx].chunks.some(c => c.type === 'table');
+                    uiAPI.renderLine(targetIdx, newState[targetIdx], { 
+                        key            : activeKey, 
+                        shouldRenderSub: hasTableInNew 
+                    });
+                }
+            }   
 
             // 8. 커서 복원
             setTimeout(() => {
