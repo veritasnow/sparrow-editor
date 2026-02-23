@@ -210,7 +210,7 @@ export const HtmlDeserializer = {
 
     generateId(prefix, context) {
         let id;
-        const present = context.stateAPI?.getHistoryStatus().present || {};
+        const present = context.stateAPI.getHistoryStatus().present || {};
         do {
             id = `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
         } while (present[id] || context.additionalState[id]);

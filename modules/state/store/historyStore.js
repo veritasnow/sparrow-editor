@@ -135,7 +135,7 @@ export function createHistoryStore(initialState = {}) {
     },
 
     // ----------------------------
-    // [3] 변경 감지 (O(1) 성능의 혁명)
+    // [3] 변경 감지 (O(1))
     // ----------------------------
     isLineChanged: (key, lineIndex) => {
       const prev = history[currentIndex - 1]?.[key]?.[lineIndex];

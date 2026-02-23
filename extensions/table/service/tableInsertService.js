@@ -72,13 +72,29 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
             stateAPI.saveCursor(nextCursorPos);
 
             // 7. UI 렌더링
-            // 💡 테이블 삽입은 라인 수가 늘어나거나 구조가 크게 변하므로 renderLine보다 
-            // 해당 컨테이너 전체를 render하는 것이 DOM 노드 개수 동기화에 훨씬 안전합니다.
-            uiAPI.render(newState, activeKey);
+            //uiAPI.render(newState, activeKey);
+            uiAPI.renderLine(lineIndex, newState[lineIndex], { 
+                key: activeKey, 
+                shouldRenderSub: false 
+            });
+
+            // Case 2: 테이블 라인부터 복구 라인까지 새 줄 삽입 및 렌더링
+            // applyTableBlock 결과에 따라 lineIndex 이후에 1개 또는 2개의 라인이 추가됨
+            for (let i = lineIndex + 1; i <= restoreLineIndex; i++) {
+                if (!newState[i]) continue;
+
+                // (A) 물리적 DOM 라인 생성 및 인덱스 동기화
+                uiAPI.insertLine(i, newState[i].align, activeKey);
+
+                // (B) 해당 라인 렌더링 (i가 테이블을 포함한 줄이면 하위 셀까지 렌더링)
+                const isTableLine = newState[i].chunks.some(c => c.type === 'table');
+                uiAPI.renderLine(i, newState[i], { 
+                    key: activeKey, 
+                    shouldRenderSub: isTableLine // 테이블일 때만 하위 렌더링 true
+                });
+            }            
 
             // 8. 커서 복원
-            // 💡 테이블은 복잡한 DOM이 생성되는 과정이 있으므로 
-            // 브라우저가 렌더링을 마친 후 커서를 잡을 수 있도록 테스크 큐에 넣습니다.
             setTimeout(() => {
                 selectionAPI.restoreCursor(nextCursorPos);
             }, 0);

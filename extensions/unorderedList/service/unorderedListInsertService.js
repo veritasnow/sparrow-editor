@@ -56,7 +56,11 @@ export function createUnorderedListInsertService(stateAPI, uiAPI, selectionAPI) 
             }
 
             // 6. 렌더링 실행 (주입된 renderState 사용)
-            uiAPI.render(renderState, activeKey);
+            uiAPI.renderLine(lineIndex, newState[lineIndex], { 
+                key: activeKey, 
+                shouldRenderSub: true // 리스트 내부 아이템(initialLines)을 그려야 하므로 true
+            });            
+            //uiAPI.render(renderState, activeKey);
 
             setTimeout(() => {
                 selectionAPI.restoreCursor(nextCursorPos);
