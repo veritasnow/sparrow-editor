@@ -1,5 +1,6 @@
 /* ───────── 기본 에디터 영역 ───────── */
 .sparrow-contents {
+  position: relative;
   border: 1px solid #ccc;
   padding: 10px;
   min-height: 200px;

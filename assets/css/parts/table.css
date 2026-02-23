@@ -105,3 +105,66 @@
     pointer-events: none;
     z-index: 11;
 }
+
+
+/* ===== 병합 아이콘 (얇은 셀 병합 아이콘) ===== */
+.sparrow-table-toolbar {
+  position     : absolute;
+  display      : flex;
+  z-index      : 9999;
+  background   : #fff;
+  border       : 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* 바깥 테두리 삼각형 */
+.sparrow-table-toolbar::before {
+  content     : "";
+  position    : absolute;
+  left        : 50%;
+  transform   : translateX(-50%);
+  bottom      : -9px;
+  width       : 0;
+  height      : 0;
+  border-left : 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top  : 9px solid #ccc; /* border 색 */
+}
+
+/* 안쪽 흰색 삼각형 */
+.sparrow-table-toolbar::after {
+  content     : "";
+  position    : absolute;
+  left        : 50%;
+  transform   : translateX(-50%);
+  bottom      : -8px;
+  width       : 0;
+  height      : 0;
+  border-left : 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top  : 8px solid #fff; /* 배경색 */
+}
+
+.sparrow-table-toolbar .table-tool-btn {
+  position        : relative;
+  padding         : 10px 18px;
+  font-weight     : 500;
+  font-family     : inherit;
+  background-color: #ffffff;
+  border          : none;
+  border-radius   : 8px;
+  cursor          : pointer;
+  transition      : all 0.2s;
+}
+
+/* 버튼 사이 세로 구분선 */
+.sparrow-table-toolbar .table-tool-btn:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 16px;
+  background-color: #ddd; /* 연한 회색 */
+}
