@@ -1,74 +1,94 @@
 export const tableRenderer = {
-    /**
-     * @param {Object} chunk - 테이블 청크 모델 ({ type: 'table', data: [...], style: {...} })
-     * @param {number} lineIndex - 본문에서의 라인 위치
-     * @param {number} chunkIndex - 본문 라인 내에서의 청크 인덱스
-     */
     render(chunk, lineIndex, chunkIndex) {
+        console.log("테스트......................!!!");
         const data = chunk.data ?? [];
         const rows = data.length;
         const cols = data[0]?.length ?? 0;
 
         const table = document.createElement("table");
-        table.id                 = chunk.tableId;;
+        table.id                 = chunk.tableId;
         table.className          = "se-table chunk-table";
         table.dataset.lineIndex  = lineIndex;
         table.dataset.chunkIndex = chunkIndex;
-        table.dataset.type       = "table"; // 청크 타입 명시
-        table.dataset.index      = chunkIndex; // getSelectionContext가 인식할 인덱스
+        table.dataset.type       = "table";
+        table.dataset.index      = chunkIndex;
 
-        // 1. 테이블 기본 스타일 설정
         Object.assign(table.style, {
             borderCollapse: "collapse",
             border        : "1px solid #ccc",
             margin        : "4px 0",
             fontSize      : "14px",
-            width         : "100%", // 기본 너비 100% 권장
+            width         : "100%",
+            tableLayout   : "fixed", // ⭐ 병합 안정성 (중요)
             ...(chunk.style || {})
         });
 
         for (let r = 0; r < rows; r++) {
             const tr = document.createElement("tr");
+
             for (let c = 0; c < cols; c++) {
-                const td       = document.createElement("td");
                 const cellData = data[r]?.[c];
 
-                // 2. 셀 고유 ID 설정 (재귀 에디터의 Key가 됨)
-                if (cellData && cellData.id) {
+                // ⭐ 병합으로 제거된 셀은 절대 렌더하면 안됨
+                if (!cellData) continue;
+
+                const td = document.createElement("td");
+
+                // 1️⃣ 셀 ID (selection / 재귀 editor 핵심)
+                if (cellData.id) {
                     td.id = cellData.id;
                     td.setAttribute("data-container-id", cellData.id);
                 }
-                
+
                 td.className = "se-table-cell";
-                //td.setAttribute("contenteditable", "true"); 
-                
-                // 3. 셀 기본 스타일 설정
+                td.dataset.row = r;
+                td.dataset.col = c;
+
+                // 2️⃣ 병합 스팬 (핵심 로직)
+                const rowspan = cellData.rowspan ?? 1;
+                const colspan = cellData.colspan ?? 1;
+
+                if (rowspan > 1) {
+                    td.rowSpan = rowspan;
+                }
+                if (colspan > 1) {
+                    td.colSpan = colspan;
+                }
+
+                // 3️⃣ 스타일
                 Object.assign(td.style, {
                     border       : "1px solid #ddd",
                     padding      : "4px 6px",
                     minWidth     : "40px",
                     height       : "24px",
                     verticalAlign: "middle",
-                    ...(cellData?.style || {})
+                    boxSizing    : "border-box",
+                    ...(cellData.style || {})
                 });
 
-                const p = document.createElement("p");
-                p.className         = "text-block"; // 본문 클래스와 통일
-                p.dataset.lineIndex = "0"; // ✅ 핵심 추가
+                // 4️⃣ 내부 에디터 컨테이너 (네 LiteEditor 구조 완전 호환)
+                const container = document.createElement("div");
+                container.className = "text-block";
+                container.dataset.lineIndex = "0";
+                container.style.textAlign = "left";
 
                 const span = document.createElement("span");
                 span.className      = "chunk-text";
-                span.dataset.index  = "0"; // 텍스트 청크 인덱스 부여
-                span.innerHTML      = "&#x200B;"; 
+                span.dataset.index  = "0";
+                span.dataset.lineIndex  = "0";
+                span.dataset.chunkIndex = "0";
+                span.innerHTML      = "&#x200B;"; // ZWS 유지 (네 에디터 필수)
                 span.style.fontSize = "14px";
+                span.style.fontFamily = "Pretendard, sans-serif";
 
-                p.appendChild(span);
-                td.appendChild(p);
+                container.appendChild(span);
+                td.appendChild(container);
                 tr.appendChild(td);
             }
+
             table.appendChild(tr);
         }
-        
+
         return table;
     }
 };

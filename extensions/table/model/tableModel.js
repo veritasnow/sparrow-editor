@@ -10,7 +10,9 @@ export function TableChunkModel(rows, cols) {
             Array.from({ length: cols }, () => ({
                 // 2. ID 규칙: cell-[TableID]-[CellUniqueID]
                 id: `cell-${tableId}-${Math.random().toString(36).slice(2, 11)}`,
-                style: {}
+                style: {},
+                rowspan : 1,   // ✅ 기본값
+                colspan : 1    // ✅ 기본값
             }))
         ),
         style: { width: '100%' },

@@ -55,13 +55,16 @@ export function createEditorAPI({
         renderLine: function(lineIndex, lineData, { 
             key             = MAIN_CONTENT_KEY, 
             pool            = null, 
-            shouldRenderSub = true 
+            shouldRenderSub = true,
+            skipSync        = false,
+            tableStrategy   = 'reuse' // ⭐ 추가
         } = {}) {
         //renderLine: function(lineIndex, lineData, key = MAIN_CONTENT_KEY, pool = null, shouldRenderSub = true) {
             // 해당 라인 기본 렌더링 실행
-            ui.renderLine(lineIndex, lineData, key, pool);
+            ui.renderLine(lineIndex, lineData, key, pool, skipSync, { tableStrategy });
             // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
             if(shouldRenderSub) {
+                console.log("111111111");
                 this._renderSubDom([lineData]);
             }
         },

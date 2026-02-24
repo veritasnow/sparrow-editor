@@ -36,17 +36,20 @@ export function createTableCellToolbarView(rootEl, actionHandlers) {
             if (typeof handler !== "function") return;
 
             const tableId = toolbar.dataset.targetTableId;
+            console.log("tableId : ", tableId);
+
+            // 🔥 여기만 수정하면 에러 100% 해결
             const tableEl = tableId
-                ? rootEl.querySelector(`#${tableId}`)
+                ? document.getElementById(tableId)
                 : null;
 
             handler({
-                action   : item.action,
+                action  : item.action,
                 toolbar,
                 rootEl,
-                tableId,   // ⭐ 중요
-                tableEl,   // ⭐ 서비스에서 바로 사용 가능
-                event    : e
+                tableId,
+                tableEl,
+                event   : e
             });
         });
         toolbar.appendChild(btn);

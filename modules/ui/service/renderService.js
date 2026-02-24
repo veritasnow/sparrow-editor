@@ -56,7 +56,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
     /**
      * 4. 개별 라인 렌더링
      */
-    function renderLine(lineIndex, lineData, targetKey, externalPool = null, skipSync = false) {
+    function renderLine(lineIndex, lineData, targetKey, externalPool = null, skipSync = false, options = {}) {        
         const container = getTargetElement(targetKey);
         if (!container) return;
 
@@ -99,13 +99,42 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 const br = document.createElement("br");
                 br.dataset.marker = "empty";
                 lineEl.appendChild(br);
+            } else {
+
+                console.log("optionsoptions : ", options)
+                if (options.tableStrategy === 'force') {
+                    console.log("여기?");
+                    // ⭐ 테이블 구조 변경 전용 렌더
+                    renderLineChunksWithTableForce(
+                        lineData, 
+                        lineIndex, 
+                        lineEl, 
+                        tablePool
+                    );
+                } else {
+                    // ⭐ 기존 안정 로직 (절대 유지)
+                    renderLineChunksWithReuse(
+                        lineData, 
+                        lineIndex, 
+                        lineEl, 
+                        tablePool
+                    );
+                }
+            }
+            /*
+            if (!lineData.chunks || lineData.chunks.length === 0) {
+                const br = document.createElement("br");
+                br.dataset.marker = "empty";
+                lineEl.appendChild(br);
             } else {        
                 this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
             }
+            */
 
             if (!skipSync) {
                 syncLineIndexes(container);
             }
+
 
         }
 
@@ -114,6 +143,33 @@ export function createRenderService({ rootId, rendererRegistry }) {
     /**
      * 5. 청크 렌더링 및 테이블 재사용
      */
+    function renderLineChunksWithTableForce(line, lineIndex, parentEl, tablePool) {
+        line.chunks.forEach((chunk, chunkIndex) => {
+
+            let el = null;
+
+            // 🔥 핵심: 테이블은 절대 재사용 금지 (구조 싱크 보장)
+            if (chunk.type !== 'table') {
+                if (tablePool && tablePool.length > 0) {
+                    el = tablePool.shift();
+                }
+            }
+
+            // 새로 렌더
+            if (!el) {
+                const renderer = rendererRegistry[chunk.type];
+                if (!renderer) return;
+                el = renderer.render(chunk, lineIndex, chunkIndex);
+            }
+
+            el.dataset.lineIndex  = lineIndex;
+            el.dataset.chunkIndex = chunkIndex;
+            el.dataset.index      = chunkIndex;
+            el.classList.add(`chunk-${chunk.type}`);
+
+            parentEl.appendChild(el);
+        });
+    }
     function renderLineChunksWithReuse(line, lineIndex, parentEl, tablePool) {
         line.chunks.forEach((chunk, chunkIndex) => {
             let el;
