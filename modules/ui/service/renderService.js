@@ -101,9 +101,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 lineEl.appendChild(br);
             } else {
 
-                console.log("optionsoptions : ", options)
                 if (options.tableStrategy === 'force') {
-                    console.log("여기?");
                     // ⭐ 테이블 구조 변경 전용 렌더
                     renderLineChunksWithTableForce(
                         lineData, 
