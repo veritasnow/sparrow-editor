@@ -3,9 +3,10 @@ import { createRangeService } from "./service/rangeService.js";
 import { createRestoreCursorService } from "./service/restoreCursorService.js";
 
 export function createSelectionApplication({ rootId }) {
-    let lastValidPos     = null;
-    let lastActiveKey    = null;
-    let cacheActiveKeys  = null;
+    let lastValidPos      = null;
+    let lastActiveKey     = null;
+    let cacheActiveKeys   = null;
+    let cacheSelectedKeys = null;
     
     const root           = document.getElementById(rootId);
     // 외부 서비스 주입
@@ -20,9 +21,25 @@ export function createSelectionApplication({ rootId }) {
         return cacheActiveKeys;
     }
 
+    /*
     function refreshActiveKeys() {
         cacheActiveKeys = keyService.syncActiveKeys(lastActiveKey);
     }
+    */
+    function refreshActiveKeys() {
+        const prev = cacheActiveKeys;
+        cacheActiveKeys = keyService.syncActiveKeys(lastActiveKey);
+
+        // ActiveKey 바뀌면 selected도 같이 갱신 (테이블 드래그 대응 핵심)
+        const changed =
+            !prev ||
+            prev.length !== cacheActiveKeys?.length ||
+            prev?.some((k, i) => k !== cacheActiveKeys[i]);
+
+        if (changed) {
+            refreshSelectedKeys(); // 🔥 자동 동기화
+        }
+    }   
 
     function ensureActiveKeys() {
         if (cacheActiveKeys === null) {
@@ -33,6 +50,7 @@ export function createSelectionApplication({ rootId }) {
 
     function setCachedActiveKey(key) {
         cacheActiveKeys = [key];
+        refreshSelectedKeys(); // ⭐ 수동 포커스 변경 대응
     }    
 
     function getActiveKey() {
@@ -109,6 +127,46 @@ export function createSelectionApplication({ rootId }) {
     function findParentContainerId(containerId) {
         return keyService.findParentContainerId(containerId);
     }
+
+    function getSelectedKeys() {
+        return cacheSelectedKeys ? [...cacheSelectedKeys] : [];
+    }
+
+    /**
+     * ⭐ 핵심: ActiveContainer 기준으로 .is-selected 셀만 추출
+     * (tableEl 필요 없음)
+     */
+    function refreshSelectedKeys() {
+        const activeContainer = getActiveContainer();
+        if (!activeContainer) {
+            return cacheSelectedKeys || [];
+        }
+
+        const ids = keyService.getSelectedCellIdsByActive(activeContainer);
+
+        // DOM class가 순간적으로 풀리는 경우 대비 (렌더 직후)
+        if (!ids || ids.length === 0) {
+            return cacheSelectedKeys || [];
+        }
+
+        // 중복 제거 + 안정 캐싱
+        const unique = [];
+        const seen = new Set();
+
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i];
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            unique.push(id);
+        }
+
+        cacheSelectedKeys = unique;
+        return cacheSelectedKeys;
+    }    
+
+    function clearSelectedKeys() {
+        cacheSelectedKeys = null;
+    }    
     
     return { 
         getActiveKeys,
@@ -141,5 +199,6 @@ export function createSelectionApplication({ rootId }) {
         getMainKey,
         findParentContainerId,
         getLineIndex,
+        getSelectedKeys,        // ⭐ 추가 (mergeCells는 이거 써야 함)
     };
 }

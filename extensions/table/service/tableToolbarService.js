@@ -51,8 +51,8 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
         console.group("🧩 mergeCells START");
         console.log("tableId:", tableId);
+        const selectedCellIds = selectionAPI.getSelectedKeys();
 
-        const selectedCellIds = selectionAPI.getActiveKeys();
         console.log("selectedCellIds:", selectedCellIds);
 
         const parentKey = selectionAPI.findParentContainerId(tableId);
@@ -126,12 +126,8 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
         const baseCell = data[minRow][minCol];
 
-        console.log("baseCell:", baseCell);
-
         baseCell.rowspan = maxRow - minRow + 1;
         baseCell.colspan = maxCol - minCol + 1;
-
-        console.log("baseCell after span:", baseCell);
 
         // ⭐ 5. 나머지 셀 제거
         const deleteKeys = [];
@@ -144,37 +140,27 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
                 if (cell?.id) {
                     deleteKeys.push(cell.id);
-                    console.log("🗑 삭제 대상:", cell.id, "at", { r, c });
                 }
 
                 data[r][c] = null;
             }
         }
 
-        console.log("deleteKeys:", deleteKeys);
-        console.log("data after merge:", JSON.parse(JSON.stringify(data)));
-
         if (deleteKeys.length) {
             stateAPI.deleteBatch(deleteKeys);
         }
 
         // ⭐ 6. 저장
-        console.log("parentKeyparentKeyparentKeyparentKey : ", parentKey);
-        console.log("parentStateparentStateparentStateparentState : ", parentState);
-
         stateAPI.save(parentKey, parentState);
-        console.log("✅ state saved");
 
         // ⭐ 7. 렌더
         uiAPI.renderLine(lineIndex, parentState[lineIndex], {
             key: parentKey,
             shouldRenderSub: true,
-            tableStrategy: 'force' // 🔥 이것만 추가
+            tableStrategy: 'force'
         });
 
-        console.log("🎨 renderLine done");
         console.groupEnd();
-
         return true;
     }
 

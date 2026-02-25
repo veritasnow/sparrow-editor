@@ -77,5 +77,29 @@ export function createKeyService(root) {
         return parentContainer ? parentContainer.getAttribute('data-container-id') : null;
     }    
 
-    return { syncActiveKeys, findParentContainerId };
+    function getSelectedCellIdsByActive(activeContainer) {
+        if (!activeContainer) return [];
+
+        // 현재 컨테이너 기준 가장 가까운 테이블 영역 탐색
+        const tableRoot =
+            activeContainer.closest('.se-table') || activeContainer;
+
+        const selectedCells = tableRoot.querySelectorAll(
+            '.se-table-cell.is-selected'
+        );
+
+        const ids = [];
+        for (let i = 0; i < selectedCells.length; i++) {
+            const el = selectedCells[i];
+            const id =
+                el.getAttribute('data-container-id') ||
+                el.id;
+
+            if (id) ids.push(id);
+        }
+
+        return ids;
+    }
+
+    return { syncActiveKeys, findParentContainerId, getSelectedCellIdsByActive };
 }
