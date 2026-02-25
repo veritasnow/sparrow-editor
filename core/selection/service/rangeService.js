@@ -96,15 +96,6 @@ export function createRangeService() {
 
         return result;
     }    
-    /*
-    function mapIdsToCells(idSet, selectedCells, rootContainer) {
-        return Array.from(idSet).map(id => {
-            const existing = selectedCells.find(cell => cell.id === id);
-            const targetTd = existing || rootContainer.querySelector(`#${id}`);
-            return targetTd;
-        }).filter(Boolean);
-    } 
-    */   
 
     // 멀티 선택 여부 판정
     function checkIsMultiSelection(cells) {
@@ -127,29 +118,6 @@ export function createRangeService() {
 
         return hasDifferentTable || hasMoreCellsInSameTable;
     }
-    /*
-    function checkIsMultiSelection(cells) {
-        // 복수 테이블/셀 판정 로직
-        // 판정 기준 변경: 
-        // 1. midName 종류가 2개 이상이다 (여러 테이블이 잡혔다)
-        // 2. 혹은 같은 midName 내에 여러 셀이 있다
-        if (cells.length <= 1) return false;
-        
-        const firstCellId = cells[0].id;
-        const firstTableId = firstCellId.split('-')[1];
-        
-        // 1. 테이블 ID(midName)가 다른 게 하나라도 섞여 있거나
-        // 2. 같은 테이블 내에서 다른 셀이 더 선택되어 있거나
-        // 모든 셀의 midName을 수집하여 유일한 테이블 ID들 추출
-        const midNames = new Set(cells.map(td => td.id.split('-')[1]));
-        const hasDifferentTable = midNames.size > 1;
-        const hasMoreCellsInSameTable = cells.some((td, idx) => 
-            idx !== 0 && td.id.split('-')[1] === firstTableId
-        );
-
-        return hasDifferentTable || hasMoreCellsInSameTable;
-    }
-    */
 
     // 단일 셀 선택 시 시각적 처리 (기존 로직 그대로)
     function applySingleSelectionVisuals(ranges, rootContainer) {

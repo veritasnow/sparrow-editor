@@ -41,7 +41,7 @@ export function createDragService(defaultRootId) {
 
         // CASE 0: 동일 테이블 내부 드래그
         if (currentTD && startTable?.contains(currentTD)) {
-            return _getGridCellRange(startTable, startTD, currentTD);
+            return _getLinearCellRange(startTable, startTD, currentTD);
         }
 
         // CASE 1: 상위 테이블/부모 TD 영역으로 진입 (중첩 테이블 대응)
@@ -105,51 +105,6 @@ export function createDragService(defaultRootId) {
         const cells = Array.from(table.querySelectorAll('.se-table-cell'));
         const indices = [cells.indexOf(start), cells.indexOf(end)].sort((a, b) => a - b);
         return cells.slice(indices[0], indices[1] + 1);
-    }
-
-    function _getGridCellRange(table, start, end) {
-        const rows = Array.from(table.querySelectorAll(':scope > tbody > tr, :scope > tr'));
-
-        let startRow, startCol, endRow, endCol;
-
-        rows.forEach((tr, rowIndex) => {
-            const cells = Array.from(tr.querySelectorAll(':scope > .se-table-cell'));
-            cells.forEach((cell, colIndex) => {
-                if (cell === start) {
-                    startRow = rowIndex;
-                    startCol = colIndex;
-                }
-                if (cell === end) {
-                    endRow = rowIndex;
-                    endCol = colIndex;
-                }
-            });
-        });
-
-        if (
-            startRow === undefined ||
-            endRow === undefined
-        ) {
-            return [start];
-        }
-
-        const minRow = Math.min(startRow, endRow);
-        const maxRow = Math.max(startRow, endRow);
-        const minCol = Math.min(startCol, endCol);
-        const maxCol = Math.max(startCol, endCol);
-
-        const result = [];
-
-        for (let r = minRow; r <= maxRow; r++) {
-            const cells = Array.from(rows[r].querySelectorAll(':scope > .se-table-cell'));
-            for (let c = minCol; c <= maxCol; c++) {
-                if (cells[c]) {
-                    result.push(cells[c]);
-                }
-            }
-        }
-
-        return result;
     }
 
     return { mouseDragCalculate };

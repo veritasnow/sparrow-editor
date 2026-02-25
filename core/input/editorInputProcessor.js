@@ -123,8 +123,11 @@ export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaul
             }
         }
 
+        const targetChunk = currentLine.chunks[dataIndex];
         // Case 1: 단순 텍스트 업데이트
-        if (dataIndex !== null && activeNode && currentLine.chunks[dataIndex].type === 'text') {
+        if (
+            dataIndex !== null && activeNode && targetChunk && targetChunk.type === 'text'
+        ) {
             const safeText  = getSafeTextFromRange(range);
             // 상태 저장 전에 해당 라인에는 값 입력이 발생했으므로 유령 문자를 날린다.
             const cleanText = safeText.replace(/\u200B/g, '');

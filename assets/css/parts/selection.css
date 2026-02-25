@@ -1,0 +1,8 @@
+  /* 선택되지 않은 셀은 브라우저 기본 드래그 파란색 제거 */
+.sparrow-contents .se-table-cell.is-not-selected ::selection {
+    background: transparent;
+}
+
+.sparrow-contents .se-table-cell.is-not-selected *::selection {
+    background: transparent;
+}
