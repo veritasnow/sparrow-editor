@@ -47,48 +47,28 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
     /**
      * 셀 병합
      */
-    function mergeCells({ tableEl, tableId }) {
+    function mergeCells({ tableId }) {
 
-        console.group("🧩 mergeCells START");
-        console.log("tableId:", tableId);
         const selectedCellIds = selectionAPI.getSelectedKeys();
-
-        console.log("selectedCellIds:", selectedCellIds);
-
-        const parentKey = selectionAPI.findParentContainerId(tableId);
-        console.log("parentKey:", parentKey);
-
-        if (!selectedCellIds?.length || selectedCellIds.length < 2) {
-            console.warn("❌ 선택 셀 부족");
-            console.groupEnd();
+        if (!selectedCellIds.length || selectedCellIds.length < 2) {
             return false;
         }
 
         // ⭐ 1. 부모 상태
+        const parentKey   = selectionAPI.findParentContainerId(tableId);
         const parentState = stateAPI.get(parentKey);
-        console.log("parentState:", parentState);
-
         if (!parentState) {
-            console.warn("❌ parentState 없음");
-            console.groupEnd();
             return false;
         }
 
         // ⭐ 2. tableId로 정확하게 테이블 찾기
         const tableInfo = findTableChunkById(parentState, tableId);
-        console.log("tableInfo:", tableInfo);
-
         if (!tableInfo) {
-            console.warn("❌ tableChunk 못 찾음");
-            console.groupEnd();
             return false;
         }
 
         const { lineIndex, chunk } = tableInfo;
         const data = chunk.data;
-
-        console.log("lineIndex:", lineIndex);
-        console.log("table data:", JSON.parse(JSON.stringify(data)));
 
         // ⭐ 3. cellId → 좌표 변환
         const positions = [];
@@ -97,17 +77,12 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
             for (let c = 0; c < data[r].length; c++) {
                 const cell = data[r][c];
                 if (cell && selectedCellIds.includes(cell.id)) {
-                    console.log("✔ 매칭 셀 발견:", cell.id, "→", { r, c });
                     positions.push({ r, c });
                 }
             }
         }
 
-        console.log("positions:", positions);
-
         if (positions.length < 2) {
-            console.warn("❌ positions 부족");
-            console.groupEnd();
             return false;
         }
 
@@ -116,14 +91,6 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
         const maxRow = Math.max(...positions.map(p => p.r));
         const minCol = Math.min(...positions.map(p => p.c));
         const maxCol = Math.max(...positions.map(p => p.c));
-
-        console.log("merge bounds:", {
-            minRow,
-            maxRow,
-            minCol,
-            maxCol
-        });
-
         const baseCell = data[minRow][minCol];
 
         baseCell.rowspan = maxRow - minRow + 1;
@@ -135,13 +102,10 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
         for (let r = minRow; r <= maxRow; r++) {
             for (let c = minCol; c <= maxCol; c++) {
                 if (r === minRow && c === minCol) continue;
-
                 const cell = data[r][c];
-
-                if (cell?.id) {
+                if (cell.id) {
                     deleteKeys.push(cell.id);
                 }
-
                 data[r][c] = null;
             }
         }
@@ -155,12 +119,11 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
         // ⭐ 7. 렌더
         uiAPI.renderLine(lineIndex, parentState[lineIndex], {
-            key: parentKey,
+            key            : parentKey,
             shouldRenderSub: true,
-            tableStrategy: 'force'
+            tableStrategy  : 'force'
         });
 
-        console.groupEnd();
         return true;
     }
 

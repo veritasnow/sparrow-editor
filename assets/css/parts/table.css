@@ -168,3 +168,78 @@
   height: 16px;
   background-color: #ddd; /* 연한 회색 */
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== 1️⃣ 셀 내부 텍스트 선택은 허용 (핵심) ===== */
+.sparrow-contents .se-table-cell,
+.sparrow-contents .se-table-cell * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+}
+
+/* ===== 2️⃣ 브라우저 기본 드래그 블럭 색상만 완전 제거 ===== */
+.sparrow-contents .se-table-cell::selection,
+.sparrow-contents .se-table-cell *::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.sparrow-contents .se-table-cell::-moz-selection,
+.sparrow-contents .se-table-cell *::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* ===== 3️⃣ 우리가 직접 그리는 셀 블럭 하이라이트 ===== */
+.sparrow-contents .se-table-cell.is-selected {
+  background: rgba(35, 131, 226, 0.25);
+  outline: 1px solid rgba(35, 131, 226, 0.6);
+}
+
+/* 선택 제외 셀 (선택 영역 계산용) */
+.sparrow-contents .se-table-cell.is-not-selected {
+  background: transparent;
+}
+
+/* selection 색 복구 */
+.sparrow-contents .se-table-cell.is-dragging::selection,
+.sparrow-contents .se-table-cell.is-dragging *::selection {
+  background: rgba(35, 131, 226, 0.25) !important;
+  color: inherit !important;
+}
+
+
+/* ===== 3️⃣ 우리가 직접 그리는 셀 블럭 하이라이트 ===== */
+.sparrow-contents .se-table-cell.is-selected::selection,
+.sparrow-contents .se-table-cell.is-selected *::selection {
+  background: transparent !important;
+}
+
+
+/* 선택 제외 셀 (선택 영역 계산용) */
+.sparrow-contents .se-table-cell.is-not-selected::selection,
+.sparrow-contents .se-table-cell.is-not-selected *::selection {
+  background: transparent !important;
+}

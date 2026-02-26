@@ -24,7 +24,7 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
 
     const clearCellSelection = () => {
         editorEl.querySelectorAll('.se-table-cell').forEach(td => {
-            td.classList.remove('is-selected', 'is-not-selected', 'is-dragging');
+            td.classList.remove('is-selected', 'is-not-selected');
         });
     };
 
@@ -60,10 +60,6 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         // 2. 실시간 브라우저 Selection 데이터 획득 (UI API 사용)
         const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
-
-        if(activeId !== selectionAPI.getMainKey()) {
-            document.getElementById(activeId).classList.add('is-dragging');
-        }
 
         // 3. 시각화 호출 (Range 서비스 사용)
         rangeService.applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, editorEl.id);

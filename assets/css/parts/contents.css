@@ -59,3 +59,22 @@
 .sparrow-contents .text-block span{
   height: 24px;
 }
+
+
+
+
+
+
+/* ===== sparrow-contents 기본 드래그 색상 변경 ===== */
+.sparrow-contents::selection,
+.sparrow-contents *::selection {
+  background: rgba(35, 131, 226, 0.35); /* 원하는 색 */
+  color: inherit; /* 또는 #fff */
+}
+
+/* Firefox */
+.sparrow-contents::-moz-selection,
+.sparrow-contents *::-moz-selection {
+  background: rgba(35, 131, 226, 0.35);
+  color: inherit;
+}
