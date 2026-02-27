@@ -6,7 +6,7 @@ export function createRangeService() {
         if (!selectedCells || selectedCells.length === 0) return;
 
         let newSelectedCells = [];
-        const rootContainer = document.getElementById(normalized.containerId);
+        const rootContainer  = document.getElementById(normalized.containerId);
         if (!rootContainer) return;
 
         // [1] 데이터 수집 (여러 라인 선택 시)

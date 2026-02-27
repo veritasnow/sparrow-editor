@@ -1,7 +1,5 @@
 /**
  * 테이블 및 텍스트 드래그 시 선택 영역과 활성 컨테이너를 계산하는 서비스
- * ✔ rowspan + colspan 혼합 드래그 완전 대응
- * ✔ 세로 병합 셀 누락 버그 해결
  */
 export function createDragService(defaultRootId) {
     
@@ -26,7 +24,6 @@ export function createDragService(defaultRootId) {
 
         const range = sel.getRangeAt(0);
         let commonParent = range.commonAncestorContainer;
-
         if (commonParent.nodeType === Node.TEXT_NODE) {
             commonParent = commonParent.parentElement;
         }
@@ -39,14 +36,7 @@ export function createDragService(defaultRootId) {
      * [내부] 마우스 위치에 따른 최종 선택 셀 배열 결정
      */
     function _calculateSelectedCells(e, startTD) {
-        // 🔥 contenteditable + span 위 드래그 안정화 (핵심 보강)
-        let targetEl = e.target;
-        if (!targetEl.closest?.('.se-table-cell')) {
-            const hit = document.elementFromPoint(e.clientX, e.clientY);
-            if (hit) targetEl = hit;
-        }
-
-        const currentTD  = targetEl.closest('.se-table-cell');
+        const currentTD  = e.target.closest('.se-table-cell');
         const startTable = startTD.closest('.se-table');
 
         // CASE 0: 동일 테이블 내부 드래그
@@ -55,7 +45,7 @@ export function createDragService(defaultRootId) {
         }
 
         // CASE 1: 상위 테이블/부모 TD 영역으로 진입 (중첩 테이블 대응)
-        const parentTD = targetEl.closest('.se-table-cell');
+        const parentTD = e.target.closest('.se-table-cell');
         if (parentTD && parentTD !== startTD) {
             const parentTable = parentTD.closest('.se-table');
             if (parentTable) {
@@ -72,7 +62,7 @@ export function createDragService(defaultRootId) {
     }
 
     /**
-     * [내부] 중첩 테이블 범위 계산
+     * [내부] 중첩 테이블 상황에서 할아버지 테이블의 직계 아들 TD를 찾아 범위 계산
      */
     function _calculateNestedTableRange(parentTable, startTD, parentTD) {
         const directCells      = _getDirectCells(parentTable);
@@ -82,34 +72,46 @@ export function createDragService(defaultRootId) {
         const endIdx   = directCells.indexOf(parentTD);
 
         if (startIdx !== -1 && endIdx !== -1) {
-            const [min, max] = [startIdx, endIdx].sort((a, b) => a - b);
-            return directCells.slice(min, max + 1);
+            const rangeIndices = [startIdx, endIdx].sort((a, b) => a - b);
+            return directCells.slice(rangeIndices[0], rangeIndices[1] + 1);
         }
 
         return [startTD];
     }
 
     /**
-     * 🔥 핵심: rowspan/colspan 포함 논리 그리드 기반 범위 계산 (완전 수정본)
+     * [유틸] 특정 요소로부터 상위로 올라가며 주어진 리스트에 포함된 직계 조상 TD 탐색
      */
+    function _findDirectAncestorInList(node, stopAt, list) {
+        let current = node;
+        while (current && current !== stopAt) {
+            if (list.includes(current)) return current;
+            current = current.parentElement;
+        }
+        return null;
+    }
+
+    /**
+     * [유틸] 테이블의 직계 자식 셀(TD)들만 추출
+     */
+    function _getDirectCells(table) {
+        return Array.from(table.querySelectorAll(':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell, :scope > tr > td.se-table-cell'));
+    }
+
     function _getGridCellRange(table, start, end) {
-        const rows = Array.from(
-            table.querySelectorAll(':scope > tbody > tr, :scope > tr')
-        );
+        const rows = Array.from(table.querySelectorAll(':scope > tbody > tr, :scope > tr'));
 
         // 1️⃣ 논리 그리드 생성 (rowspan/colspan 반영)
         const grid = [];
-
+        
         rows.forEach((tr, r) => {
             if (!grid[r]) grid[r] = [];
             let colPointer = 0;
 
-            const cells = Array.from(
-                tr.querySelectorAll(':scope > .se-table-cell')
-            );
+            const cells = Array.from(tr.querySelectorAll(':scope > .se-table-cell'));
 
             cells.forEach(cell => {
-                // 병합으로 이미 채워진 칸 skip
+                // 이미 병합으로 채워진 col skip
                 while (grid[r][colPointer]) {
                     colPointer++;
                 }
@@ -131,18 +133,29 @@ export function createDragService(defaultRootId) {
             });
         });
 
-        // 2️⃣ 🔥 병합셀 점유 영역(rect) 기반 좌표 계산 (기존 코드 완전 교체)
-        const startRect = _findCellRect(grid, start);
-        const endRect   = _findCellRect(grid, end);
+        // 2️⃣ start / end의 "논리 좌표" 찾기
+        let startPos = null;
+        let endPos = null;
 
-        if (!startRect || !endRect) {
+        for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < (grid[r]?.length || 0); c++) {
+                if (grid[r][c] === start && !startPos) {
+                    startPos = { r, c };
+                }
+                if (grid[r][c] === end && !endPos) {
+                    endPos = { r, c };
+                }
+            }
+        }
+
+        if (!startPos || !endPos) {
             return [start];
         }
 
-        const minRow = Math.min(startRect.minR, endRect.minR);
-        const maxRow = Math.max(startRect.maxR, endRect.maxR);
-        const minCol = Math.min(startRect.minC, endRect.minC);
-        const maxCol = Math.max(startRect.maxC, endRect.maxC);
+        const minRow = Math.min(startPos.r, endPos.r);
+        const maxRow = Math.max(startPos.r, endPos.r);
+        const minCol = Math.min(startPos.c, endPos.c);
+        const maxCol = Math.max(startPos.c, endPos.c);
 
         // 3️⃣ 논리 범위 내 셀 수집 (중복 제거)
         const resultSet = new Set();
@@ -157,55 +170,6 @@ export function createDragService(defaultRootId) {
         }
 
         return Array.from(resultSet);
-    }
-
-    /**
-     * 🔥 신규: 병합 셀의 실제 점유 사각형 영역 찾기 (핵심 함수)
-     */
-    function _findCellRect(grid, targetCell) {
-        let minR = Infinity, maxR = -1;
-        let minC = Infinity, maxC = -1;
-
-        for (let r = 0; r < grid.length; r++) {
-            const row = grid[r];
-            if (!row) continue;
-
-            for (let c = 0; c < row.length; c++) {
-                if (row[c] === targetCell) {
-                    if (r < minR) minR = r;
-                    if (r > maxR) maxR = r;
-                    if (c < minC) minC = c;
-                    if (c > maxC) maxC = c;
-                }
-            }
-        }
-
-        if (minR === Infinity) return null;
-
-        return { minR, maxR, minC, maxC };
-    }
-
-    /**
-     * [유틸] 테이블 직계 셀만 추출
-     */
-    function _getDirectCells(table) {
-        return Array.from(
-            table.querySelectorAll(
-                ':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell, :scope > tr > td.se-table-cell'
-            )
-        );
-    }
-
-    /**
-     * [유틸] 상위 조상 중 directCells에 포함된 TD 찾기
-     */
-    function _findDirectAncestorInList(node, stopAt, list) {
-        let current = node;
-        while (current && current !== stopAt) {
-            if (list.includes(current)) return current;
-            current = current.parentElement;
-        }
-        return null;
     }
 
     return { mouseDragCalculate };
