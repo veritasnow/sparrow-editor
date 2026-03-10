@@ -64,7 +64,6 @@ export function createEditorAPI({
             ui.renderLine(lineIndex, lineData, key, pool, skipSync, { tableStrategy });
             // 🔥 [추가] 해당 라인이 테이블을 포함하고 있다면 하위 셀들도 재귀적으로 렌더링
             if(shouldRenderSub) {
-                console.log("111111111");
                 this._renderSubDom([lineData]);
             }
         },
@@ -121,25 +120,25 @@ export function createEditorAPI({
     * selectionAPI (동일)
     * ───────────────────────────── */
     const selectionAPI = {
-        restoreCursor               : (pos) => domSelection.restoreCursor(pos),
-        restoreMultiBlockCursor     : (positions) => domSelection.restoreMultiBlockCursor(positions),
-        getDomSelection             : (targetKey) => domSelection.getDomSelection(targetKey),
-        getSelectionPosition        : () => domSelection.getSelectionPosition(),
-        getInsertionAbsolutePosition: () => domSelection.getInsertionAbsolutePosition(),
-        updateLastValidPosition     : () => domSelection.updateLastValidPosition(),
-        getLastValidPosition        : () => domSelection.getLastValidPosition(),
-        getActiveKey                : () => domSelection.getActiveKey(),
-        getActiveKeys               : () => domSelection.getActiveKeys(),
-        getLastActiveKey            : () => domSelection.getLastActiveKey(),
-        getSelectionContext         : () => domSelection.getSelectionContext(),
-        getIsRestoring              : () => domSelection.getIsRestoring(),
-        setIsRestoring              : (val) => domSelection.setIsRestoring(val),
-        refreshActiveKeys           : () => domSelection.refreshActiveKeys(),
-        getSelectionMode            : () => domSelection.getSelectionMode(),
-        getMainKey                  : () => domSelection.getMainKey(),
+        restoreCursor               : (pos)         => domSelection.restoreCursor(pos),
+        restoreMultiBlockCursor     : (positions)   => domSelection.restoreMultiBlockCursor(positions),
+        getDomSelection             : (targetKey)   => domSelection.getDomSelection(targetKey),
+        getSelectionPosition        : ()            => domSelection.getSelectionPosition(),
+        getInsertionAbsolutePosition: ()            => domSelection.getInsertionAbsolutePosition(),
+        updateLastValidPosition     : ()            => domSelection.updateLastValidPosition(),
+        getLastValidPosition        : ()            => domSelection.getLastValidPosition(),
+        getActiveKey                : ()            => domSelection.getActiveKey(),
+        getActiveKeys               : ()            => domSelection.getActiveKeys(),
+        getLastActiveKey            : ()            => domSelection.getLastActiveKey(),
+        getSelectionContext         : ()            => domSelection.getSelectionContext(),
+        getIsRestoring              : ()            => domSelection.getIsRestoring(),
+        setIsRestoring              : (val)         => domSelection.setIsRestoring(val),
+        refreshActiveKeys           : ()            => domSelection.refreshActiveKeys(),
+        getSelectionMode            : ()            => domSelection.getSelectionMode(),
+        getMainKey                  : ()            => domSelection.getMainKey(),
         findParentContainerId       : (containerId) => domSelection.findParentContainerId(containerId),
-        getLineIndex                : (el) => domSelection.getLineIndex(el),
-        getSelectedKeys             : () => domSelection.getSelectedKeys(),
+        getLineIndex                : (el)          => domSelection.getLineIndex(el),
+        getSelectedKeys             : ()            => domSelection.getSelectedKeys(),
     };
 
   return { stateAPI, uiAPI, selectionAPI };

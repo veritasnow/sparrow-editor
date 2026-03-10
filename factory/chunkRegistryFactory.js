@@ -1,6 +1,5 @@
 // factory/chunkRegistryFactory.js
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
-
 import { TextChunkModel } from '../model/editorModel.js';
 import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
 import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';

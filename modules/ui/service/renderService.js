@@ -168,6 +168,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             parentEl.appendChild(el);
         });
     }
+    
     function renderLineChunksWithReuse(line, lineIndex, parentEl, tablePool) {
         line.chunks.forEach((chunk, chunkIndex) => {
             let el;
