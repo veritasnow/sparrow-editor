@@ -23,39 +23,60 @@ export function createInputApplication({ editorEl }) {
         }
     }
 
+
+    /**
+     * Input/Composition 이벤트 처리 콜백을 주입받아 바인딩합니다.
+     * @param {Function} processInputCallback - Core의 입력 처리 로직 함수
+     */
+    function bindInput(processInputCallback) {
+        assertAlive();
+        inputService.bindEvents(processInputCallback);
+    }
+
+    /**
+     * Keydown 이벤트 처리 콜백(Enter, Backspace 등) 객체를 주입받아 바인딩합니다.
+     * @param {Object} handlers - { handleEnter: Function, handleBackspace: Function }
+     */
+    function bindKeydown(handlers) {
+        assertAlive();
+        keyService.bindEvents(handlers);
+    }
+
+    /**
+     * Input 모듈 전체 생명주기를 종료합니다.
+     * 하위 바인딩 서비스들의 이벤트를 모두 해제합니다.
+     */
+    function destroy() {
+        if (destroyed) return;
+        destroyed = true;
+
+        inputService.destroy?.();
+        keyService.destroy?.();
+    }
+
+    function isComposing() {
+        return inputService.isComposing();
+    }          
+
     return {
         /**
          * Input/Composition 이벤트 처리 콜백을 주입받아 바인딩합니다.
          * @param {Function} processInputCallback - Core의 입력 처리 로직 함수
          */
-        bindInput(processInputCallback) {
-            assertAlive();
-            inputService.bindEvents(processInputCallback);
-        },
+        bindInput,
 
         /**
          * Keydown 이벤트 처리 콜백(Enter, Backspace 등) 객체를 주입받아 바인딩합니다.
          * @param {Object} handlers - { handleEnter: Function, handleBackspace: Function }
          */
-        bindKeydown(handlers) {
-            assertAlive();
-            keyService.bindEvents(handlers);
-        },
+        bindKeydown,
 
         /**
          * Input 모듈 전체 생명주기를 종료합니다.
          * 하위 바인딩 서비스들의 이벤트를 모두 해제합니다.
          */
-        destroy() {
-            if (destroyed) return;
-            destroyed = true;
+        destroy,
 
-            inputService.destroy?.();
-            keyService.destroy?.();
-        },
-
-        isComposing() {
-            return inputService.isComposing();
-        },        
+        isComposing,        
     };
 }

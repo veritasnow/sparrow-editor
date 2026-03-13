@@ -235,69 +235,74 @@ export function createRenderService({ rootId, rendererRegistry }) {
         });
     }
 
+    function render(state, targetKey) {
+        syncParagraphCount(state, targetKey);
+        const container = getTargetElement(targetKey);
+        if (!container) return;
+
+        state.forEach((line, i) => {
+            this.renderLine(i, line, targetKey, null, true);
+        });
+        
+        syncLineIndexes(container);
+    }
+
+    function ensureFirstLine(targetKey) {
+        const container = getTargetElement(targetKey);
+        if (!container || container.children.length > 0) return;
+        container.appendChild(createLineElement());
+    } 
+
+    function insertLine(lineIndex, align = "left", targetKey, lineData = null) {
+        const container = getTargetElement(targetKey);
+        if (!container) return;
+        
+        const newEl = createLineElement(lineData);
+        newEl.style.textAlign = align;
+        
+        // 🔥 [NotFoundError 해결의 핵심]
+        // :scope > 를 사용해 현재 container의 '직계 자식'인 lineIndex를 찾습니다.
+        // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
+        const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+
+        if (target) {
+            container.insertBefore(newEl, target);
+        } else {
+            container.appendChild(newEl);
+        }
+        syncLineIndexes(container);
+    }
+
+    function insertLineAfter(refEl, newIndex, align, targetKey) {
+        const container       = getTargetElement(targetKey);
+        const newEl           = createLineElement();
+        newEl.style.textAlign = align;
+        newEl.setAttribute('data-line-index', newIndex);
+
+        // 기준 노드 바로 다음 형제 앞에 삽입 = 기준 노드 바로 뒤에 삽입
+        if (refEl && refEl.nextSibling) {
+            container.insertBefore(newEl, refEl.nextSibling);
+        } else {
+            container.appendChild(newEl);
+        }
+        syncLineIndexes(container);
+        return newEl;
+    }
+
+    function removeLine(lineIndex, targetKey) {
+        const container = getTargetElement(targetKey);
+        const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
+        if (target) {
+            container.removeChild(target);
+        }
+    }
+
     return {
-        render(state, targetKey) {
-            syncParagraphCount(state, targetKey);
-            const container = getTargetElement(targetKey);
-            if (!container) return;
-
-            state.forEach((line, i) => {
-                this.renderLine(i, line, targetKey, null, true);
-            });
-            
-            syncLineIndexes(container);
-        },
-
-        ensureFirstLine(targetKey) {
-            const container = getTargetElement(targetKey);
-            if (!container || container.children.length > 0) return;
-            container.appendChild(createLineElement());
-        },
-
-        insertLine(lineIndex, align = "left", targetKey, lineData = null) {
-            const container = getTargetElement(targetKey);
-            if (!container) return;
-            
-            const newEl = createLineElement(lineData);
-            newEl.style.textAlign = align;
-            
-            // 🔥 [NotFoundError 해결의 핵심]
-            // :scope > 를 사용해 현재 container의 '직계 자식'인 lineIndex를 찾습니다.
-            // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
-            const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
-
-            if (target) {
-                container.insertBefore(newEl, target);
-            } else {
-                container.appendChild(newEl);
-            }
-            syncLineIndexes(container);
-        },
-
-        insertLineAfter(refEl, newIndex, align, targetKey) {
-            const container       = getTargetElement(targetKey);
-            const newEl           = createLineElement();
-            newEl.style.textAlign = align;
-            newEl.setAttribute('data-line-index', newIndex);
-
-            // 기준 노드 바로 다음 형제 앞에 삽입 = 기준 노드 바로 뒤에 삽입
-            if (refEl && refEl.nextSibling) {
-                container.insertBefore(newEl, refEl.nextSibling);
-            } else {
-                container.appendChild(newEl);
-            }
-            syncLineIndexes(container);
-            return newEl;
-        },
-
-        removeLine(lineIndex, targetKey) {
-            const container = getTargetElement(targetKey);
-            const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
-            if (target) {
-                container.removeChild(target);
-            }
-        },
-
+        render,
+        ensureFirstLine,
+        insertLine,
+        insertLineAfter,
+        removeLine,
         renderLine,
         renderLineChunksWithReuse,
         renderChunk
