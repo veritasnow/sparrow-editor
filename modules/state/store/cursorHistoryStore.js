@@ -28,6 +28,7 @@ export function createCursorHistoryStore(initialCursor = null) {
       history = history.slice(history.length - MAX_HISTORY);
     }
 
+    console.log("history!!!! : ", history);
     // 인덱스를 최신 위치로 갱신
     currentIndex = history.length - 1;
   }

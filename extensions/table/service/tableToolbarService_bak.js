@@ -1,7 +1,3 @@
-import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { TextChunkModel } from '../../../model/editorModel.js';
-import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
-
 /**
  * 테이블 툴바 액션 서비스
  * (행 추가 / 열 추가 / 병합 / 삭제)
@@ -13,74 +9,16 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
      * 아래에 행 추가
      */
     function addRow({ tableEl, rootEl, action, event }) {
+        alert("기능 구현중");        
         if (!tableEl) return false;
-
-        const tableId = tableEl.id;
-        const selectedCellIds = selectionAPI.getSelectedKeys();
+        // TODO: 행 추가 로직 구현 예정
+        // 1. 선택된 셀 위치 분석
+        // 2. 모델 state에 row 삽입
+        // 3. UI 부분 렌더링
         
-        if (!selectedCellIds || selectedCellIds.length === 0) return false;
-
-        // 1️⃣ 부모 상태 및 테이블 정보 확보
-        const parentKey = selectionAPI.findParentContainerId(tableId);
-        const parentState = stateAPI.get(parentKey);
-        if (!parentState) return false;
-
-        const tableInfo = findTableChunkById(parentState, tableId);
-        if (!tableInfo) return false;
-
-        const { lineIndex, chunk } = tableInfo;
-        const data = chunk.data;
-
-        // 2️⃣ 추가될 위치(targetRowIndex) 계산
-        let targetRowIndex = -1;
-        for (let r = 0; r < data.length; r++) {
-            for (let c = 0; c < data[r].length; c++) {
-                const cell = data[r][c];
-                if (cell && selectedCellIds.includes(cell.id)) {
-                    const rowEnd = r + (cell.rowspan || 1) - 1;
-                    targetRowIndex = Math.max(targetRowIndex, rowEnd);
-                }
-            }
-        }
-        if (targetRowIndex === -1) return false;
-
-        // 3️⃣ 새로운 행 생성 및 각 셀의 독립 상태(State) 즉시 등록
-        // insertTable의 방식처럼 각 셀을 순회하며 직접 등록합니다.
-        const colCount = data[0].length;
-        const newRow = [];
-
-        for (let i = 0; i < colCount; i++) {
-            const newCellId = `cell-${tableId}-${Math.random().toString(36).slice(2, 11)}`;
-            
-            const cellModel = {
-                id: newCellId,
-                style: {},
-                rowspan: 1,
-                colspan: 1
-            };
-
-            // 🔥 [insertTable 방식 준수] 각 셀에 대해 빈 텍스트 라인 상태를 즉시 저장
-            stateAPI.save(newCellId, [
-                EditorLineModel('left', [
-                    TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })
-                ])
-            ], false);
-
-            newRow.push(cellModel);
-        }
-
-        // 4️⃣ 데이터 배열에 신규 행 삽입 및 부모 상태 확정
-        data.splice(targetRowIndex + 1, 0, newRow);
-        stateAPI.save(parentKey, parentState);
-
-        // 5️⃣ UI 렌더링 - 딥 렌더링 강제
-        // tableStrategy: 'force'를 사용하여 테이블의 <tr>, <td>를 새로 만들고
-        // shouldRenderSub: true를 통해 uiAPI 내부의 _renderSubDom이 
-        // 위에서 save한 cellId의 내부 <p> 태그들을 그리도록 만듭니다.
-        uiAPI.renderLine(lineIndex, parentState[lineIndex], {
-            key: parentKey,
-            shouldRenderSub: true,
-            tableStrategy: 'force' 
+        console.log("[TableToolbar] addRow called", {
+            tableId: tableEl.id,
+            action
         });
 
         return true;
@@ -202,7 +140,87 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
         return true;
     }
+    /*
+    function mergeCells({ tableId }) {
 
+        const selectedCellIds = selectionAPI.getSelectedKeys();
+        if (!selectedCellIds.length || selectedCellIds.length < 2) {
+            return false;
+        }
+
+        // ⭐ 1. 부모 상태
+        const parentKey   = selectionAPI.findParentContainerId(tableId);
+        const parentState = stateAPI.get(parentKey);
+        if (!parentState) {
+            return false;
+        }
+
+        // ⭐ 2. tableId로 정확하게 테이블 찾기
+        const tableInfo = findTableChunkById(parentState, tableId);
+        if (!tableInfo) {
+            return false;
+        }
+
+        const { lineIndex, chunk } = tableInfo;
+        const data = chunk.data;
+
+        // ⭐ 3. cellId → 좌표 변환
+        const positions = [];
+
+        for (let r = 0; r < data.length; r++) {
+            for (let c = 0; c < data[r].length; c++) {
+                const cell = data[r][c];
+                if (cell && selectedCellIds.includes(cell.id)) {
+                    positions.push({ r, c });
+                }
+            }
+        }
+
+        if (positions.length < 2) {
+            return false;
+        }
+
+        // ⭐ 4. 직사각형 계산
+        const minRow = Math.min(...positions.map(p => p.r));
+        const maxRow = Math.max(...positions.map(p => p.r));
+        const minCol = Math.min(...positions.map(p => p.c));
+        const maxCol = Math.max(...positions.map(p => p.c));
+        const baseCell = data[minRow][minCol];
+
+        baseCell.rowspan = maxRow - minRow + 1;
+        baseCell.colspan = maxCol - minCol + 1;
+
+        // ⭐ 5. 나머지 셀 제거
+        const deleteKeys = [];
+
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r === minRow && c === minCol) continue;
+                const cell = data[r][c];
+                if (cell.id) {
+                    deleteKeys.push(cell.id);
+                }
+                data[r][c] = null;
+            }
+        }
+
+        if (deleteKeys.length) {
+            stateAPI.deleteBatch(deleteKeys);
+        }
+
+        // ⭐ 6. 저장
+        stateAPI.save(parentKey, parentState);
+
+        // ⭐ 7. 렌더
+        uiAPI.renderLine(lineIndex, parentState[lineIndex], {
+            key            : parentKey,
+            shouldRenderSub: true,
+            tableStrategy  : 'force'
+        });
+
+        return true;
+    }
+    */
     function findTableChunkById(parentState, tableId) {
         for (let i = 0; i < parentState.length; i++) {
             const line = parentState[i];
