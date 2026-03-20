@@ -17,21 +17,20 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
 
         const tableId = tableEl.id;
         const selectedCellIds = selectionAPI.getSelectedKeys();
-        
         if (!selectedCellIds || selectedCellIds.length === 0) return false;
 
-        // 1️⃣ 부모 상태 및 테이블 정보 확보
+        // 1️⃣ 부모 상태 확보 (Deep Copy까지는 아니어도 얕은 복사는 준비)
         const parentKey = selectionAPI.findParentContainerId(tableId);
         const parentState = stateAPI.get(parentKey);
         if (!parentState) return false;
 
+        // 2️⃣ 테이블 정보 및 타겟 위치 계산
         const tableInfo = findTableChunkById(parentState, tableId);
         if (!tableInfo) return false;
 
         const { lineIndex, chunk } = tableInfo;
-        const data = chunk.data;
+        const { data } = chunk;
 
-        // 2️⃣ 추가될 위치(targetRowIndex) 계산
         let targetRowIndex = -1;
         for (let r = 0; r < data.length; r++) {
             for (let c = 0; c < data[r].length; c++) {
@@ -44,43 +43,60 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
         }
         if (targetRowIndex === -1) return false;
 
-        // 3️⃣ 새로운 행 생성 및 각 셀의 독립 상태(State) 즉시 등록
-        // insertTable의 방식처럼 각 셀을 순회하며 직접 등록합니다.
+        // 3️⃣ 새로운 셀 데이터 및 행 생성
         const colCount = data[0].length;
         const newRow = [];
-
+        
+        // 개별 셀 상태 등록 (이 부분은 외부 API이므로 그대로 유지하되, 내부 로직은 순수하게 관리)
         for (let i = 0; i < colCount; i++) {
             const newCellId = `cell-${tableId}-${Math.random().toString(36).slice(2, 11)}`;
             
-            const cellModel = {
-                id: newCellId,
-                style: {},
-                rowspan: 1,
-                colspan: 1
-            };
-
-            // 🔥 [insertTable 방식 준수] 각 셀에 대해 빈 텍스트 라인 상태를 즉시 저장
             stateAPI.save(newCellId, [
                 EditorLineModel('left', [
                     TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })
                 ])
             ], false);
 
-            newRow.push(cellModel);
+            newRow.push({
+                id: newCellId,
+                style: {},
+                rowspan: 1,
+                colspan: 1
+            });
         }
 
-        // 4️⃣ 데이터 배열에 신규 행 삽입 및 부모 상태 확정
-        data.splice(targetRowIndex + 1, 0, newRow);
-        stateAPI.save(parentKey, parentState);
+        // 4️⃣ 🔥 [불변성 핵심] 데이터 구조 재구성
+        // A. 새로운 Data 배열 생성 (기존 data 수정 X)
+        const updatedData = [
+            ...data.slice(0, targetRowIndex + 1),
+            newRow,
+            ...data.slice(targetRowIndex + 1)
+        ];
 
-        // 5️⃣ UI 렌더링 - 딥 렌더링 강제
-        // tableStrategy: 'force'를 사용하여 테이블의 <tr>, <td>를 새로 만들고
-        // shouldRenderSub: true를 통해 uiAPI 내부의 _renderSubDom이 
-        // 위에서 save한 cellId의 내부 <p> 태그들을 그리도록 만듭니다.
-        uiAPI.renderLine(lineIndex, parentState[lineIndex], {
+        // B. 새로운 ParentState 생성 (부모 객체들 교체)
+        const updatedParentState = parentState.map((line, idx) => {
+            if (idx !== lineIndex) return line; // 다른 라인은 그대로 유지
+
+            return {
+                ...line,
+                chunks: line.chunks.map(c => {
+                    // 테이블 chunk가 아니거나 ID가 다르면 그대로 유지
+                    if (c.type !== 'table' || c.tableId !== tableId) return c;
+                    
+                    // 타겟 테이블만 새로운 data를 가진 객체로 교체
+                    return { ...c, data: updatedData };
+                })
+            };
+        });
+
+        // 5️⃣ 최종 확정 저장
+        stateAPI.save(parentKey, updatedParentState);
+
+        // 6️⃣ UI 렌더링
+        uiAPI.renderLine(lineIndex, updatedParentState[lineIndex], {
             key: parentKey,
             shouldRenderSub: true,
-            tableStrategy: 'force' 
+            tableStrategy: 'force'
         });
 
         return true;
@@ -90,17 +106,87 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
      * 오른쪽에 열 추가
      */
     function addCol({ tableEl, rootEl, action, event }) {
-        alert("기능 구현중");        
         if (!tableEl) return false;
 
-        // TODO: 열 추가 로직 구현 예정
-        // 1. 현재 셀 column index 계산
-        // 2. 각 row에 column 삽입
-        // 3. state & UI 동기화
+        const tableId = tableEl.id;
+        const selectedCellIds = selectionAPI.getSelectedKeys();
+        if (!selectedCellIds || selectedCellIds.length === 0) return false;
 
-        console.log("[TableToolbar] addCol called", {
-            tableId: tableEl.id,
-            action
+        // 1️⃣ 부모 상태 확보
+        const parentKey = selectionAPI.findParentContainerId(tableId);
+        const parentState = stateAPI.get(parentKey);
+        if (!parentState) return false;
+
+        // 2️⃣ 테이블 정보 및 타겟 열 위치(Index) 계산
+        const tableInfo = findTableChunkById(parentState, tableId);
+        if (!tableInfo) return false;
+
+        const { lineIndex, chunk } = tableInfo;
+        const { data } = chunk; // data: [row][col] 구조
+
+        let targetColIndex = -1;
+        // 선택된 셀들 중 가장 오른쪽에 있는 열의 인덱스를 찾음
+        for (let r = 0; r < data.length; r++) {
+            for (let c = 0; c < data[r].length; c++) {
+                const cell = data[r][c];
+                if (cell && selectedCellIds.includes(cell.id)) {
+                    // 병합된 셀인 경우 colspan을 고려하여 끝 지점 계산
+                    const colEnd = c + (cell.colspan || 1) - 1;
+                    targetColIndex = Math.max(targetColIndex, colEnd);
+                }
+            }
+        }
+
+        if (targetColIndex === -1) return false;
+
+        // 3️⃣ 새로운 열 데이터 생성 및 각 행에 삽입
+        // 🔥 [불변성] 기존 data를 직접 수정하지 않기 위해 map 사용
+        const updatedData = data.map((row) => {
+            const newRow = [...row]; // 행 복사
+            
+            // 새 셀 생성
+            const newCellId = `cell-${tableId}-${Math.random().toString(36).slice(2, 11)}`;
+            
+            // 개별 셀의 상세 상태(텍스트 등) 저장
+            stateAPI.save(newCellId, [
+                EditorLineModel('left', [
+                    TextChunkModel('text', '', { ...DEFAULT_TEXT_STYLE })
+                ])
+            ], false);
+
+            const newCell = {
+                id: newCellId,
+                style: {},
+                rowspan: 1,
+                colspan: 1
+            };
+
+            // 계산된 위치 다음에 삽입
+            newRow.splice(targetColIndex + 1, 0, newCell);
+            return newRow;
+        });
+
+        // 4️⃣ [불변성] 전체 ParentState 구조 재구성
+        const updatedParentState = parentState.map((line, idx) => {
+            if (idx !== lineIndex) return line;
+
+            return {
+                ...line,
+                chunks: line.chunks.map(c => {
+                    if (c.type !== 'table' || c.tableId !== tableId) return c;
+                    return { ...c, data: updatedData };
+                })
+            };
+        });
+
+        // 5️⃣ 최종 확정 저장
+        stateAPI.save(parentKey, updatedParentState);
+
+        // 6️⃣ UI 렌더링
+        uiAPI.renderLine(lineIndex, updatedParentState[lineIndex], {
+            key: parentKey,
+            shouldRenderSub: true,
+            tableStrategy: 'force'
         });
 
         return true;

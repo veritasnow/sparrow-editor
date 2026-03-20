@@ -43,7 +43,7 @@ export function createHistoryStore(initialState = {}) {
     const newData = reducer(currentData, patch);
 
     if (currentData === newData) return;
-
+    console.log("history!!!! : ", history);
     const nextMap = { ...prevMap, [key]: newData };
     _updateHistory(nextMap, options.saveHistory);
   }
