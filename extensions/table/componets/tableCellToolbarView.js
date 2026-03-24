@@ -9,10 +9,13 @@ export function createTableCellToolbarView(rootEl, actionHandlers) {
     toolbar.style.zIndex   = "9999";
 
     const menuItems = [
-        { title: "아래에 행 추가", action: "add-row", icon: "▦+" },
-        { title: "오른쪽에 열 추가", action: "add-col", icon: "+▦" },
-        { title: "셀 병합", action: "merge", icon: "◫+◫" }, // ← 여기만 변경
-        { title: "테이블 삭제", action: "delete", icon: "×" }
+        { title: "아래에 행 추가", action: "add-row", icon: "⊞↓" },
+        { title: "오른쪽에 열 추가", action: "add-col", icon: "⊞→" },
+        { title: "셀 병합", action: "merge", icon: "⊞+⊞" },
+        // 삭제 관련 아이콘 개선
+        { title: "행 삭제", action: "delete-row", icon: "▤⊖" }, // 가로줄(행)을 뺀다
+        { title: "열 삭제", action: "delete-col", icon: "▥⊖" }, // 세로줄(열)을 뺀다
+        { title: "테이블 삭제", action: "delete", icon: "⊞x" }
     ];
 
     menuItems.forEach(item => {
