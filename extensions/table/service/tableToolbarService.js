@@ -175,5 +175,74 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
         return true;
     }
 
-    return { addRow, addCol, mergeCells, deleteTable };
+function deleteRow({ tableEl }) {
+        const ctx = getTableContext(tableEl?.id);
+        const activeCellId = selectionAPI.getActiveKey();
+        if (!ctx || !activeCellId) return false;
+
+        const { data } = ctx.chunk;
+        if (data.length <= 1) {
+            // 행이 하나뿐이라면 테이블 전체 삭제로 연결하거나 무시
+            return deleteTable({ tableEl });
+        }
+
+        let targetRowIndex = -1;
+        for (let r = 0; r < data.length; r++) {
+            if (data[r].find(c => c?.id === activeCellId)) {
+                targetRowIndex = r;
+                break;
+            }
+        }
+
+        if (targetRowIndex === -1) return false;
+
+        // 삭제될 행에 있는 셀들의 ID 수집 (메모리 해제용)
+        const deleteKeys = data[targetRowIndex]
+            .filter(cell => cell && cell.id)
+            .map(cell => cell.id);
+
+        // 데이터 업데이트: 해당 인덱스 행 제거
+        const updatedData = data.filter((_, idx) => idx !== targetRowIndex);
+
+        if (deleteKeys.length) stateAPI.deleteBatch(deleteKeys);
+        return commitTableUpdate(ctx, updatedData);
+    }
+
+    function deleteCol({ tableEl }) {
+        const ctx = getTableContext(tableEl?.id);
+        const activeCellId = selectionAPI.getActiveKey();
+        if (!ctx || !activeCellId) return false;
+
+        const { data } = ctx.chunk;
+        const colCount = data[0].length;
+
+        if (colCount <= 1) {
+            // 열이 하나뿐이라면 테이블 전체 삭제로 연결하거나 무시
+            return deleteTable({ tableEl });
+        }
+
+        let targetColIndex = -1;
+        for (let r = 0; r < data.length; r++) {
+            const cellIndex = data[r].findIndex(c => c?.id === activeCellId);
+            if (cellIndex !== -1) {
+                targetColIndex = cellIndex;
+                break;
+            }
+        }
+
+        if (targetColIndex === -1) return false;
+
+        const deleteKeys = [];
+        const updatedData = data.map(row => {
+            const newRow = [...row];
+            const removed = newRow.splice(targetColIndex, 1)[0];
+            if (removed && removed.id) deleteKeys.push(removed.id);
+            return newRow;
+        });
+
+        if (deleteKeys.length) stateAPI.deleteBatch(deleteKeys);
+        return commitTableUpdate(ctx, updatedData);
+    }    
+
+    return { addRow, addCol, mergeCells, deleteTable, deleteRow, deleteCol };
 }

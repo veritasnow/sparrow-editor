@@ -18,10 +18,13 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
     );
 
     const cellToolbar = createTableCellToolbarView(rootEl, {
-        "add-row": tableToolbarService.addRow,
-        "add-col": tableToolbarService.addCol,
-        "merge"  : tableToolbarService.mergeCells,
-        "delete" : tableToolbarService.deleteTable
+        "add-row"    : tableToolbarService.addRow,
+        "add-col"    : tableToolbarService.addCol,
+        "merge"      : tableToolbarService.mergeCells,
+        "delete"     : tableToolbarService.deleteTable,
+        "delete-row" : tableToolbarService.deleteRow,
+        "delete-col" : tableToolbarService.deleteCol,
+
     });
 
     let lastCursorPos = null;
