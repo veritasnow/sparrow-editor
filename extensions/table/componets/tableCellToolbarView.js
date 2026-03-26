@@ -63,19 +63,35 @@ export function createTableCellToolbarView(rootEl, actionHandlers) {
 }
 
 /**
- * 툴바 위치 업데이트 함수
+ * 툴바 위치 업데이트 함수 (셀 기준)
+ * @param {HTMLElement} rootEl - 에디터 컨테이너
+ * @param {HTMLElement} cellEl - 클릭된 TD 요소
+ * @param {HTMLElement} cellToolbar - 툴바 요소
  */
-export const showToolbar = (rootEl, tableEl, cellToolbar) => {
-    const rect     = tableEl.getBoundingClientRect();
+export const showToolbar = (rootEl, cellEl, cellToolbar) => {
+    // 1. 셀과 루트(에디터)의 절대 위치 정보를 가져옵니다.
+    const rect = cellEl.getBoundingClientRect();
     const rootRect = rootEl.getBoundingClientRect();
 
     cellToolbar.classList.add("active");
-    
-    // 계산식: (현재 테이블의 화면상 top - 에디터의 화면상 top) + 에디터의 스크롤 위치
-    const top  = (rect.top - rootRect.top) + rootEl.scrollTop - 38;
+    cellToolbar.style.display = "block"; // 숨겨져 있을 수 있으므로 명시
+
+    // 2. 위치 계산식
+    // top: 셀의 top - 루트의 top + 에디터 스크롤 - 툴바 높이(약 38px)
+    // left: 셀의 left - 루트의 left + 에디터 스크롤
+    const top = (rect.top - rootRect.top) + rootEl.scrollTop - 40; // 여백을 위해 40px 정도로 조정
     const left = (rect.left - rootRect.left) + rootEl.scrollLeft;
 
-    cellToolbar.style.top             = `${top}px`; 
-    cellToolbar.style.left            = `${left}px`;
-    cellToolbar.dataset.targetTableId = tableEl.id;
+    cellToolbar.style.top = `${top}px`;
+    cellToolbar.style.left = `${left}px`;
+
+    console.log("toptop : ", top);
+    console.log("leftleft : ", left);
+
+    // 3. (중요) 행/열 삭제 시 어떤 셀을 기준으로 할지 알기 위해 데이터 저장
+    const tableEl = cellEl.closest("table");
+    cellToolbar.dataset.targetTableId = tableEl ? tableEl.id : "";
+    cellToolbar.dataset.targetRow = cellEl.dataset.row;
+    cellToolbar.dataset.targetCol = cellEl.dataset.col;
+    cellToolbar.dataset.targetCellId = cellEl.id;
 };

@@ -1,11 +1,11 @@
 // extensions/table/tableFeatureBinder.js
 import { createTablePopupView } from './componets/tablePopupView.js';
 import { createTableInsertService } from './service/tableInsertService.js';
-import { createTableCellToolbarView } from '../table/componets/tableCellToolbarView.js'
+import { createTableCellToolbarView, showToolbar } from '../table/componets/tableCellToolbarView.js'
 import { createTableToolbarService } from '../table/service/tableToolbarService.js';
 
 export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId) {
-    const rootEl = document.getElementById(rootId);
+    const rootEl  = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
@@ -79,26 +79,21 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
         }
     };
 
-
-    // --- 🆕 테이블 셀 툴바 제어 로직 ---
-    const showCellToolbar = (tableEl) => {
-        const rect     = tableEl.getBoundingClientRect();
-        const rootRect = rootEl.getBoundingClientRect();
-        cellToolbar.style.display         = 'flex';
-        cellToolbar.style.top             = `${rect.top - rootRect.top - 35}px`; 
-        cellToolbar.style.left            = `${rect.left - rootRect.left}px`;
-        cellToolbar.dataset.targetTableId = tableEl.id;
+    const handleTableClick = (cellEl) => {
+        showToolbar(rootEl, cellEl, cellToolbar);
     };
 
     const hideCellToolbar = () => {
         cellToolbar.style.display = 'none';
+        cellToolbar.classList.remove("active");        
     };
 
     // 에디터 본문 내 테이블 클릭 감지
     const onContentClick = (e) => {
-        const table = e.target.closest('.chunk-table');
-        if (table) {
-            showCellToolbar(table);
+        const cell = e.target.closest('.se-table-cell');
+        
+        if (cell) {
+            handleTableClick(cell);
         } else if (!cellToolbar.contains(e.target)) {
             hideCellToolbar();
         }
