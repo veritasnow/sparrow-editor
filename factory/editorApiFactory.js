@@ -128,10 +128,12 @@ export function createEditorAPI({
         updateLastValidPosition     : ()            => domSelection.updateLastValidPosition(),
         getLastValidPosition        : ()            => domSelection.getLastValidPosition(),
         getActiveKey                : ()            => domSelection.getActiveKey(),
+        //getActiveKeys               : ()            => domSelection.getActiveKeys(),
+
         getActiveKeys: () => {
             // 1. 현재 선택된 키(셀 ID들) 배열을 가져옵니다.
-            const keys = domSelection.getSelectedKeys() || [];
-            
+            const keys = domSelection.getActiveKeys() || [];
+
             // 2. 메인 에디터 엘리먼트를 찾습니다.
             const mainEditorEl = document.getElementById(MAIN_CONTENT_KEY);
 
@@ -153,7 +155,7 @@ export function createEditorAPI({
                 }
             }
 
-            return domSelection.getSelectedKeys();
+            return domSelection.getActiveKeys();
         },
         getLastActiveKey            : ()            => domSelection.getLastActiveKey(),
         getSelectionContext         : ()            => domSelection.getSelectionContext(),
