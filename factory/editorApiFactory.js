@@ -128,7 +128,33 @@ export function createEditorAPI({
         updateLastValidPosition     : ()            => domSelection.updateLastValidPosition(),
         getLastValidPosition        : ()            => domSelection.getLastValidPosition(),
         getActiveKey                : ()            => domSelection.getActiveKey(),
-        getActiveKeys               : ()            => domSelection.getActiveKeys(),
+        getActiveKeys: () => {
+            // 1. 현재 선택된 키(셀 ID들) 배열을 가져옵니다.
+            const keys = domSelection.getSelectedKeys() || [];
+            
+            // 2. 메인 에디터 엘리먼트를 찾습니다.
+            const mainEditorEl = document.getElementById(MAIN_CONTENT_KEY);
+
+            if (mainEditorEl) {
+                // 💡 선택된 키가 1개보다 많으면(다중 선택) 전체 편집 불가능하게 설정
+                if (keys.length > 1) {
+                    if (mainEditorEl.getAttribute('contenteditable') !== 'false') {
+                        mainEditorEl.setAttribute('contenteditable', 'false');
+                        console.log(`[Selection] Multiple keys detected (${keys.length}). Main editor locked.`);
+                    }
+                } 
+                // 💡 선택된 키가 1개 이하(단일 커서 등)이면 다시 편집 가능하게 복구
+                else {
+                    if (mainEditorEl.getAttribute('contenteditable') !== 'true') {
+                        mainEditorEl.setAttribute('contenteditable', 'true');
+                        // 포커스가 풀렸을 수 있으므로 필요 시 다시 focus() 해줄 수 있습니다.
+                        // mainEditorEl.focus(); 
+                    }
+                }
+            }
+
+            return domSelection.getSelectedKeys();
+        },
         getLastActiveKey            : ()            => domSelection.getLastActiveKey(),
         getSelectionContext         : ()            => domSelection.getSelectionContext(),
         getIsRestoring              : ()            => domSelection.getIsRestoring(),
