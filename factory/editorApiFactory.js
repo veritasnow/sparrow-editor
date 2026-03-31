@@ -128,8 +128,8 @@ export function createEditorAPI({
         updateLastValidPosition     : ()            => domSelection.updateLastValidPosition(),
         getLastValidPosition        : ()            => domSelection.getLastValidPosition(),
         getActiveKey                : ()            => domSelection.getActiveKey(),
-        //getActiveKeys               : ()            => domSelection.getActiveKeys(),
-
+        getActiveKeys               : ()            => domSelection.getActiveKeys(),
+        /*
         getActiveKeys: () => {
             // 1. 현재 선택된 키(셀 ID들) 배열을 가져옵니다.
             const keys = domSelection.getActiveKeys() || [];
@@ -157,6 +157,7 @@ export function createEditorAPI({
 
             return domSelection.getActiveKeys();
         },
+        */
         getLastActiveKey            : ()            => domSelection.getLastActiveKey(),
         getSelectionContext         : ()            => domSelection.getSelectionContext(),
         getIsRestoring              : ()            => domSelection.getIsRestoring(),
@@ -167,6 +168,20 @@ export function createEditorAPI({
         findParentContainerId       : (containerId) => domSelection.findParentContainerId(containerId),
         getLineIndex                : (el)          => domSelection.getLineIndex(el),
         getSelectedKeys             : ()            => domSelection.getSelectedKeys(),
+        isMultiSelect               : ()            => {
+            domSelection.refreshActiveKeys();
+
+            // 1. 현재 선택된 키(셀 ID들) 배열을 가져옵니다.
+            const keys = domSelection.getActiveKeys() || [];
+            console.log("현재 선택된 키들: ", keys);
+            if (keys.length > 1) {
+                return true;
+            } 
+            // 💡 선택된 키가 1개 이하(단일 커서 등)이면 다시 편집 가능하게 복구
+            else {
+                return false;
+            }
+        },
     };
 
   return { stateAPI, uiAPI, selectionAPI };

@@ -30,6 +30,12 @@ export function createKeyBindingService(editorEl) {
         onKeydown = (e) => {
             const { key, ctrlKey, shiftKey } = e;
 
+            if (handlers.isMultiSelect && handlers.isMultiSelect()) {
+                e.preventDefault(); 
+                e.stopPropagation();
+                return;
+            }
+
             // ENTER
             if (key === "Enter") {
                 e.preventDefault();

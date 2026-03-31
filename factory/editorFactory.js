@@ -125,7 +125,8 @@ export function createEditorFactory() {
           processDelete    : keyProcessor.processDelete,
           processPaste     : keyProcessor.processPaste,
           undo             : keyProcessor.undo,
-          redo             : keyProcessor.redo
+          redo             : keyProcessor.redo,
+          isMultiSelect    : selectionAPI.isMultiSelect
         });
 
         // D. 툴바 피처 바인딩

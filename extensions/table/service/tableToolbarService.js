@@ -156,7 +156,7 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
     }
 
     function deleteTable({ tableEl }) {
-        const ctx = getTableContext(tableEl?.id);
+        const ctx = getTableContext(tableEl.id);
         if (!ctx) return false;
 
         const { parentKey, parentState, lineIndex, chunkIndex } = ctx;
@@ -175,7 +175,8 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
         return true;
     }
 
-function deleteRow({ tableEl }) {
+    function deleteRow({ tableEl }) {
+        console.log("ssssssssssssssssssssssss");
         const ctx = getTableContext(tableEl?.id);
         const activeCellId = selectionAPI.getActiveKey();
         if (!ctx || !activeCellId) return false;
