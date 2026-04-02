@@ -128,7 +128,12 @@ export function createEditorAPI({
         updateLastValidPosition     : ()            => domSelection.updateLastValidPosition(),
         getLastValidPosition        : ()            => domSelection.getLastValidPosition(),
         getActiveKey                : ()            => domSelection.getActiveKey(),
-        getActiveKeys               : ()            => domSelection.getActiveKeys(),
+        //getActiveKeys               : ()            => domSelection.getActiveKeys(),
+        getActiveKeys: () => {
+            setLock(false);
+            return domSelection.getActiveKeys();
+        },
+
         getLastActiveKey            : ()            => domSelection.getLastActiveKey(),
         getSelectionContext         : ()            => domSelection.getSelectionContext(),
         getIsRestoring              : ()            => domSelection.getIsRestoring(),
@@ -140,20 +145,43 @@ export function createEditorAPI({
         getLineIndex                : (el)          => domSelection.getLineIndex(el),
         getSelectedKeys             : ()            => domSelection.getSelectedKeys(),
         isMultiSelect               : ()            => {
-            domSelection.refreshActiveKeys();
-
             // 1. 현재 선택된 키(셀 ID들) 배열을 가져옵니다.
             const keys = domSelection.getActiveKeys() || [];
-            console.log("현재 선택된 키들: ", keys);
             if (keys.length > 1) {
+                setLock(true);                
                 return true;
             } 
             // 💡 선택된 키가 1개 이하(단일 커서 등)이면 다시 편집 가능하게 복구
             else {
+                setLock(false);
                 return false;
             }
         },
     };
+
+
+    let isLocked = false;
+
+    function setLock(lock) {
+        if (isLocked === lock) return;
+        isLocked = lock;
+
+        const editorEl = document.getElementById(MAIN_CONTENT_KEY);
+        if (!editorEl) return;
+
+        if (isLocked) {
+            console.log("🔒 editor locked");
+
+            editorEl.setAttribute("contenteditable", "false");
+            editorEl.blur(); // ⭐ IME 차단 핵심
+        } else {
+            console.log("🔓 editor unlocked");
+
+            editorEl.setAttribute("contenteditable", "true");
+
+            editorEl.focus({ preventScroll: true });
+        }
+    }
 
   return { stateAPI, uiAPI, selectionAPI };
 }

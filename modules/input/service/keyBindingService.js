@@ -30,12 +30,6 @@ export function createKeyBindingService(editorEl) {
         onKeydown = (e) => {
             const { key, ctrlKey, shiftKey } = e;
 
-            if (handlers.isMultiSelect && handlers.isMultiSelect()) {
-                e.preventDefault(); 
-                e.stopPropagation();
-                return;
-            }
-
             // ENTER
             if (key === "Enter") {
                 e.preventDefault();
@@ -80,6 +74,12 @@ export function createKeyBindingService(editorEl) {
                 handlers.redo();
                 return;
             }
+
+            if (handlers.isMultiSelect && handlers.isMultiSelect()) {
+                e.preventDefault(); 
+                e.stopPropagation();
+                return;
+            }            
         };
 
         // 2. 붙여넣기 핸들러
