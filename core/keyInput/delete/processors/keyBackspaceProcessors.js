@@ -38,9 +38,14 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
 
     // 2. [위치 파악] 삭제할 위치(lineIndex, offset) 및 선택영역 확보
     const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
+    console.log("lineIndexlineIndexlineIndex : ", lineIndex);
+    console.log("offsetoffsetoffsetoffsetoffset : ", offset);
+    console.log("rangesrangesrangesrangesranges : ", ranges);
+
 
     // 3. [상태 계산] 비즈니스 로직 수행
     const result = calculateBackspaceState(currentState, lineIndex, offset, ranges, stateAPI);
+    console.log("resultresultresultresultresult : ", result);
     if (result.newState === currentState) return;
 
 
@@ -252,17 +257,17 @@ function applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI
     if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
         const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
         const count    = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
-        
-        for (let i = 0; i < count; i++) {
-            // ✅ 중요: container.children[startIdx]는 리스트일 땐 <li>, 일반일 땐 <p>를 가리킴
-            const lineEl = container.children[startIdx]; 
+
+        // 🔥 뒤에서부터 삭제
+        for (let i = count - 1; i >= 0; i--) {
+            const targetIdx = startIdx + i;
+            const lineEl = container.children[targetIdx];
+
             if (lineEl) {
-                // 삭제 전 테이블 보관
                 const tables = Array.from(lineEl.getElementsByClassName('chunk-table'));
                 if (tables.length > 0) movingTablePool.push(...tables);
-                
-                // DOM에서 줄 삭제 (li든 p든 통째로 날림)
-                uiAPI.removeLine(startIdx, activeKey);
+
+                uiAPI.removeLine(targetIdx, activeKey);
             }
         }
     }

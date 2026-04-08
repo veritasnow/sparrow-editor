@@ -212,17 +212,18 @@ function applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectionAPI })
         }
     }
 
-    // 삭제될 줄(아랫줄)의 테이블 확보 (병합되어 위로 끌어올려질 테이블들)
     if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
         const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
-        const count = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
-        
-        for (let i = 0; i < count; i++) {
-            // 주의: 하나를 지우면 다음 요소가 그 인덱스로 오므로 계속 startIdx를 참조
-            const lineToDeleteEl = container.children[startIdx];
+        const count    = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
+
+        // 🔥 역순 삭제 (핵심)
+        for (let i = count - 1; i >= 0; i--) {
+            const targetIdx = startIdx + i;
+            const lineToDeleteEl = container.children[targetIdx];
+
             if (lineToDeleteEl) {
                 movingTablePool.push(...lineToDeleteEl.getElementsByClassName('chunk-table'));
-                uiAPI.removeLine(startIdx, activeKey); // O(1) 삭제
+                uiAPI.removeLine(targetIdx, activeKey);
             }
         }
     }
