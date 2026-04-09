@@ -221,3 +221,87 @@
 .sparrow-contents .se-table-cell.is-not-selected *::selection {
   background: transparent !important;
 }
+
+
+
+
+
+
+
+
+
+
+/* --- 기존 스타일은 그대로 두고, 아래 내용을 추가/수정 하세요 --- */
+
+/* 1. 툴바 기본 형태 수정 (가변성 확보) */
+.sparrow-table-toolbar {
+    display: flex;
+    flex-wrap: nowrap; /* 기본은 한줄 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* 2. 버튼 기본 패딩 살짝 조정 */
+.sparrow-table-toolbar .table-tool-btn {
+    padding: 8px 12px; /* 기존 10px에서 가로폭을 살짝 조절 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+}
+
+/* ---------------------------------------------------- */
+/* 🔥 반응형 구간: 화면 너비가 좁을 때 (768px 이하) */
+/* ---------------------------------------------------- */
+@media screen and (max-width: 768px) {
+    /* 툴바 전체 크기 축소 */
+    .sparrow-table-toolbar {
+        border-radius: 4px;
+        background: #fdfdfd;
+    }
+
+    /* 삼각형 크기도 살짝 조절 (선택사항) */
+    .sparrow-table-toolbar::before { border-top-width: 6px; bottom: -6px; }
+    .sparrow-table-toolbar::after { border-top-width: 5px; bottom: -5px; }
+
+    .sparrow-table-toolbar .table-tool-btn {
+        padding: 6px 8px; /* 버튼 안쪽 여백 축소 */
+    }
+
+    .sparrow-table-toolbar .table-icon {
+        font-size: 13px; /* 아이콘 텍스트 크기 축소 */
+    }
+    
+    .sparrow-table-toolbar .table-tool-btn:not(:last-child)::after {
+        height: 12px; /* 구분선 높이 축소 */
+    }
+}
+
+/* ---------------------------------------------------- */
+/* 🔥 초소형 구간: 모바일 (480px 이하) */
+/* ---------------------------------------------------- */
+@media screen and (max-width: 480px) {
+    /* 버튼 6개가 한 줄이면 화면을 뚫고 나갈 수 있으므로 2줄 배치 고려 */
+    .sparrow-table-toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3개씩 2줄 */
+        width: max-content;
+        min-width: 120px;
+    }
+
+    .sparrow-table-toolbar .table-tool-btn {
+        padding: 10px 5px;
+        border-bottom: 1px solid #eee; /* 가로 구분선 */
+    }
+
+    /* 2줄 레이아웃일 때는 기존 세로 구분선 제거 */
+    .sparrow-table-toolbar .table-tool-btn::after {
+        display: none !important;
+    }
+
+    /* 삼각형 위치가 안 맞을 수 있으므로 숨기거나 조정 */
+    .sparrow-table-toolbar::before,
+    .sparrow-table-toolbar::after {
+        display: none; 
+    }
+}
