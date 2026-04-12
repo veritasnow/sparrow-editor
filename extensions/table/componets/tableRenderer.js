@@ -1,6 +1,5 @@
 export const tableRenderer = {
     render(chunk, lineIndex, chunkIndex) {
-        console.log("테스트......................!!!");
         const data = chunk.data ?? [];
         const rows = data.length;
         const cols = data[0]?.length ?? 0;
@@ -66,23 +65,6 @@ export const tableRenderer = {
                     ...(cellData.style || {})
                 });
 
-                // 4️⃣ 내부 에디터 컨테이너 (네 LiteEditor 구조 완전 호환)
-                const container = document.createElement("div");
-                container.className = "text-block";
-                container.dataset.lineIndex = "0";
-                container.style.textAlign = "left";
-
-                const span = document.createElement("span");
-                span.className      = "chunk-text";
-                span.dataset.index  = "0";
-                span.dataset.lineIndex  = "0";
-                span.dataset.chunkIndex = "0";
-                span.innerHTML      = "&#x200B;"; // ZWS 유지 (네 에디터 필수)
-                span.style.fontSize = "14px";
-                span.style.fontFamily = "Pretendard, sans-serif";
-
-                container.appendChild(span);
-                td.appendChild(container);
                 tr.appendChild(td);
             }
 
