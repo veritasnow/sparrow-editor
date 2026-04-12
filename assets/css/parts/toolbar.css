@@ -1,6 +1,7 @@
 /* ───────── 툴바 스타일 ───────── */
 .sparrow-toolbar {
   display: flex;
+  flex-wrap: wrap;       /* 🔥 핵심: 공간 부족 시 줄바꿈 허용 */
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
@@ -8,6 +9,9 @@
   background-color: #f8f8f8;
   border: 1px solid #ddd;
   border-radius: 6px;
+  /* 툴바가 여러 줄이 되어도 에디터 영역을 침범하지 않도록 설정 */
+  position: relative; 
+  height: auto;          /* 높이는 가변적으로 */
 }
 
 .sparrow-toolbar button {
@@ -381,4 +385,42 @@
   height: 1.5px;
   background-color: currentColor;
   border-radius: 1px;
+}
+
+
+/* ───────── 반응형 미디어 쿼리 ───────── */
+
+/* 태블릿/작은 모니터 (예: 768px 이하) */
+@media screen and (max-width: 768px) {
+  .sparrow-toolbar {
+    gap: 4px; /* 간격 살짝 축소 */
+    padding: 4px;
+  }
+
+  .sparrow-toolbar button {
+    width: 30px;  /* 버튼 크기 미세 축소 */
+    height: 30px;
+  }
+
+  .sparrow-toolbar .font-family-select {
+    width: 80px;  /* 글꼴 선택창 너비 축소 */
+  }
+}
+
+/* 모바일 (예: 480px 이하) */
+@media screen and (max-width: 480px) {
+  .sparrow-toolbar {
+    justify-content: flex-start; /* 왼쪽 정렬 유지 */
+  }
+
+  /* 세로 구분선(수직 바)이 줄바꿈 시 어색할 수 있으므로 숨기거나 조정 */
+  .sparrow-toolbar div[style*="width:1px"] {
+    display: none; 
+  }
+
+  .sparrow-toolbar .font-size-select,
+  .sparrow-toolbar .font-family-select {
+    flex-grow: 1; /* 선택창들이 남는 가로 공간을 채우도록 함 */
+    min-width: 60px;
+  }
 }
