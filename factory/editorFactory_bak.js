@@ -5,7 +5,6 @@ import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
 import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 import { unorderedListRenderer } from '../extensions/unorderedList/components/unorderedListRenderer.js';
-import { createDomObserver } from '../core/observer/domObserver.js';
 
 import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
@@ -171,12 +170,6 @@ export function createEditorFactory() {
             disposers.push(() => ext.destroy());
           }
         });
-
-        // 코어 옵저버 연결: 테이블이 추가될 때 리사이저를 붙여달라고 요청
-        const observerDisposer = createDomObserver(editorEl, {
-            onTableAdded: (table) => tableRenderer._ensureResizers(table)
-        });
-        disposers.push(observerDisposer);
 
         mounted = true;
         console.log(`[SparrowEditor] ${rootId} mounted with MAIN_CONTENT_KEY.`);
