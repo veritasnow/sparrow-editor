@@ -16,7 +16,7 @@ export function createTablePopupView(rootEl, toolbar, tableBtn) {
         // 10 x 10 grid 만들기
         for (let r = 1; r <= 10; r++) {
             for (let c = 1; c <= 10; c++) {
-                const cell = document.createElement('div');
+                const cell     = document.createElement('div');
                 cell.className = 'table-cell';
                 cell.dataset.row = r;
                 cell.dataset.col = c;
@@ -30,9 +30,9 @@ export function createTablePopupView(rootEl, toolbar, tableBtn) {
 
     const open = () => {
         popup.style.display = 'block';
-        const rect = tableBtn.getBoundingClientRect();
+        const rect        = tableBtn.getBoundingClientRect();
         const toolbarRect = toolbar.getBoundingClientRect();
-        popup.style.top = `${rect.bottom - toolbarRect.top + 6}px`;
+        popup.style.top  = `${rect.bottom - toolbarRect.top + 6}px`;
         popup.style.left = `${rect.left - toolbarRect.left}px`;
     };
 

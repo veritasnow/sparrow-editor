@@ -74,7 +74,7 @@ export function createTableCellToolbarView(rootEl, actionHandlers) {
  */
 export const showToolbar = (rootEl, cellEl, cellToolbar) => {
     // 1. 위치 계산을 위한 기본 좌표 획득
-    const rect = cellEl.getBoundingClientRect();
+    const rect     = cellEl.getBoundingClientRect();
     const rootRect = rootEl.getBoundingClientRect();
     
     // 툴바를 먼저 보이게 해야 offsetWidth/Height 계산이 가능합니다.
@@ -82,12 +82,12 @@ export const showToolbar = (rootEl, cellEl, cellToolbar) => {
     cellToolbar.classList.add("active");
 
     // 툴바의 실제 크기 측정 (CSS가 적용된 후의 크기)
-    const toolbarWidth = cellToolbar.offsetWidth;
+    const toolbarWidth  = cellToolbar.offsetWidth;
     const toolbarHeight = cellToolbar.offsetHeight;
 
     // 2. 기본 위치 설정 (셀의 중앙 상단)
     // top: 셀 상단 - 툴바 높이 - 화살표 여백(약 10px)
-    let top = (rect.top - rootRect.top) + rootEl.scrollTop - toolbarHeight - 10;
+    let top  = (rect.top - rootRect.top) + rootEl.scrollTop - toolbarHeight + 10;
     
     // left: 셀의 왼쪽 끝 기준
     let left = (rect.left - rootRect.left) + rootEl.scrollLeft;
@@ -119,13 +119,13 @@ export const showToolbar = (rootEl, cellEl, cellToolbar) => {
     }
 
     // 최종 좌표 적용
-    cellToolbar.style.top = `${top}px`;
+    cellToolbar.style.top  = `${top}px`;
     cellToolbar.style.left = `${left}px`;
 
     // 3. 데이터 저장 (기존 로직 유지)
     const tableEl = cellEl.closest("table");
     cellToolbar.dataset.targetTableId = tableEl ? tableEl.id : "";
-    cellToolbar.dataset.targetRow = cellEl.dataset.row || "";
-    cellToolbar.dataset.targetCol = cellEl.dataset.col || "";
-    cellToolbar.dataset.targetCellId = cellEl.id || "";
+    cellToolbar.dataset.targetRow     = cellEl.dataset.row || "";
+    cellToolbar.dataset.targetCol     = cellEl.dataset.col || "";
+    cellToolbar.dataset.targetCellId  = cellEl.id || "";
 };

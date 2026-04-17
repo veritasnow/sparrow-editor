@@ -7,7 +7,7 @@ import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 import { unorderedListRenderer } from '../extensions/unorderedList/components/unorderedListRenderer.js';
 import { createDomObserver } from '../core/observer/domObserver.js';
 
-import { createEditorInputProcessor } from '../core/input/editorInputProcessor.js';
+import { createEditorInputProcessor } from '../core/input/process/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
 
 import { bindSelectionFeature } from '../core/selection/selectionFeatureBinder.js';

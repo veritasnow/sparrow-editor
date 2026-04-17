@@ -5,22 +5,22 @@ export const tableRenderer = {
         const cols = data[0]?.length ?? 0;
 
         const table = document.createElement("table");
-        table.id = chunk.tableId;
-        table.className = "se-table chunk-table";
-        table.dataset.lineIndex = lineIndex;
+        table.id                 = chunk.tableId;
+        table.className          = "se-table chunk-table";
+        table.dataset.lineIndex  = lineIndex;
         table.dataset.chunkIndex = chunkIndex;
-        table.dataset.type = "table";
-        table.dataset.index = chunkIndex;
+        table.dataset.type       = "table";
+        table.dataset.index      = chunkIndex;
         table.dataset.hasResizer = "true";
 
         Object.assign(table.style, {
             borderCollapse: "collapse",
-            border: "1px solid #ccc",
-            margin: "4px 0",
-            fontSize: "14px",
-            width: "100%",
-            tableLayout: "fixed",
-            boxSizing: "border-box",
+            border        : "1px solid #ccc",
+            margin        : "4px 0",
+            fontSize      : "14px",
+            width         : "100%",
+            tableLayout   : "fixed",
+            boxSizing     : "border-box",
             ...(chunk.style || {})
         });
 
@@ -36,9 +36,9 @@ export const tableRenderer = {
                     td.setAttribute("data-container-id", cellData.id);
                 }
 
-                td.className = "se-table-cell";
-                td.dataset.row = r;
-                td.dataset.col = c;
+                td.className      = "se-table-cell";
+                td.dataset.row    = r;
+                td.dataset.col    = c;
                 td.style.position = "relative"; 
 
                 const rowspan = cellData.rowspan ?? 1;
@@ -47,12 +47,12 @@ export const tableRenderer = {
                 if (colspan > 1) td.colSpan = colspan;
 
                 Object.assign(td.style, {
-                    border: "1px solid #ddd",
-                    padding: "4px 6px",
-                    minWidth: "40px",
-                    height: "24px",
+                    border       : "1px solid #ddd",
+                    padding      : "4px 6px",
+                    minWidth     : "40px",
+                    height       : "24px",
                     verticalAlign: "middle",
-                    boxSizing: "border-box",
+                    boxSizing    : "border-box",
                     ...(cellData.style || {})
                 });
 
@@ -81,13 +81,13 @@ export const tableRenderer = {
         resizer.setAttribute("contenteditable", "false");
         
         Object.assign(resizer.style, {
-            position: "absolute",
-            right: "0",
-            top: "0",
-            width: "8px",
-            height: "100%",
-            cursor: "col-resize",
-            zIndex: "100",
+            position  : "absolute",
+            right     : "0",
+            top       : "0",
+            width     : "8px",
+            height    : "100%",
+            cursor    : "col-resize",
+            zIndex    : "100",
             background: "transparent",
             userSelect: "none"
         });
@@ -102,7 +102,7 @@ export const tableRenderer = {
     },
 
     _initiateResize(e, td) {
-        const startX = e.pageX;
+        const startX     = e.pageX;
         const startWidth = td.offsetWidth;
 
         const onMouseMove = (moveEvent) => {
