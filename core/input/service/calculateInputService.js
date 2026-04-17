@@ -1,7 +1,6 @@
 // /core/input/service/calculateInputService.js
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { inputModelService } from '../../input/inputModelService.js';
-import { getSafeTextFromRange } from '../utils/inputUtils.js';
 import { splitChunksByTable } from '../service/splitInputService.js';
 
 export function calculateInputUpdate({ currentLine, selection, activeKey, uiAPI }) {
@@ -85,4 +84,10 @@ export function calculateInputUpdate({ currentLine, selection, activeKey, uiAPI 
         ...result,
         flags: { ...flags, hasChange: true }
     };
+}
+
+function getSafeTextFromRange(range) {
+    if (!range) return '';
+    const node = range.startContainer;
+    return node.nodeType === Node.TEXT_NODE ? (node.nodeValue ?? '') : '';
 }
