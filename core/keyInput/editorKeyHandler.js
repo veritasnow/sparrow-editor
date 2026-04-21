@@ -3,12 +3,23 @@ import { executeEnter } from '../keyInput/enter/processors/keyEnterProcessors.js
 import { executeDelete } from '../keyInput/delete/processors/keyDeleteProcessors.js';
 import { executeBackspace } from '../keyInput/delete/processors/keyBackspaceProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
+import { createEditorInputProcessor } from '../keyInput/input/process/editorInputProcessor.js';
+
+
 
 /**
  * EditorKeyHandler
  */
 export function createEditorKeyHandler(context) {
     const { stateAPI, uiAPI, selectionAPI } = context;
+
+    const inputProcessor = createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, selectionAPI.getMainKey());
+
+    // 입력 키 처리
+    const processInput = inputProcessor.processInput;
+
+    // 싱크 처리
+    const syncInput    = inputProcessor.syncInput;
 
     // 엔터 키 처리
     const processEnter = () => {
@@ -41,6 +52,8 @@ export function createEditorKeyHandler(context) {
     };
 
     return {
+        processInput,
+        syncInput,
         processEnter,
         processBackspace,
         processDelete,

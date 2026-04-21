@@ -7,7 +7,7 @@ import { tableRenderer } from '../extensions/table/componets/tableRenderer.js';
 import { unorderedListRenderer } from '../extensions/unorderedList/components/unorderedListRenderer.js';
 import { createDomObserver } from '../core/observer/domObserver.js';
 
-import { createEditorInputProcessor } from '../core/input/process/editorInputProcessor.js';
+import { createEditorInputProcessor } from '../core/keyInput/input/process/editorInputProcessor.js';
 import { createEditorKeyHandler } from '../core/keyInput/editorKeyHandler.js';
 
 import { bindSelectionFeature } from '../core/selection/selectionFeatureBinder.js';
@@ -69,9 +69,6 @@ export function createEditorFactory() {
       MAIN_CONTENT_KEY
     });
 
-    // inputProcessor 생성 시 MAIN_CONTENT_KEY 전달
-    const inputProcessor = createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, MAIN_CONTENT_KEY);
-
     const editorAPI = {
       getToolbarButton(name) {
         const buttonIds = {
@@ -106,28 +103,26 @@ export function createEditorFactory() {
           }
         });
 
-        // B. 입력 이벤트 바인딩
-        inputApp.bindInput(inputProcessor.processInput);
-        disposers.push(() => {
-          console.log(`[${rootId}] Input processor unbinding...`);
-        });
-
-        // C. 키보드 핸들러 (Enter, Backspace 등)
+        // B. 입력 이벤트 바인딩, 키보드 핸들러 (Enter, Backspace 등)
         const keyProcessor = createEditorKeyHandler({
           stateAPI    : stateAPI,
           uiAPI       : uiAPI,
           selectionAPI: selectionAPI
         });
+        
+        inputApp.bind({
+          input: keyProcessor.processInput,
 
-        inputApp.bindKeydown({
-          syncInput        : inputProcessor.syncInput,
-          processEnter     : keyProcessor.processEnter,
-          processBackspace : keyProcessor.processBackspace,
-          processDelete    : keyProcessor.processDelete,
-          processPaste     : keyProcessor.processPaste,
-          undo             : keyProcessor.undo,
-          redo             : keyProcessor.redo,
-          isMultiSelect    : selectionAPI.isMultiSelect
+          keydown: {
+            syncInput        : keyProcessor.syncInput,
+            processEnter     : keyProcessor.processEnter,
+            processBackspace : keyProcessor.processBackspace,
+            processDelete    : keyProcessor.processDelete,
+            processPaste     : keyProcessor.processPaste,
+            undo             : keyProcessor.undo,
+            redo             : keyProcessor.redo,
+            isMultiSelect    : selectionAPI.isMultiSelect
+          }
         });
 
         // D. 툴바 피처 바인딩

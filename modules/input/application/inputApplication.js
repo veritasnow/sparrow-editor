@@ -25,22 +25,25 @@ export function createInputApplication({ editorEl }) {
 
 
     /**
-     * Input/Composition 이벤트 처리 콜백을 주입받아 바인딩합니다.
-     * @param {Function} processInputCallback - Core의 입력 처리 로직 함수
+     * 바인드 (Facade)
+     * @param {Object} config
+     * {
+     *   input?: Function,
+     *   keydown?: Object
+     * }
      */
-    function bindInput(processInputCallback) {
+    function bind({ input, keydown } = {}) {
         assertAlive();
-        inputService.bindEvents(processInputCallback);
+
+        if (input) {
+            inputService.bindEvents(input);
+        }
+
+        if (keydown) {
+            keyService.bindEvents(keydown);
+        }
     }
 
-    /**
-     * Keydown 이벤트 처리 콜백(Enter, Backspace 등) 객체를 주입받아 바인딩합니다.
-     * @param {Object} handlers - { handleEnter: Function, handleBackspace: Function }
-     */
-    function bindKeydown(handlers) {
-        assertAlive();
-        keyService.bindEvents(handlers);
-    }
 
     /**
      * Input 모듈 전체 생명주기를 종료합니다.
@@ -59,18 +62,7 @@ export function createInputApplication({ editorEl }) {
     }          
 
     return {
-        /**
-         * Input/Composition 이벤트 처리 콜백을 주입받아 바인딩합니다.
-         * @param {Function} processInputCallback - Core의 입력 처리 로직 함수
-         */
-        bindInput,
-
-        /**
-         * Keydown 이벤트 처리 콜백(Enter, Backspace 등) 객체를 주입받아 바인딩합니다.
-         * @param {Object} handlers - { handleEnter: Function, handleBackspace: Function }
-         */
-        bindKeydown,
-
+        bind,
         /**
          * Input 모듈 전체 생명주기를 종료합니다.
          * 하위 바인딩 서비스들의 이벤트를 모두 해제합니다.

@@ -1,5 +1,5 @@
 // /core/input/service/applyInputService.js
-import { normalizeCursorData } from '../../../utils/cursorUtils.js';
+import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
 export function applyInputState({
     stateAPI,

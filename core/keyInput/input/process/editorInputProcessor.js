@@ -1,10 +1,10 @@
 // /core/input/processors/inputProcessor.js
-import { EditorLineModel } from '../../../model/editorLineModel.js';
+import { EditorLineModel } from '../../../../model/editorLineModel.js';
 import { calculateInputUpdate } from '../service/calculateInputService.js';
 import { handleSplitInput } from '../service/splitInputService.js';
 import { applyInputState } from '../service/applyInputService.js';
 import { executeInputRendering } from '../service/renderInputService.js';
-import { normalizeCursorData } from '../../../utils/cursorUtils.js';
+import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
 export function createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, defaultKey) {
 

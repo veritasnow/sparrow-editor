@@ -1,6 +1,6 @@
 // /core/input/service/splitInputService.js
-import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { normalizeCursorData } from '../../../utils/cursorUtils.js';
+import { EditorLineModel } from '../../../../model/editorLineModel.js';
+import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
 export function splitChunksByTable(chunks, align) {
     const lines = [];

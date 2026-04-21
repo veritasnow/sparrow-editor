@@ -1,7 +1,7 @@
-// /core/input/service/calculateInputService.js
-import { EditorLineModel } from '../../../model/editorLineModel.js';
-import { inputModelService } from '../../input/inputModelService.js';
-import { splitChunksByTable } from '../service/splitInputService.js';
+// /core/keyInput/input/service/calculateInputService.js
+import { EditorLineModel } from '../../../../model/editorLineModel.js';
+import { inputModelService } from './inputModelService.js';
+import { splitChunksByTable } from './splitInputService.js';
 
 export function calculateInputUpdate({ currentLine, selection, activeKey, uiAPI }) {
 
