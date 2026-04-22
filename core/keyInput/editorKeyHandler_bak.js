@@ -3,7 +3,7 @@ import { executeEnter } from '../keyInput/enter/processors/keyEnterProcessors.js
 import { executeDelete } from '../keyInput/delete/processors/keyDeleteProcessors.js';
 import { executeBackspace } from '../keyInput/delete/processors/keyBackspaceProcessors.js';
 import { executeHistory } from '../../core/keyInput/historyProcessor.js';
-import { executeInput } from '../keyInput/input/process/editorInputProcessor.js';
+import { createEditorInputProcessor } from '../keyInput/input/process/editorInputProcessor.js';
 
 
 
@@ -13,15 +13,13 @@ import { executeInput } from '../keyInput/input/process/editorInputProcessor.js'
 export function createEditorKeyHandler(context) {
     const { stateAPI, uiAPI, selectionAPI } = context;
 
-    // 🔥 input (adapter 역할)
-    const processInput = (skipRender = false) => {
-        executeInput({ stateAPI, uiAPI, selectionAPI, skipRender, skipHistory: true });
-    };
+    const inputProcessor = createEditorInputProcessor(stateAPI, uiAPI, selectionAPI, selectionAPI.getMainKey());
 
-    const syncInput = () => {
-        executeInput({ stateAPI, uiAPI, selectionAPI, skipRender: true, skipHistory: false });
-    };
+    // 입력 키 처리
+    const processInput = inputProcessor.processInput;
 
+    // 싱크 처리
+    const syncInput    = inputProcessor.syncInput;
 
     // 엔터 키 처리
     const processEnter = () => {
