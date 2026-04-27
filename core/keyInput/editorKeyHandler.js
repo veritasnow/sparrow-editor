@@ -38,7 +38,7 @@ export function createEditorKeyHandler(context) {
         executeDelete(e, { stateAPI, uiAPI, selectionAPI });
     };    
 
-    // 📋 붙여넣기 처리 추가
+    // 붙여넣기 처리 추가
     const processPaste = (e) => {
         executePaste(e, { stateAPI, uiAPI, selectionAPI });
     };    
