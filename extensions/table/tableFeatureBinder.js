@@ -1,5 +1,6 @@
 // extensions/table/tableFeatureBinder.js
 import { createTablePopupView } from './componets/tablePopupView.js';
+import { createTableResizeService } from './service/tableResizeService.js';
 import { createTableInsertService } from './service/tableInsertService.js';
 import { createTableCellToolbarView, showToolbar } from '../table/componets/tableCellToolbarView.js'
 import { createTableToolbarService } from '../table/service/tableToolbarService.js';
@@ -7,6 +8,21 @@ import { createTableToolbarService } from '../table/service/tableToolbarService.
 export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId) {
     const rootEl  = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
+
+    const resizeService = createTableResizeService({ stateAPI });    
+    /* ---------------- 리사이징 이벤트 위임 ---------------- */
+
+    const onMouseOver = (e) => {
+        const table = e.target.closest('.se-table');
+        if (!table) return;
+
+        resizeService.attach(table);
+    };
+
+    rootEl.addEventListener('mouseover', onMouseOver);
+
+    /* ---------------- 기존 로직 유지 ---------------- */
+
 
     // 1. View & Service 초기화
     const { popup, grid, sizeText, open, close } = createTablePopupView(rootEl, toolbar, tableBtn);

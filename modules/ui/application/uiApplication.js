@@ -119,11 +119,6 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       );
     },
 
-    extractTableDataFromDOM(tableElement) {
-      assertAlive();
-      return domParserService.extractTableDataFromDOM(tableElement);
-    },
-
     // ───────── Lifecycle ─────────
     destroy,
   };

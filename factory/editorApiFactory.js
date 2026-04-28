@@ -65,7 +65,6 @@ export function createEditorAPI({
         insertLine: (i, a, key = MAIN_CONTENT_KEY) => ui.insertLine(i, a, key),
         removeLine: (i, key = MAIN_CONTENT_KEY) => ui.removeLine(i, key),
         parseLineDOM: (p, chunks, sel, off, idx) => ui.parseLineDOM(p, chunks, sel, off, idx),
-        extractTableDataFromDOM: (tableEl) => ui.extractTableDataFromDOM(tableEl),
         partialRenderOnScroll: (range, editorState, editorContext) => ui.partialRenderOnScroll(range, editorState, editorContext),
         forceFullRender: (editorState) => ui.render(editorState),
         resetPartialRender: () => ui.resetPartialRender(),
