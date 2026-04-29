@@ -1,10 +1,14 @@
+// extensions/table/service/tableResizeService.js
+
 export function createTableResizeService({ stateAPI }) {
 
     function attach(tableEl) {
         if (!tableEl) return;
 
+        // ✅ table-layout 고정
         tableEl.style.tableLayout = "fixed";
 
+        // ✅ width를 px로 고정 (최초 1회만)
         if (!tableEl.style.width || tableEl.style.width === "100%") {
             tableEl.style.width = tableEl.offsetWidth + "px";
         }
@@ -65,36 +69,31 @@ export function createTableResizeService({ stateAPI }) {
 
         return el;
     }
-
+    
     function startResize(e, td) {
-        const table = td.closest("table");
-
-        const startCol = Number(td.dataset.col);
-        const span = td.colSpan || 1;
-
-        // 🔥 병합 대응: "오른쪽 끝 컬럼"
-        const colIndex = startCol + span - 1;
-
-        const colgroup = table.querySelector("colgroup");
-        const col = colgroup.children[colIndex];
-        const nextCol = colgroup.children[colIndex + 1];
-
-        if (!nextCol) return;
-
         const startX = e.pageX;
-        const startWidth = col.offsetWidth;
-        const nextStartWidth = nextCol.offsetWidth;
+
+        const tr = td.parentElement;
+        const tdIndex = Array.from(tr.children).indexOf(td);
+
+        const nextTd = tr.children[tdIndex + 1];
+
+        // 👉 오른쪽 셀 없으면 종료
+        if (!nextTd) return;
+
+        const startWidth     = td.offsetWidth;
+        const nextStartWidth = nextTd.offsetWidth;
 
         const onMouseMove = (moveEvent) => {
             const diff = moveEvent.pageX - startX;
 
-            const newWidth = Math.max(40, startWidth + diff);
+            const newWidth     = Math.max(40, startWidth + diff);
             const newNextWidth = Math.max(40, nextStartWidth - diff);
 
             if (newNextWidth <= 40) return;
 
-            col.style.width = newWidth + "px";
-            nextCol.style.width = newNextWidth + "px";
+            td.style.width     = newWidth + "px";
+            nextTd.style.width = newNextWidth + "px";
         };
 
         const onMouseUp = () => {
@@ -102,40 +101,40 @@ export function createTableResizeService({ stateAPI }) {
             document.removeEventListener("mouseup", onMouseUp);
             document.body.style.userSelect = "";
 
-            updateStateByCol(table, colIndex, col.offsetWidth);
+            updateStateByTd(td, nextTd);
         };
 
         document.body.style.userSelect = "none";
         document.addEventListener("mousemove", onMouseMove);
         document.addEventListener("mouseup", onMouseUp);
-    }    
+    }
     /*
     function startResize(e, td) {
-        const table = td.closest("table");
-        const colIndex = Number(td.dataset.col);
+        const startX    = e.pageX;
+        const table     = td.closest("table");
+        const colIndex  = Number(td.dataset.col);
 
-        const colgroup = table.querySelector("colgroup");
-        const col = colgroup.children[colIndex];
-        const nextCol = colgroup.children[colIndex + 1];
+        const colgroup  = table.querySelector("colgroup");
+        const col       = colgroup.children[colIndex];
+        const nextCol   = colgroup.children[colIndex + 1];
 
-        // 👉 마지막 컬럼이면 종료
+        // ✅ 마지막 컬럼은 resize 막기 (선택)
         if (!nextCol) return;
 
-        const startX = e.pageX;
-        const startWidth = col.offsetWidth;
-        const nextStartWidth = nextCol.offsetWidth;
+        const startWidth      = col.offsetWidth;
+        const nextStartWidth  = nextCol.offsetWidth;
 
         const onMouseMove = (moveEvent) => {
             const diff = moveEvent.pageX - startX;
 
-            const newWidth = Math.max(40, startWidth + diff);
+            const newWidth     = Math.max(40, startWidth + diff);
             const newNextWidth = Math.max(40, nextStartWidth - diff);
 
+            // ✅ 다음 컬럼이 최소보다 작아지면 막기
             if (newNextWidth <= 40) return;
 
-            // 🔥 핵심: col 기준으로 변경
-            col.style.width = newWidth + "px";
-            nextCol.style.width = newNextWidth + "px";
+            col.style.width      = newWidth + "px";
+            nextCol.style.width  = newNextWidth + "px";
         };
 
         const onMouseUp = () => {
@@ -143,7 +142,7 @@ export function createTableResizeService({ stateAPI }) {
             document.removeEventListener("mouseup", onMouseUp);
             document.body.style.userSelect = "";
 
-            updateStateByCol(table, colIndex, col.offsetWidth);
+            updateState(table, colIndex, col.offsetWidth);
         };
 
         document.body.style.userSelect = "none";
@@ -152,8 +151,7 @@ export function createTableResizeService({ stateAPI }) {
     }
     */
 
-    // 🔥 핵심: td 기준 ❌ → col 기준으로 저장
-    function updateStateByCol(table, colIndex, width) {
+    function updateState(table, colIndex, width) {
         const tableId = table.id;
 
         const rootState = stateAPI.get();
@@ -168,25 +166,12 @@ export function createTableResizeService({ stateAPI }) {
         const tableChunk = line.chunks.find(c => c.tableId === tableId);
         if (!tableChunk) return;
 
-        // 👉 모든 row에 대해 colIndex 기준으로 width 반영
         tableChunk.data.forEach(row => {
-            let currentCol = 0;
+            const cell = row[colIndex];
+            if (!cell) return;
 
-            for (let i = 0; i < row.length; i++) {
-                const cell = row[i];
-                if (!cell) continue;
-
-                const span = cell.colspan || 1;
-
-                // 🔥 병합 셀 포함 계산
-                if (currentCol <= colIndex && colIndex < currentCol + span) {
-                    if (!cell.style) cell.style = {};
-                    cell.style.width = width + "px";
-                    break;
-                }
-
-                currentCol += span;
-            }
+            if (!cell.style) cell.style = {};
+            cell.style.width = width + "px";
         });
 
         stateAPI.save(undefined, rootState);

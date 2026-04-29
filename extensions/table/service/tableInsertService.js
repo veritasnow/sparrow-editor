@@ -39,9 +39,9 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
             const { lineIndex, absoluteOffset } = pos;
 
             // 3. 모델 계산 (새로운 라인 데이터 및 TableChunk 생성)
-            // applyTableBlock은 특정 라인을 쪼개서 사이에 테이블을 넣거나, 새 줄을 추가하는 로직을 수행합니다.
+            // buildTableInsertion 특정 라인을 쪼개서 사이에 테이블을 넣거나, 새 줄을 추가하는 로직을 수행합니다.
             const { newState, restoreLineIndex, restoreChunkIndex, restoreOffset, tableChunk } =
-                applyTableBlock(editorState, rows, cols, lineIndex, absoluteOffset);
+                buildTableInsertion(editorState, rows, cols, lineIndex, absoluteOffset);
 
             // 4. 🔥 [핵심] 각 셀을 독립적인 State 컨테이너로 초기화
             // 테이블 렌더러가 작동하기 전에 상태 저장소에 셀 ID들이 먼저 등록되어 있어야 합니다.
@@ -121,7 +121,7 @@ export function createTableInsertService(stateAPI, uiAPI, selectionAPI) {
 }
 
 
-function applyTableBlock(editorState, rows, cols, currentLineIndex, cursorOffset) {
+function buildTableInsertion(editorState, rows, cols, currentLineIndex, cursorOffset) {
     const currentLine = editorState[currentLineIndex];
     if (!currentLine) return { newState: editorState };
 
