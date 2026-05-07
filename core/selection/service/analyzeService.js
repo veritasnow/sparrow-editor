@@ -2,22 +2,18 @@ import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../constants/style
 
 export function createAnalyzeService(stateAPI, selectionAPI) {
   
-  /**
-   * [Main] 분석 로직 최적화
-   * 루프를 최소화하고 "통일성 확인"과 "데이터 수집"을 한 번의 패스로 처리합니다.
-   */
   function analyzeSelection() {
     const activeKeys = selectionAPI.getActiveKeys(); 
     if (!activeKeys?.length) return getEmptyResult();
 
     // 분석을 위한 상태 변수
-    let unifiedText = null;   // 첫 번째 텍스트 스타일 기준
-    let unifiedLine = null;   // 첫 번째 라인 스타일 기준
+    let unifiedText    = null;   // 첫 번째 텍스트 스타일 기준
+    let unifiedLine    = null;   // 첫 번째 라인 스타일 기준
     let textUniformMap = {};  // 각 속성별 통일성 여부
     let lineUniformMap = {};
-    let isFirstText = true;
-    let isFirstLine = true;
-    let hasValidData = false;
+    let isFirstText    = true;
+    let isFirstLine    = true;
+    let hasValidData   = false;
 
     // 1. 활성 컨테이너 순회
     for (const key of activeKeys) {

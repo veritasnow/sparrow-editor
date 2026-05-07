@@ -178,7 +178,7 @@ export function createDragService(defaultRootId) {
             }
         });
         */
-        
+
         const uniqueCells = new Set();
 
         grid.forEach(row => {

@@ -132,119 +132,32 @@ export function createDragService(defaultRootId) {
         });
 
         // 2️⃣ 🔥 병합셀 점유 영역(rect) 기반 좌표 계산 (기존 코드 완전 교체)
-        const startAnchor = _findCellAnchor(grid, start);
-        const endAnchor   = _findCellAnchor(grid, end);
+        const startRect = _findCellRect(grid, start);
+        const endRect   = _findCellRect(grid, end);
 
-        if (!startAnchor || !endAnchor) {
+        if (!startRect || !endRect) {
             return [start];
         }
 
-        const minRow = Math.min(startAnchor.row, endAnchor.row);
-        const maxRow = Math.max(startAnchor.row, endAnchor.row);
+        const minRow = Math.min(startRect.minR, endRect.minR);
+        const maxRow = Math.max(startRect.maxR, endRect.maxR);
+        const minCol = Math.min(startRect.minC, endRect.minC);
+        const maxCol = Math.max(startRect.maxC, endRect.maxC);
 
-        const minCol = Math.min(startAnchor.col, endAnchor.col);
-        const maxCol = Math.max(startAnchor.col, endAnchor.col);
-
-        // 3️⃣ unique 셀 수집
-        /*
-        앵커형식
-        const uniqueCells = new Set();
-
-        grid.forEach(row => {
-            row?.forEach(cell => {
-                if (cell) {
-                    uniqueCells.add(cell);
-                }
-            });
-        });
-
-        // 4️⃣ anchor 가 선택 영역 안에 있는 셀만 선택
+        // 3️⃣ 논리 범위 내 셀 수집 (중복 제거)
         const resultSet = new Set();
 
-        uniqueCells.forEach(cell => {
-
-            const anchor = _findCellAnchor(grid, cell);
-
-            if (!anchor) return;
-
-            const isInside =
-                anchor.row >= minRow &&
-                anchor.row <= maxRow &&
-                anchor.col >= minCol &&
-                anchor.col <= maxCol;
-
-            if (isInside) {
-                resultSet.add(cell);
-            }
-        });
-        */
-        
-        const uniqueCells = new Set();
-
-        grid.forEach(row => {
-
-            row?.forEach(cell => {
-
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                const cell = grid[r]?.[c];
                 if (cell) {
-                    uniqueCells.add(cell);
-                }
-            });
-        });
-
-        const resultSet = new Set();
-
-        uniqueCells.forEach(cell => {
-
-            const cellRect = _findCellRect(
-                grid,
-                cell
-            );
-
-            if (!cellRect) {
-                return;
-            }
-
-            // 🔥 선택 rect 와 셀 rect 가 겹치는가
-            const intersects =
-                cellRect.maxR >= minRow &&
-                cellRect.minR <= maxRow &&
-                cellRect.maxC >= minCol &&
-                cellRect.minC <= maxCol;
-
-            if (intersects) {
-                resultSet.add(cell);
-            }
-        });
-        
-        return Array.from(resultSet);
-    }
-
-    /**
-     * 🔥 병합셀 anchor 위치 찾기
-     * (병합셀의 시작 좌표)
-     */
-    function _findCellAnchor(grid, targetCell) {
-
-        for (let r = 0; r < grid.length; r++) {
-
-            const row = grid[r];
-
-            if (!row) continue;
-
-            for (let c = 0; c < row.length; c++) {
-
-                if (row[c] === targetCell) {
-
-                    return {
-                        row: r,
-                        col: c
-                    };
+                    resultSet.add(cell);
                 }
             }
         }
 
-        return null;
-    }    
+        return Array.from(resultSet);
+    }
 
     /**
      * 🔥 신규: 병합 셀의 실제 점유 사각형 영역 찾기 (핵심 함수)
@@ -270,7 +183,7 @@ export function createDragService(defaultRootId) {
         if (minR === Infinity) return null;
 
         return { minR, maxR, minC, maxC };
-    }    
+    }
 
     /**
      * [유틸] 테이블 직계 셀만 추출
