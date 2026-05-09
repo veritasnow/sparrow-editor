@@ -1,3 +1,5 @@
+import { findParentTdFromTable, findParentTableFromTd } from "../utils/selectionUtils.js";
+
 /**
  * 테이블 및 텍스트 드래그 시 선택 영역과 활성 컨테이너를 계산하는 서비스
  * ✔ rowspan + colspan 혼합 드래그 완전 대응
@@ -51,7 +53,12 @@ export function createDragService(defaultRootId) {
 
         // CASE 0: 동일 테이블 내부 드래그
         if (currentTD && startTable?.contains(currentTD)) {
-            return _getGridCellRange(startTable, startTD, currentTD);
+
+            return _getGridCellRange(
+                startTable,
+                startTD,
+                currentTD
+            );
         }
 
         // CASE 1: 상위 테이블/부모 TD 영역으로 진입 (중첩 테이블 대응)
@@ -73,20 +80,75 @@ export function createDragService(defaultRootId) {
 
     /**
      * [내부] 중첩 테이블 범위 계산
+     * ✔ 자식 → 부모 drag rectangle 확장 지원
+     * ✔ 병합셀 intersects 방식 유지
+     * ✔ 기존 튀는 selection 버그 유지 해결
      */
     function _calculateNestedTableRange(parentTable, startTD, parentTD) {
-        const directCells      = _getDirectCells(parentTable);
-        const effectiveStartTD = _findDirectAncestorInList(startTD, parentTable, directCells);
 
-        const startIdx = directCells.indexOf(effectiveStartTD);
-        const endIdx   = directCells.indexOf(parentTD);
+        // 현재 드래그 시작 셀이 속한 자식 테이블
+        const childTable = startTD.closest('.se-table');
 
-        if (startIdx !== -1 && endIdx !== -1) {
-            const [min, max] = [startIdx, endIdx].sort((a, b) => a - b);
-            return directCells.slice(min, max + 1);
+        // 방어
+        if (!childTable) {
+            return [parentTD];
         }
 
-        return [startTD];
+        // 자식 테이블 전체 셀 유지
+        const childCells = _getDirectCells(childTable);
+
+        // =========================================
+        // 🔥 핵심
+        // 자식 테이블을 감싸고 있는
+        // 부모 table-cell 찾기
+        // =========================================
+
+        // const childRootTD = childTable.closest('.se-table-cell');
+        let childRootTD = findParentTdFromTable(childTable);
+
+        // 🔥 parentTable 기준 direct td 까지 상승
+        while (
+            childRootTD &&
+            childRootTD.closest('.se-table') !== parentTable
+        ) {
+            const upperTable = childRootTD.closest('.se-table');
+
+            if (!upperTable) {
+                break;
+            }
+
+            childRootTD = findParentTdFromTable(upperTable);
+        }
+
+        // 부모 셀 못찾으면 fallback
+        if (!childRootTD) {
+
+            return [
+                ...childCells,
+                parentTD
+            ];
+        }
+
+        // =========================================
+        // 🔥 부모 table 기준 rectangle selection
+        // =========================================
+
+        const parentRange = _getGridCellRange(
+            parentTable,
+            childRootTD,
+            parentTD
+        );
+
+        // =========================================
+        // 🔥 자식 셀 + 부모 rectangle 병합
+        // =========================================
+
+        return Array.from(
+            new Set([
+                ...childCells,
+                ...parentRange
+            ])
+        );
     }
 
     /**
@@ -216,7 +278,9 @@ export function createDragService(defaultRootId) {
             }
         });
         
-        return Array.from(resultSet);
+        const result = Array.from(resultSet);
+
+        return result;
     }
 
     /**

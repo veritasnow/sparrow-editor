@@ -54,19 +54,29 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
 
     editorEl.addEventListener('mousemove', (e) => {
         if (!isDragging || !startTD) return;
-        // 1. 드래그 로직 계산 위임
-        const { selectedCells, activeId } = dragService.mouseDragCalculate(e, startTD);
 
-        // 2. 실시간 브라우저 Selection 데이터 획득 (UI API 사용)
+        // 1. 드래그 계산
+        const { selectedCells, activeId } =
+            dragService.mouseDragCalculate(e, startTD);
+
+        // 2. selection normalize
         const domRanges  = selectionAPI.getDomSelection(activeId);
         const normalized = normalizeCursorData(domRanges, activeId);
 
-        if(activeId !== selectionAPI.getMainKey()) {
-            document.getElementById(activeId).classList.add('is-dragging');
+        if (activeId !== selectionAPI.getMainKey()) {
+            document
+                .getElementById(activeId)
+                ?.classList.add('is-dragging');
         }
 
-        // 3. 시각화 호출 (Range 서비스 사용)
-        rangeService.applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, editorEl.id);
+        // 🔥 startTD 추가 전달
+        rangeService.applyVisualAndRangeSelection(
+            selectedCells,
+            normalized,
+            stateAPI,
+            editorEl.id,
+            startTD
+        );
     });
 
     window.addEventListener('mouseup', (e) => {

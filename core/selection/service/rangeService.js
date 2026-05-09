@@ -1,8 +1,22 @@
+import { findParentTdFromTable, findParentTableFromTd } from "../utils/selectionUtils.js";
 /**
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
 export function createRangeService() {
-    function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId) {
+    function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId, startTD) {
+
+        console.log('========== RANGE START ==========');
+
+        console.log(
+            'INPUT selectedCells :',
+            selectedCells.map(td => td?.id)
+        );
+
+        console.log(
+            'normalized :',
+            normalized
+        );
+        
         if (!selectedCells || selectedCells.length === 0) return;
 
         let newSelectedCells = [];
@@ -18,6 +32,10 @@ export function createRangeService() {
             // 2. 재귀 호출 (stateAPI를 함께 넘겨서 내부 셀들도 조회하며 수집)
             const finalSelectedIds = new Set();
             collectAllCellIdsFromState(targetLines, finalSelectedIds, stateAPI);
+            console.log(
+                'finalSelectedIds :',
+                [...finalSelectedIds]
+            );
             newSelectedCells = mapIdsToCells(finalSelectedIds, selectedCells, rootContainer);
  
         } else {
@@ -29,20 +47,88 @@ export function createRangeService() {
                 const allCollectedIds = new Set();
                 // 2. 한 번의 루프로 본인 ID + 자식 ID 수집
                 selectedCells.forEach(cell => {
-                    // 본인 ID 추가
+
+                    if (!cell?.id) {
+                        return;
+                    }
+
+                    // 자기 자신
                     allCollectedIds.add(cell.id);
-                    // 자식들 탐색 (조회만 수행)
-                    const innerLines = stateAPI.get(cell.id);
-                    if (innerLines && innerLines.length > 0) {
-                        collectAllCellIdsFromState(innerLines, allCollectedIds, stateAPI);
+
+                    // =====================================
+                    // 🔥 부모 td chain 전체 수집
+                    // =====================================
+
+                    let currentTable = cell.closest('.se-table');
+
+                    while (currentTable) {
+
+                        console.log('CURRENT TABLE :', currentTable.id);
+
+                        // const parentTd = currentTable.parentElement?.closest('.se-table-cell');
+                        const parentTd = findParentTdFromTable(currentTable);
+
+                        console.log(
+                            'PARENT TD :',
+                            parentTd?.id
+                        );
+
+                        if (!parentTd?.id) {
+                            break;
+                        }
+
+                        allCollectedIds.add(parentTd.id);
+
+                        currentTable =
+                            parentTd.parentElement?.closest('.se-table');
+
+                        console.log(
+                            'NEXT TABLE :',
+                            currentTable?.id
+                        );
                     }
                 });
+                // =========================================
+                // 🔥 핵심 수정 부분
+                // 기존:
+                // startTD 하나만 재귀 탐색
+                //
+                // 변경:
+                // 선택된 모든 셀 재귀 탐색
+                // =========================================
+
+                selectedCells.forEach(cell => {
+
+                    const innerLines = stateAPI.get(cell.id);
+
+                    if (
+                        innerLines &&
+                        Array.isArray(innerLines) &&
+                        innerLines.length > 0
+                    ) {
+
+                        collectAllCellIdsFromState(
+                            innerLines,
+                            allCollectedIds,
+                            stateAPI
+                        );
+                    }
+                });
+                console.log(
+                    'allCollectedIds :',
+                    [...allCollectedIds]
+                );                
                 // 3. 수집된 ID들을 바탕으로 새로운 배열 생성
                 newSelectedCells = mapIdsToCells(allCollectedIds, selectedCells, rootContainer);
             } else {
                 newSelectedCells = [...selectedCells];
             }
         }
+
+        console.log(
+            'BEFORE MULTI CHECK :',
+            newSelectedCells.map(td => td.id)
+        );        
 
         // 셀판정
         const isMultiSelection = checkIsMultiSelection(newSelectedCells);
@@ -73,32 +159,40 @@ export function createRangeService() {
     }    
 
     // ID 셋을 받아 실제 TD 엘리먼트 배열로 변환
-    function mapIdsToCells(idSet, selectedCells, rootContainer) {
+    function mapIdsToCells(idSet, selectedCells) {
+
         const result = [];
 
         idSet.forEach(id => {
-            if (!id) return;
 
-            // 1️⃣ 이미 선택된 셀 우선 (가장 안전)
-            const existing = selectedCells.find(cell => cell && cell.id === id);
+            if (!id) {
+                return;
+            }
+
+            // 이미 있는 셀 우선
+            const existing = selectedCells.find(
+                cell => cell?.id === id
+            );
+
             if (existing) {
                 result.push(existing);
                 return;
             }
 
-            // 2️⃣ DOM에서 탐색 (병합으로 없을 수도 있음)
-            const targetTd = rootContainer.querySelector(`#${id}`);
+            // 🔥 rootContainer 사용 금지
+            const targetTd = document.getElementById(id);
+
             if (targetTd) {
                 result.push(targetTd);
             }
-            // 🔥 없으면 그냥 스킵 (병합된 유령 셀)
         });
 
         return result;
-    }    
+    }
 
     // 멀티 선택 여부 판정
     function checkIsMultiSelection(cells) {
+        
         if (!cells || cells.length <= 1) return false;
 
         const safeCells = cells.filter(td => td && td.id);
@@ -115,6 +209,13 @@ export function createRangeService() {
         const hasMoreCellsInSameTable = safeCells.some((td, idx) => 
             idx !== 0 && td.id.split('-')[1] === firstTableId
         );
+
+        console.log({
+            firstTableId,
+            midNames: [...midNames],
+            hasDifferentTable,
+            hasMoreCellsInSameTable
+        });        
 
         return hasDifferentTable || hasMoreCellsInSameTable;
     }
@@ -139,28 +240,70 @@ export function createRangeService() {
 
     // 복수 셀 선택 시 시각적 처리 (기존 로직 그대로)
     function applyMultiSelectionVisuals(newSelectedCells) {
-        const targetTables = new Set();
+
+        const targetTables = new Map();
+
         newSelectedCells.forEach(td => {
-            const table = td.closest('.se-table');
-            if (table) targetTables.add(table);
+
+            if (!td) {
+                return;
+            }
+
+            let currentTd = td;
+            let currentTable =
+                currentTd.closest('.se-table');
+
+            while (currentTable) {
+
+                console.log(
+                    'VISUAL TABLE :',
+                    currentTable.id
+                );
+
+                if (!targetTables.has(currentTable)) {
+                    targetTables.set(currentTable, []);
+                }
+
+                targetTables.get(currentTable).push(currentTd);
+
+                // const parentTd = currentTable.parentElement?.closest('.se-table-cell');
+                const parentTd = findParentTdFromTable(currentTable);
+
+                console.log(
+                    'VISUAL PARENT TD :',
+                    parentTd?.id
+                );
+
+                if (!parentTd) {
+                    break;
+                }
+
+                currentTd = parentTd;
+
+                currentTable = parentTd.parentElement?.closest('.se-table');
+            }
         });
 
-        targetTables.forEach(table => {
-            const allCellsInTable = table.querySelectorAll('.se-table-cell');
-            allCellsInTable.forEach(td => {
-                if (td.closest('.se-table') !== table) return; // 중첩 테이블 방어
+        targetTables.forEach((selectedInTable, table) => {
 
-                const isTarget = newSelectedCells.some(selected => selected.id === td.id);
-                if (isTarget) {
-                    td.classList.add('is-selected');
-                    td.classList.remove('is-not-selected');
-                } else {
-                    td.classList.remove('is-selected');
-                    td.classList.add('is-not-selected');
-                }
+            const allCellsInTable = Array.from(
+                table.querySelectorAll(
+                    ':scope > tbody > tr > .se-table-cell, \
+                    :scope > tr > .se-table-cell'
+                )
+            );
+
+            allCellsInTable.forEach(td => {
+
+                const isTarget = selectedInTable.some(
+                    selected => selected?.id === td.id
+                );
+
+                td.classList.toggle('is-selected', isTarget);
+                td.classList.toggle('is-not-selected', !isTarget);
             });
         });
-    }    
+    }
     function collectAllCellIdsFromState(lines, idSet, stateAPI) {
         if (!lines || !Array.isArray(lines)) return;
 
