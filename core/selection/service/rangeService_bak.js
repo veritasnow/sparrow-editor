@@ -6,48 +6,71 @@ export function createRangeService() {
         if (!selectedCells || selectedCells.length === 0) return;
 
         let newSelectedCells = [];
-        const rootContainer = document.getElementById(normalized.containerId);
+        const rootContainer  = document.getElementById(normalized.containerId);
         if (!rootContainer) return;
 
-        // 🚩 [수정] 다시 자식 ID들을 수집합니다. (자식들도 파란색은 되어야 하니까요)
-        const allCollectedIds = new Set();
-        
-        // 드래그 중인 메인 셀들과 그 안의 모든 자식 ID 수집
-        selectedCells.forEach(cell => {
-            allCollectedIds.add(cell.id);
-            const innerLines = stateAPI.get(cell.id);
-            if (innerLines && innerLines.length > 0) {
-                collectAllCellIdsFromState(innerLines, allCollectedIds, stateAPI);
+        // [1] 데이터 수집 (여러 라인 선택 시)
+        if (normalized.ranges && normalized.ranges.length > 1) {
+            const startLine   = normalized.ranges[0].lineIndex;
+            const endLine     = normalized.ranges[normalized.ranges.length - 1].lineIndex;
+            const targetLines = stateAPI.getLineRange(startLine, endLine, normalized.containerId);
+            
+            // 2. 재귀 호출 (stateAPI를 함께 넘겨서 내부 셀들도 조회하며 수집)
+            const finalSelectedIds = new Set();
+            collectAllCellIdsFromState(targetLines, finalSelectedIds, stateAPI);
+            newSelectedCells = mapIdsToCells(finalSelectedIds, selectedCells, rootContainer);
+ 
+        } else {
+            //newSelectedCells = [...selectedCells];
+            const startLine = normalized.ranges[0].lineIndex;
+            const lineData  = stateAPI.getLineRange(startLine, startLine, normalized.containerId);
+            if(lineData[0].chunks[0].type === 'table') {
+                // 1. 새로운 집합 생성 (원본 유지)
+                const allCollectedIds = new Set();
+                // 2. 한 번의 루프로 본인 ID + 자식 ID 수집
+                selectedCells.forEach(cell => {
+                    // 본인 ID 추가
+                    allCollectedIds.add(cell.id);
+                    // 자식들 탐색 (조회만 수행)
+                    const innerLines = stateAPI.get(cell.id);
+                    if (innerLines && innerLines.length > 0) {
+                        collectAllCellIdsFromState(innerLines, allCollectedIds, stateAPI);
+                    }
+                });
+                // 3. 수집된 ID들을 바탕으로 새로운 배열 생성
+                newSelectedCells = mapIdsToCells(allCollectedIds, selectedCells, rootContainer);
+            } else {
+                newSelectedCells = [...selectedCells];
             }
-        });
-        
-        newSelectedCells = mapIdsToCells(allCollectedIds, selectedCells, rootContainer);
+        }
 
-        // 🚩 [핵심] 멀티 선택 판정은 '수집된 전체'가 아니라 '원래 선택된(부모 레벨)' 셀들로만 합니다.
-        // 그래야 자식들이 수집되었다고 해서 부모 테이블 전체가 어두워지지 않습니다.
-        const isMultiSelection = checkIsMultiSelection(selectedCells); 
+        // 셀판정
+        const isMultiSelection = checkIsMultiSelection(newSelectedCells);
 
         newSelectedCells.forEach((td, idx) => {
+            // 여러 개가 잡혔다면 무조건 'use-visual', 딱 하나면 'skip-visual'
             td.selectionStatus = (idx === 0 && !isMultiSelection) ? 'skip-visual' : 'use-visual';
         });
 
         if(newSelectedCells.length > 0) {
             const isSkipVisual = newSelectedCells[0].selectionStatus === "skip-visual";
+
+            // [3] 전체 초기화 (Global Cleanup)
             const mainRootContainer = document.getElementById(rootId);
-            
             mainRootContainer?.querySelectorAll('.se-table-cell').forEach(td => {
                 td.classList.remove('is-selected', 'is-not-selected');
             });
 
             if (isSkipVisual) {
+                // 단일 셀 모드
                 applySingleSelectionVisuals(normalized.ranges, rootContainer);
             } else {
-                // 🚩 전체 수집된 셀(자식 포함)을 넘기되,
-                // 로직 내부에서 '누가 어두워질지' 똑똑하게 판단하게 합니다.
-                applyMultiSelectionVisuals(newSelectedCells, selectedCells);
+                // 선택된 모든 테이블 루프
+                // newSelectedCells가 속한 모든 테이블을 찾음
+                applyMultiSelectionVisuals(newSelectedCells);
             }
         }
-    }
+    }    
 
     // ID 셋을 받아 실제 TD 엘리먼트 배열로 변환
     function mapIdsToCells(idSet, selectedCells, rootContainer) {
@@ -78,22 +101,22 @@ export function createRangeService() {
     function checkIsMultiSelection(cells) {
         if (!cells || cells.length <= 1) return false;
 
-        const tableCounts = {};
-        cells.forEach(td => {
-            const table = td.closest('.se-table');
-            if (table) {
-                const tid = table.id;
-                tableCounts[tid] = (tableCounts[tid] || 0) + 1;
-            }
-        });
+        const safeCells = cells.filter(td => td && td.id);
+        if (safeCells.length <= 1) return false;
 
-        // 🔍 [로그 추가]
-        console.log("🔍 [MultiCheck] Table Counts Map:", tableCounts);
-        
-        const result = Object.values(tableCounts).some(count => count > 1);
-        console.log("🔍 [MultiCheck] Result:", result);
-        
-        return result;
+        const firstCellId = safeCells[0].id;
+        const firstTableId = firstCellId.split('-')[1];
+
+        const midNames = new Set(
+            safeCells.map(td => td.id.split('-')[1])
+        );
+
+        const hasDifferentTable = midNames.size > 1;
+        const hasMoreCellsInSameTable = safeCells.some((td, idx) => 
+            idx !== 0 && td.id.split('-')[1] === firstTableId
+        );
+
+        return hasDifferentTable || hasMoreCellsInSameTable;
     }
 
     // 단일 셀 선택 시 시각적 처리 (기존 로직 그대로)
@@ -115,36 +138,29 @@ export function createRangeService() {
     }
 
     // 복수 셀 선택 시 시각적 처리 (기존 로직 그대로)
-    function applyMultiSelectionVisuals(allCollectedCells, originalSelectedCells) {
-        // 1. 모든 셀에서 클래스 초기화 (이미 상위에서 수행됨)
-        
-        // 2. originalSelectedCells(부모 레벨)에 포함된 셀들은 무조건 is-selected
-        originalSelectedCells.forEach(td => {
-            td.classList.add('is-selected');
-            // 부모 셀 내부의 모든 하위 셀들도 시각적으로 선택 표시
-            td.querySelectorAll('.se-table-cell').forEach(child => {
-                child.classList.add('is-selected');
-                child.classList.remove('is-not-selected');
-            });
+    function applyMultiSelectionVisuals(newSelectedCells) {
+        const targetTables = new Set();
+        newSelectedCells.forEach(td => {
+            const table = td.closest('.se-table');
+            if (table) targetTables.add(table);
         });
 
-        // 3. 같은 테이블 내의 선택되지 않은 형제 셀들은 is-not-selected 처리
-        const tablesToProcess = new Set();
-        originalSelectedCells.forEach(td => {
-            const t = td.closest('.se-table');
-            if (t) tablesToProcess.add(t);
-        });
+        targetTables.forEach(table => {
+            const allCellsInTable = table.querySelectorAll('.se-table-cell');
+            allCellsInTable.forEach(td => {
+                if (td.closest('.se-table') !== table) return; // 중첩 테이블 방어
 
-        tablesToProcess.forEach(table => {
-            const directCells = Array.from(table.querySelectorAll(':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell'));
-            directCells.forEach(td => {
-                const isDirectlySelected = originalSelectedCells.some(sel => sel.id === td.id);
-                if (!isDirectlySelected) {
+                const isTarget = newSelectedCells.some(selected => selected.id === td.id);
+                if (isTarget) {
+                    td.classList.add('is-selected');
+                    td.classList.remove('is-not-selected');
+                } else {
+                    td.classList.remove('is-selected');
                     td.classList.add('is-not-selected');
                 }
             });
         });
-    }
+    }    
     function collectAllCellIdsFromState(lines, idSet, stateAPI) {
         if (!lines || !Array.isArray(lines)) return;
 
