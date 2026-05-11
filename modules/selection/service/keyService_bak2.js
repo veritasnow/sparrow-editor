@@ -7,52 +7,67 @@ export function createKeyService(root) {
      * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
      */ 
     function syncActiveKeys(lastActiveKey) {
+
         const sel = window.getSelection();
-        
-        // 기본 방어 로직
+        console.log("syncActiveKeys called, selection: ", sel);
+        console.log("syncActiveKeys called, lastActiveKey: ", lastActiveKey);
+
         if (!sel || sel.rangeCount === 0) {
             return [lastActiveKey].filter(Boolean);
         }
 
         const ids = new Set();
 
-        // 1. 실제 선택된 셀 수집 (UI 기반)
-        const selectedCells = document.querySelectorAll('.se-table-cell.is-selected');
-        selectedCells.forEach(el => {
-            // 🔥 필터링 추가: is-not-selected 클래스가 있으면 스킵
-            if (el.classList.contains('is-not-selected')) return;
+        // 1. 실제 선택된 셀
+        const selectedCells = document.querySelectorAll(
+            '.se-table-cell.is-selected'
+        );
 
+        selectedCells.forEach(el => {
             const id = el.getAttribute('data-container-id');
             if (id) ids.add(id);
         });
 
         // 2. anchor/focus 기준 컨테이너 추적
-        [sel.anchorNode, sel.focusNode].forEach(node => {
+        [
+            sel.anchorNode,
+            sel.focusNode
+        ].forEach(node => {
+
             if (!node) return;
 
-            const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+            const el =
+                node.nodeType === Node.TEXT_NODE
+                    ? node.parentElement
+                    : node;
+
             if (!el) return;
 
-            // 🔥 개선: closest 탐색 시 'is-not-selected'가 붙은 요소는 무시하도록 selector 수정
-            const container = el.closest('[data-container-id]:not(.is-not-selected)');
+            const container = el.closest('[data-container-id]');
 
             if (!container) return;
 
             const isTableCell = container.classList.contains('se-table-cell');
+
             if (isTableCell) {
+
                 const selectedCount = document.querySelectorAll('.se-table-cell.is-selected').length;
-                // 멀티 셀 드래그 선택이면 텍스트 커서 기준 로직은 무시
-                if (selectedCount > 1) return;
+
+                // 멀티 셀 드래그 선택이면 무시
+                if (selectedCount > 1) {
+                    return;
+                }
             }
 
             const id = container.getAttribute('data-container-id');
+
             if (id) ids.add(id);
         });
 
         const result = Array.from(ids);
 
         if (result.length > 0) {
-            // 마지막으로 추가된 키를 활성 키로 유지
+            lastActiveKey = result[result.length - 1];
             return result;
         }
 
