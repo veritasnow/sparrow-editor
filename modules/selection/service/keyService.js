@@ -8,55 +8,43 @@ export function createKeyService(root) {
      */ 
     function syncActiveKeys(lastActiveKey) {
         const sel = window.getSelection();
-        
-        // 기본 방어 로직
-        if (!sel || sel.rangeCount === 0) {
-            return [lastActiveKey].filter(Boolean);
-        }
+        if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
 
         const ids = new Set();
 
-        // 1. 실제 선택된 셀 수집 (UI 기반)
-        const selectedCells = document.querySelectorAll('.se-table-cell.is-selected');
+        // 1. UI 기반 선택된 셀 수집 (순수하게 선택된 하위 셀들)
+        const selectedCells = document.querySelectorAll('.se-table-cell.is-selected:not(.is-not-selected)');
         selectedCells.forEach(el => {
-            // 🔥 필터링 추가: is-not-selected 클래스가 있으면 스킵
-            if (el.classList.contains('is-not-selected')) return;
-
             const id = el.getAttribute('data-container-id');
             if (id) ids.add(id);
         });
 
-        // 2. anchor/focus 기준 컨테이너 추적
-        [sel.anchorNode, sel.focusNode].forEach(node => {
-            if (!node) return;
+        // 2. 브라우저 Selection 범위 기준 상위 컨테이너 추적
+        for (let i = 0; i < sel.rangeCount; i++) {
+            const range = sel.getRangeAt(i);
+            let ancestor = range.commonAncestorContainer;
+            if (ancestor.nodeType === Node.TEXT_NODE) ancestor = ancestor.parentElement;
 
-            const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-            if (!el) return;
-
-            // 🔥 개선: closest 탐색 시 'is-not-selected'가 붙은 요소는 무시하도록 selector 수정
-            const container = el.closest('[data-container-id]:not(.is-not-selected)');
-
-            if (!container) return;
-
-            const isTableCell = container.classList.contains('se-table-cell');
-            if (isTableCell) {
-                const selectedCount = document.querySelectorAll('.se-table-cell.is-selected').length;
-                // 멀티 셀 드래그 선택이면 텍스트 커서 기준 로직은 무시
-                if (selectedCount > 1) return;
+            // 🔥 핵심 수정: 현재 선택 영역을 감싸고 있는 가장 가까운 컨테이너를 찾음
+            // 'is-not-selected'가 아닌 모든 컨테이너를 찾습니다.
+            const mainContainer = ancestor.closest('[data-container-id]:not(.is-not-selected)');
+            
+            if (mainContainer) {
+                const id = mainContainer.getAttribute('data-container-id');
+                if (id) ids.add(id);
             }
+        }
 
-            const id = container.getAttribute('data-container-id');
+        // 3. 드래그 중인 부모 셀 강제 포함 (is-dragging)
+        // 질문하신 상황처럼 부모 셀 내부에서 드래그가 일어날 때 부모 ID가 누락되는 것을 방지
+        const draggingContainers = document.querySelectorAll('.se-table-cell.is-dragging, .sparrow-contents.is-dragging');
+        draggingContainers.forEach(el => {
+            const id = el.getAttribute('data-container-id');
             if (id) ids.add(id);
         });
 
         const result = Array.from(ids);
-
-        if (result.length > 0) {
-            // 마지막으로 추가된 키를 활성 키로 유지
-            return result;
-        }
-
-        return [lastActiveKey].filter(Boolean);
+        return result.length > 0 ? result : [lastActiveKey].filter(Boolean);
     }
 
     function findParentContainerId(containerId) {
