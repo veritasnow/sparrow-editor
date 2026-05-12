@@ -137,44 +137,6 @@ export function createDragService(defaultRootId) {
         return Array.from(new Set(resultCells));
     }
 
-    function _getCrossTableCells(startTable, endTable) {
-        const root = startTable.closest('.sparrow-contents') || document.body;
-        const allElements = Array.from(root.querySelectorAll('*'));
-        
-        let startIndex = allElements.indexOf(startTable);
-        let endIndex = allElements.indexOf(endTable);
-
-        // 드래그 방향에 따라 인덱스 정렬
-        const [minIdx, maxIdx] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
-        
-        const resultCells = [];
-        const elementsInRange = allElements.slice(minIdx, maxIdx + 1);
-
-        elementsInRange.forEach(el => {
-            // 해당 범위 안에 있는 모든 테이블을 찾아 그 안의 직계 셀들을 추가
-            if (el.classList.contains('se-table')) {
-                const cells = el.querySelectorAll(':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell');
-                resultCells.push(...Array.from(cells));
-            }
-        });
-
-        return resultCells;
-    }
-
-    /**
-     * 두 요소의 공통 조상 중 가장 가까운 .se-table을 찾음
-     */
-    function _findCommonTable(node1, node2) {
-        if (!node1 || !node2) return null;
-        let p = node1.parentElement;
-        while (p) {
-            const table = p.closest('.se-table');
-            if (table && table.contains(node2)) return table;
-            p = table ? table.parentElement : null;
-        }
-        return null;
-    }
-
     /**
      * [추가 유틸] 특정 테이블의 직계 TD를 찾을 때까지 거슬러 올라감
      */
@@ -187,78 +149,6 @@ export function createDragService(defaultRootId) {
             current = current.parentElement;
         }
         return node;
-    }
-    /**
-     * [내부] 중첩 테이블 범위 계산
-     * ✔ 자식 → 부모 drag rectangle 확장 지원
-     * ✔ 병합셀 intersects 방식 유지
-     * ✔ 기존 튀는 selection 버그 유지 해결
-     */
-    function _calculateNestedTableRange(parentTable, startTD, parentTD) {
-
-        // 현재 드래그 시작 셀이 속한 자식 테이블
-        const childTable = startTD.closest('.se-table');
-
-        // 방어
-        if (!childTable) {
-            return [parentTD];
-        }
-
-        // 자식 테이블 전체 셀 유지
-        const childCells = _getDirectCells(childTable);
-
-        // =========================================
-        // 🔥 핵심
-        // 자식 테이블을 감싸고 있는
-        // 부모 table-cell 찾기
-        // =========================================
-
-        // const childRootTD = childTable.closest('.se-table-cell');
-        let childRootTD = findParentTdFromTable(childTable);
-
-        // 🔥 parentTable 기준 direct td 까지 상승
-        while (
-            childRootTD &&
-            childRootTD.closest('.se-table') !== parentTable
-        ) {
-            const upperTable = childRootTD.closest('.se-table');
-
-            if (!upperTable) {
-                break;
-            }
-
-            childRootTD = findParentTdFromTable(upperTable);
-        }
-
-        // 부모 셀 못찾으면 fallback
-        if (!childRootTD) {
-
-            return [
-                ...childCells,
-                parentTD
-            ];
-        }
-
-        // =========================================
-        // 🔥 부모 table 기준 rectangle selection
-        // =========================================
-
-        const parentRange = _getGridCellRange(
-            parentTable,
-            childRootTD,
-            parentTD
-        );
-
-        // =========================================
-        // 🔥 자식 셀 + 부모 rectangle 병합
-        // =========================================
-
-        return Array.from(
-            new Set([
-                ...childCells,
-                ...parentRange
-            ])
-        );
     }
 
     /**
@@ -455,18 +345,6 @@ export function createDragService(defaultRootId) {
                 ':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell, :scope > tr > td.se-table-cell'
             )
         );
-    }
-
-    /**
-     * [유틸] 상위 조상 중 directCells에 포함된 TD 찾기
-     */
-    function _findDirectAncestorInList(node, stopAt, list) {
-        let current = node;
-        while (current && current !== stopAt) {
-            if (list.includes(current)) return current;
-            current = current.parentElement;
-        }
-        return null;
     }
 
     return { mouseDragCalculate };

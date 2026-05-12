@@ -86,12 +86,8 @@ export function createRangeService() {
                 tableCounts[tid] = (tableCounts[tid] || 0) + 1;
             }
         });
-
-        // 🔍 [로그 추가]
-        console.log("🔍 [MultiCheck] Table Counts Map:", tableCounts);
         
         const result = Object.values(tableCounts).some(count => count > 1);
-        console.log("🔍 [MultiCheck] Result:", result);
         
         return result;
     }
