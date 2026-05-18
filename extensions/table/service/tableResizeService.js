@@ -189,7 +189,7 @@ export function createTableResizeService({ stateAPI }) {
             }
         });
 
-        stateAPI.save(undefined, rootState);
+        stateAPI.save(tableId, rootState);
     }
 
     return {

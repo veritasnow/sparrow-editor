@@ -1,21 +1,16 @@
 export function createRenderService({ rootId, rendererRegistry }) { 
 
-    // 1. 라인 데이터에 따른 태그 결정 (테이블 포함 시 DIV, 아니면 P)
     const getTagNameForLine = (lineData, targetKey) => {
         if (!lineData || !lineData.chunks) return "P";
-        
         if (targetKey && (targetKey.startsWith('list-') || targetKey.includes('list'))) {
             return "LI";
         }
-        
         const firstChunk = lineData.chunks[0];
-        if (firstChunk.type === 'unorderedList') return "UL"; // 리스트면 UL 반환
+        if (firstChunk.type === 'unorderedList') return "UL"; 
         if (lineData.chunks.some(c => c.type === 'table')) return "DIV";
-        
         return "P";
     };
 
-    // 2. 공통 라인 엘리먼트 생성
     const createLineElement = (lineData, lineIndex = null) => {
         const tagName = getTagNameForLine(lineData);
         const el = document.createElement(tagName);
@@ -28,14 +23,10 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
     const getTargetElement = (targetKey) => document.getElementById(targetKey || rootId);
 
-    /**
-     * 3. State와 DOM 개수 동기화
-     */
     function syncParagraphCount(state, targetKey) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        // 🔥 container.children는 직계 자식만 반환하므로 안전함
         const currentLines = container.children; 
         const stateLen = state.length;
         const domLen = currentLines.length;
@@ -60,11 +51,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
         const container = getTargetElement(targetKey);
         if (!container) return;
 
-        // 🔥 [중요] :scope > 를 사용하여 현재 컨테이너의 직계 자식인 라인만 찾음
         let lineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
         
         if (!lineEl) {
-            // 인덱스 속성이 없는 초기 엘리먼트가 있는지 확인
             lineEl = Array.from(container.children).find(el => !el.hasAttribute('data-line-index'));
         }        
         
@@ -81,13 +70,11 @@ export function createRenderService({ rootId, rendererRegistry }) {
 
         lineEl.dataset.lineIndex = lineIndex;
 
-        // 테이블 재사용 풀 확보
         const tablePool = externalPool || Array.from(lineEl.getElementsByClassName('chunk-table'));
         
         lineEl.style.textAlign = lineData.align || "left";
 
         if (requiredTag === "UL") {
-            // 리스트면 내부를 싹 비우고 그리는 renderListIntoElement를 실행
             const listChunk = lineData.chunks[0];
             const renderer  = rendererRegistry['unorderedList'];
             if (!renderer) return;
@@ -100,71 +87,49 @@ export function createRenderService({ rootId, rendererRegistry }) {
                 br.dataset.marker = "empty";
                 lineEl.appendChild(br);
             } else {
-
                 if (options.tableStrategy === 'force') {
-                    // ⭐ 테이블 구조 변경 전용 렌더
-                    renderLineChunksWithTableForce(
-                        lineData, 
-                        lineIndex, 
-                        lineEl, 
-                        tablePool
-                    );
+                    renderLineChunksWithTableForce(lineData, lineIndex, lineEl, tablePool);
                 } else {
-                    // ⭐ 기존 안정 로직 (절대 유지)
-                    renderLineChunksWithReuse(
-                        lineData, 
-                        lineIndex, 
-                        lineEl, 
-                        tablePool
-                    );
+                    renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
                 }
             }
-            /*
-            if (!lineData.chunks || lineData.chunks.length === 0) {
-                const br = document.createElement("br");
-                br.dataset.marker = "empty";
-                lineEl.appendChild(br);
-            } else {        
-                this.renderLineChunksWithReuse(lineData, lineIndex, lineEl, tablePool);
+
+            // 🎯 [수정된 핵심 1] 
+            // 현재 렌더링을 수행한 타겟 컨테이너 자체가 테이블 셀(td)이거나, 
+            // 혹은 상위 부모 중에 테이블 셀이 있다면 해당 셀의 리사이저를 찾아 무조건 '맨 마지막 자식'으로 다시 재배치합니다.
+            if (targetKey) {
+                const cellEl = document.getElementById(targetKey);
+                if (cellEl && cellEl.classList.contains('se-table-cell')) {
+                    const resizer = cellEl.querySelector(':scope > .table-resizer');
+                    if (resizer) {
+                        cellEl.appendChild(resizer); // 자식 리스트의 최하단 트레일러로 강제 이동
+                    }
+                }
             }
-            */
 
             if (!skipSync) {
                 syncLineIndexes(container);
             }
-
-
         }
-
     }
 
-    /**
-     * 5. 청크 렌더링 및 테이블 재사용
-     */
     function renderLineChunksWithTableForce(line, lineIndex, parentEl, tablePool) {
         line.chunks.forEach((chunk, chunkIndex) => {
-
             let el = null;
-
-            // 🔥 핵심: 테이블은 절대 재사용 금지 (구조 싱크 보장)
             if (chunk.type !== 'table') {
                 if (tablePool && tablePool.length > 0) {
                     el = tablePool.shift();
                 }
             }
-
-            // 새로 렌더
             if (!el) {
                 const renderer = rendererRegistry[chunk.type];
                 if (!renderer) return;
                 el = renderer.render(chunk, lineIndex, chunkIndex);
             }
-
             el.dataset.lineIndex  = lineIndex;
             el.dataset.chunkIndex = chunkIndex;
             el.dataset.index      = chunkIndex;
             el.classList.add(`chunk-${chunk.type}`);
-
             parentEl.appendChild(el);
         });
     }
@@ -175,13 +140,11 @@ export function createRenderService({ rootId, rendererRegistry }) {
             if (chunk.type === 'table') {
                 el = (tablePool && tablePool.length > 0) ? tablePool.shift() : null;
             }
-
             if (!el) {
                 const renderer = rendererRegistry[chunk.type];
                 if (!renderer) return;
                 el = renderer.render(chunk, lineIndex, chunkIndex);
             }
-
             el.dataset.lineIndex = lineIndex;
             el.dataset.chunkIndex = chunkIndex;
             el.dataset.index = chunkIndex; 
@@ -190,14 +153,9 @@ export function createRenderService({ rootId, rendererRegistry }) {
         });
     }
 
-    /**
-     * 6. 단순 텍스트 업데이트
-     */
     function renderChunk(lineIndex, chunkIndex, chunkData, targetKey) {
         const container = getTargetElement(targetKey);
-        // 🔥 [중요] :scope > 적용
         const lineEl = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
-
         if (!lineEl) return;
 
         const chunkEl = Array.from(lineEl.children).find(el => el.dataset.chunkIndex == chunkIndex);
@@ -213,26 +171,37 @@ export function createRenderService({ rootId, rendererRegistry }) {
     }
 
     /**
-     * 7. 인덱스 동기화
+     * 7. 인덱스 동기화 및 최종 레이어 샌드위치 방지 정렬
      */
     function syncLineIndexes(container) {
         if (!container) return;
 
-        //const directLines = container.querySelectorAll(':scope > [data-line-index]');
         const directLines = container.querySelectorAll(':scope > .text-block');
         
         directLines.forEach((line, idx) => {
             const newIdx = idx.toString();
-            line.dataset.lineIndex = newIdx; // 여기서 새 라인에도 인덱스가 생김!
+            line.dataset.lineIndex = newIdx;
 
             if (line.tagName === 'UL') return; 
 
-            // 내부 청크 동기화
             const chunks = line.querySelectorAll(':scope > [data-line-index]');
             chunks.forEach(chunk => {
                 chunk.dataset.lineIndex = newIdx;
             });
         });
+
+        // 🎯 [수정된 핵심 2]
+        // 인덱스 동기화 단계가 끝나는 최종 시점에, 현재 컨테이너 내부 혹은 상위에 존재하는
+        // 모든 테이블 셀을 싹 훑어서 리사이저 위치를 일괄적으로 맨 뒤 조치합니다. (중첩 테이블 스택 꼬임 원천 차단)
+        const rootContainer = document.getElementById(rootId);
+        if (rootContainer) {
+            rootContainer.querySelectorAll('.se-table-cell').forEach(td => {
+                const resizer = td.querySelector(':scope > .table-resizer');
+                if (resizer) {
+                    td.appendChild(resizer);
+                }
+            });
+        }
     }
 
     function render(state, targetKey) {
@@ -260,9 +229,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
         const newEl = createLineElement(lineData);
         newEl.style.textAlign = align;
         
-        // 🔥 [NotFoundError 해결의 핵심]
-        // :scope > 를 사용해 현재 container의 '직계 자식'인 lineIndex를 찾습니다.
-        // 그래야 insertBefore(newEl, target) 시 부모-자식 관계가 일치합니다.
         const target = container.querySelector(`:scope > [data-line-index="${lineIndex}"]`);
 
         if (target) {
@@ -279,7 +245,6 @@ export function createRenderService({ rootId, rendererRegistry }) {
         newEl.style.textAlign = align;
         newEl.setAttribute('data-line-index', newIndex);
 
-        // 기준 노드 바로 다음 형제 앞에 삽입 = 기준 노드 바로 뒤에 삽입
         if (refEl && refEl.nextSibling) {
             container.insertBefore(newEl, refEl.nextSibling);
         } else {

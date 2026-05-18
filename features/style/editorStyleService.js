@@ -9,6 +9,7 @@ export function createEditorStyleService(stateAPI, uiAPI, selectionAPI) {
         console.log("activeKeysactiveKeysactiveKeys : ", activeKeys);
         const targets    = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
+        console.log("targetstargetstargets : ", targets);
 
         const updates = [];
         const allNormalizedPositions = [];
