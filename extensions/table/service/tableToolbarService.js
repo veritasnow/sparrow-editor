@@ -176,7 +176,6 @@ export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
     }
 
     function deleteRow({ tableEl }) {
-        console.log("ssssssssssssssssssssssss");
         const ctx = getTableContext(tableEl?.id);
         const activeCellId = selectionAPI.getActiveKey();
         if (!ctx || !activeCellId) return false;

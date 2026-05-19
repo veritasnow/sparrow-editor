@@ -38,14 +38,9 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
 
     // 2. [위치 파악] 삭제할 위치(lineIndex, offset) 및 선택영역 확보
     const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
-    console.log("lineIndexlineIndexlineIndex : ", lineIndex);
-    console.log("offsetoffsetoffsetoffsetoffset : ", offset);
-    console.log("rangesrangesrangesrangesranges : ", ranges);
-
 
     // 3. [상태 계산] 비즈니스 로직 수행
     const result = calculateBackspaceState(currentState, lineIndex, offset, ranges, stateAPI);
-    console.log("resultresultresultresultresult : ", result);
     if (result.newState === currentState) return;
 
 

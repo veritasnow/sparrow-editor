@@ -6,10 +6,8 @@ export function createEditorStyleService(stateAPI, uiAPI, selectionAPI) {
 
     function applyInline(updateFn, options = { saveCursor: true }) {
         const activeKeys = selectionAPI.getActiveKeys();
-        console.log("activeKeysactiveKeysactiveKeys : ", activeKeys);
         const targets    = activeKeys.length > 0 ? activeKeys : [selectionAPI.getLastActiveKey()].filter(Boolean);
         if (targets.length === 0) return;
-        console.log("targetstargetstargets : ", targets);
 
         const updates = [];
         const allNormalizedPositions = [];
