@@ -35,7 +35,7 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     }
 
     // 2. 위치 계산
-    const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);  );
+    const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
 
     // 3. 상태 계산
     const result = calculateBackspaceState(currentState, lineIndex, offset, ranges, stateAPI);
