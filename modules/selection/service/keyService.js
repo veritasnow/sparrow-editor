@@ -12,6 +12,73 @@ export function createKeyService(root) {
 
         const ids = new Set();
 
+        // 1. UI 기반 선택된 셀 수집
+        const selectedCells = document.querySelectorAll('.se-table-cell.is-selected:not(.is-not-selected)');
+        selectedCells.forEach(el => {
+            const id = el.getAttribute('data-container-id');
+            if (id) ids.add(id);
+        });
+
+        // 2. 브라우저 Selection 범위 기준 컨테이너 추적 (개선됨)
+        for (let i = 0; i < sel.rangeCount; i++) {
+            const range = sel.getRangeAt(i);
+            
+            // 2-1. 선택 영역의 공통 조상 및 그 상위 컨테이너 수집 (기존 로직 유지)
+            let ancestor = range.commonAncestorContainer;
+            if (ancestor.nodeType === Node.TEXT_NODE) ancestor = ancestor.parentElement;
+            
+            const mainContainer = ancestor.closest('[data-container-id]:not(.is-not-selected)');
+            if (mainContainer) {
+                const id = mainContainer.getAttribute('data-container-id');
+                if (id) ids.add(id);
+            }
+
+            // 2-2. 🔥 핵심 개선: 선택 영역 '내부'에 포함된 하위 블록/컨테이너 수집
+            // TreeWalker를 사용해 선택 범위(Range) 내의 모든 엘리먼트를 안전하게 순회합니다.
+            const startContainer = range.startContainer.nodeType === Node.TEXT_NODE 
+                ? range.startContainer.parentElement 
+                : range.startContainer;
+                
+            const endContainer = range.endContainer.nodeType === Node.TEXT_NODE 
+                ? range.endContainer.parentElement 
+                : range.endContainer;
+
+            // 시작 엘리먼트 자체도 ID가 있다면 수집
+            const startId = startContainer.closest('[data-container-id]:not(.is-not-selected)')?.getAttribute('data-container-id');
+            if (startId) ids.add(startId);
+            
+            // 끝 엘리먼트 자체도 ID가 있다면 수집
+            const endId = endContainer.closest('[data-container-id]:not(.is-not-selected)')?.getAttribute('data-container-id');
+            if (endId) ids.add(endId);
+
+            // 공통 조상 내부에서 data-container-id를 가진 모든 엘리먼트를 찾아 범위 체크
+            const candidates = ancestor.querySelectorAll('[data-container-id]:not(.is-not-selected)');
+            candidates.forEach(el => {
+                // 엘리먼트가 현재 드래그/블록 선택 영역과 겹치는지 확인
+                if (sel.containsNode(el, true)) { 
+                    const id = el.getAttribute('data-container-id');
+                    if (id) ids.add(id);
+                }
+            });
+        }
+
+        // 3. 드래그 중인 부모 셀 강제 포함
+        const draggingContainers = document.querySelectorAll('.se-table-cell.is-dragging, .sparrow-contents.is-dragging');
+        draggingContainers.forEach(el => {
+            const id = el.getAttribute('data-container-id');
+            if (id) ids.add(id);
+        });
+
+        const result = Array.from(ids);
+        return result.length > 0 ? result : [lastActiveKey].filter(Boolean);
+    }
+    /*
+    function syncActiveKeys(lastActiveKey) {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return [lastActiveKey].filter(Boolean);
+
+        const ids = new Set();
+
         // 1. UI 기반 선택된 셀 수집 (순수하게 선택된 하위 셀들)
         const selectedCells = document.querySelectorAll('.se-table-cell.is-selected:not(.is-not-selected)');
         selectedCells.forEach(el => {
@@ -46,6 +113,7 @@ export function createKeyService(root) {
         const result = Array.from(ids);
         return result.length > 0 ? result : [lastActiveKey].filter(Boolean);
     }
+    */
 
     function findParentContainerId(containerId) {
         const currentEl = document.getElementById(containerId);

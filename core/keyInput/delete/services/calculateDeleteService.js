@@ -1,4 +1,4 @@
-// /core/keyInput/serivce/keyCommonService.js
+// /core/keyInput/serivces/keyCommonService.js
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
 import { splitChunkByOffset, cloneChunk, normalizeLineChunks } from '../../../../utils/mergeUtils.js';
 import { chunkRegistry } from '../../../chunk/chunkRegistry.js'; // 레지스트리 도입
