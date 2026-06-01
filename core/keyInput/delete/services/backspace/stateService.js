@@ -1,7 +1,7 @@
 // /core/keyInput/services/backspace/backspaceStateService.js
 
-import { performLineMerge, performListLineMerge } from './backspaceMergeService.js';
-import { performInternalDelete } from './backspaceDeleteService.js';
+import { performLineMerge, performListLineMerge } from './mergeService.js';
+import { performInternalDelete } from './deleteService.js';
 import { calculateDeleteSelectionState } from '../calculateDeleteService.js'
 
 export function calculateBackspaceState(currentState, lineIndex, offset, ranges = [], stateAPI) {
