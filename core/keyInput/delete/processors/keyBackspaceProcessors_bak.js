@@ -4,7 +4,7 @@ import { getRanges } from "../../../../utils/rangeUtils.js";
 import { chunkRegistry } from '../../../chunk/chunkRegistry.js';
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
-import { calculateDeleteSelectionState } from '../services/calculateDeleteService.js'
+import { calculateDeleteSelectionState } from '../services/common/calculateDeleteService.js'
 import { cloneChunk, normalizeLineChunks } from '../../../../utils/mergeUtils.js';
 
 /**

@@ -1,10 +1,12 @@
 // /core/keyInput/processors/keyBackspaceProcessors.js
 
-import { shouldPreventDeletion } from '../services/guard/guardService.js';
+import { shouldPreventDeletion } from '../services/common/guardService.js';
 import { resolveTargetPosition } from '../services/backspace/positionService.js';
 import { calculateBackspaceState } from '../services/backspace/stateService.js';
-import { applyBackspaceResult, applyBackspaceLineResult } from '../services/backspace/applyService.js';
-import { removeList } from '../services/backspace/lstService.js';
+//import { applyBackspaceResult, applyBackspaceLineResult } from '../services/backspace/applyService.js';
+import { applySingleContainerResult } from '../services/common/applyService.js';
+import { applyBackspaceLineResult } from '../services/backspace/applyService.js';
+import { removeList } from '../services/backspace/listService.js';
 
 export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
 
@@ -46,6 +48,7 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     if (result.isListLineMerge) {
         applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
     } else {
-        applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+        applySingleContainerResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+        //applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
     }
 }

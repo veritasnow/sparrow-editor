@@ -12,7 +12,7 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
 
     // 현재 커서가 있는 실제 컨테이너(에디터 혹은 TD) 정보를 가져옵니다.
     const selection   = selectionAPI.getSelectionContext();
-    const containerId = selection.containerId || activeKey;
+    const containerId = selection ? selection.containerId : activeKey;
     
     // ✅ 리스트 내부 엔터인지 확인
     if (containerId.startsWith('list-')) {

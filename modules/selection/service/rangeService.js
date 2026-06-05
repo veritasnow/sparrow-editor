@@ -160,9 +160,15 @@ export function createRangeService(root) {
         const dataIndex = activeNode?.dataset.index !== undefined ? parseInt(activeNode.dataset.index, 10) : null;
 
         return {
-            activeContainer, containerId: activeContainer.id, lineIndex,
-            parentDom, container, cursorOffset: range.startOffset,
-            activeNode, dataIndex, range
+              activeContainer
+            , containerId: activeContainer.id
+            , lineIndex
+            , parentDom
+            , container
+            , cursorOffset: range.startOffset
+            , activeNode
+            , dataIndex
+            , range
         };
 
     }    

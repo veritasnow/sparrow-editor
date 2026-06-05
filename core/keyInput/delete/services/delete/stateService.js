@@ -1,6 +1,6 @@
 import { getLineLengthFromState } from '../../../../../utils/editorStateUtils.js';
-import { calculateDeleteSelectionState } from '../calculateDeleteService.js';
-import { performInternalDelete } from './deleteService.js';
+import { calculateDeleteSelectionState } from '../common/calculateDeleteService.js';
+import { performInternalDelete } from '../common/deleteService.js';
 import { performNextLineMerge } from './mergeService.js';
 
 /**
@@ -21,5 +21,10 @@ export function calculateDeleteState(currentState, lineIndex, offset, ranges = [
     }
 
     // 3. 현재 줄 내부 삭제
-    return performInternalDelete(currentState, lineIndex, offset);
+    return performInternalDelete(currentState, lineIndex, offset, {
+        isTargetChunk    : (offset, acc, len) => offset >= acc && offset < acc + len,
+        getNewText       : (text, cut) => text.slice(0, cut) + text.slice(cut + 1),
+        getStayAnchor    : (i, cut) => ({ chunkIndex: i, type: 'text', offset: cut }),
+        getFallbackAnchor: (chunks, i, offset) => ({ chunkIndex: i, type: 'text', offset: offset })
+    });
 }

@@ -1,9 +1,11 @@
+// /core/keyInput/services/backspace/backspaceApplyService.js
+
 import { normalizeCursorData } from '../../../../../utils/cursorUtils.js';
 
 /**
- * [Step 4] UI 및 에디터 상태 반영
+ * [Step 4] UI 및 에디터 상태 반영 (최적화 버전)
  */
-export function applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
+export function applySingleContainerResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
     // 1. 상태 저장
@@ -12,9 +14,9 @@ export function applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectio
     const container = document.getElementById(activeKey);
     if (!container) return;
 
-    // 2. 테이블 Pool 확보 및 DOM 탐색 최소화
     let movingTablePool = [];
-    
+
+    // 2. 업데이트될 라인에서 미리 테이블 수거 (Delete 대응)
     if (updatedLineIndex !== null && updatedLineIndex !== undefined) {
         const currentLineEl = container.children[updatedLineIndex];
         if (currentLineEl) {
@@ -22,30 +24,35 @@ export function applyDeleteResult(activeKey, result, { stateAPI, uiAPI, selectio
         }
     }
 
+    // 3. 라인 삭제 및 테이블 수거 (뒤에서부터 삭제)
     if (deletedLineIndex !== null && deletedLineIndex !== undefined) {
         const startIdx = typeof deletedLineIndex === 'object' ? deletedLineIndex.start : deletedLineIndex;
         const count    = typeof deletedLineIndex === 'object' ? (deletedLineIndex.count || 1) : 1;
 
         for (let i = count - 1; i >= 0; i--) {
             const targetIdx = startIdx + i;
-            const lineToDeleteEl = container.children[targetIdx];
+            const lineEl = container.children[targetIdx];
 
-            if (lineToDeleteEl) {
-                movingTablePool.push(...lineToDeleteEl.getElementsByClassName('chunk-table'));
+            if (lineEl) {
+                const tables = Array.from(lineEl.getElementsByClassName('chunk-table'));
+                if (tables.length > 0) movingTablePool.push(...tables);
+
                 uiAPI.removeLine(targetIdx, activeKey);
             }
         }
     }
 
-    // 3. 병합된 줄 리렌더링 (Pool 주입)
+    // 4. 라인 업데이트 (최적화 버전 적용)
     if (updatedLineIndex !== null && newState[updatedLineIndex]) {
+        const targetElement = container.children[updatedLineIndex];
         uiAPI.renderLine(updatedLineIndex, newState[updatedLineIndex], {
-            key : activeKey,
-            pool: movingTablePool
+            key          : activeKey,
+            targetElement: targetElement, 
+            pool         : movingTablePool
         });
     }
 
-    // 4. 공통 마무리
+    // 5. 공통 마무리
     uiAPI.ensureFirstLine(activeKey);
     
     const finalPos = normalizeCursorData({ ...newPos, containerId: activeKey }, activeKey);
