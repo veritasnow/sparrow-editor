@@ -1,6 +1,6 @@
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
-import { showEditorAlert } from '../../../core/layout/components/editorModal_bak.js';
+import { showEditorAlert } from '../../../core/layout/components/editorModal.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
