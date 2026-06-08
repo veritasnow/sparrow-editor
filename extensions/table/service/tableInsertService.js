@@ -2,7 +2,7 @@
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
 import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
-import { showEditorAlert } from '../../../core/layout/components/editorModal.js';
+import { showEditorAlert } from '../../../core/layout/components/EditorModal.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
