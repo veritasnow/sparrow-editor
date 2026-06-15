@@ -1,7 +1,8 @@
 import { getLineLengthFromState } from '../../../../../utils/editorStateUtils.js';
-import { calculateDeleteSelectionState } from '../common/calculateDeleteService.js';
-import { performInternalDelete } from '../common/deleteService.js';
-import { performNextLineMerge } from './mergeService.js';
+import { calculateDeleteSelectionState } from '../common/calculateDeleteSelectionState.js';
+import { performInternalDelete } from '../common/performInternalDelete.js';
+import { EditorLineModel } from '../../../../../model/editorLineModel.js';
+import { cloneChunk, normalizeLineChunks } from '../../../../../utils/mergeUtils.js';
 
 /**
  * [Step 3] 실제 데이터 상태(State) 계산 메인
@@ -27,4 +28,32 @@ export function calculateDeleteState(currentState, lineIndex, offset, ranges = [
         getStayAnchor    : (i, cut) => ({ chunkIndex: i, type: 'text', offset: cut }),
         getFallbackAnchor: (chunks, i, offset) => ({ chunkIndex: i, type: 'text', offset: offset })
     });
+}
+
+function performNextLineMerge(currentState, lineIndex) {
+    const nextState   = [...currentState];
+    const currentLine = nextState[lineIndex];
+    const nextLine    = nextState[lineIndex + 1];
+
+    const mergedChunks = [
+        ...currentLine.chunks.map(cloneChunk),
+        ...nextLine.chunks.map(cloneChunk)
+    ];
+
+    nextState[lineIndex] = EditorLineModel(currentLine.align, normalizeLineChunks(mergedChunks));
+    nextState.splice(lineIndex + 1, 1);
+
+    return {
+        newState: nextState,
+        newPos: {
+            lineIndex,
+            anchor: {
+                chunkIndex: Math.max(0, currentLine.chunks.length - 1),
+                type      : currentLine.chunks[currentLine.chunks.length - 1].type,
+                offset    : getLineLengthFromState(currentLine)
+            }
+        },
+        deletedLineIndex: lineIndex + 1,
+        updatedLineIndex: lineIndex
+    };
 }

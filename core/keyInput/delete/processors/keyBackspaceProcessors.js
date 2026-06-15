@@ -1,12 +1,11 @@
 // /core/keyInput/processors/keyBackspaceProcessors.js
 
-import { shouldPreventDeletion } from '../services/common/guardService.js';
-import { resolveTargetPosition } from '../services/backspace/positionService.js';
-import { calculateBackspaceState } from '../services/backspace/stateService.js';
-//import { applyBackspaceResult, applyBackspaceLineResult } from '../services/backspace/applyService.js';
-import { applySingleContainerResult } from '../services/common/applyService.js';
-import { applyBackspaceLineResult } from '../services/backspace/applyService.js';
-import { removeList } from '../services/backspace/listService.js';
+import { shouldPreventDeletion } from '../services/common/shouldPreventDeletion.js';
+import { resolveBackspacePosition } from '../services/backspace/resolveBackspacePosition.js';
+import { calculateBackspaceState } from '../services/backspace/calculateBackspaceState.js';
+import { updateLine } from '../services/common/updateLine.js';
+import { mergeListLine } from '../services/backspace/mergeListLine.js';
+import { removeListContainer } from '../services/backspace/removeListContainer.js';
 
 export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
 
@@ -19,7 +18,7 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     if (activeKey.startsWith('list-') && currentState.length === 1) {
         const container = document.getElementById(activeKey);
         if (container) {
-            const removed = removeList(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey,  container);
+            const removed = removeListContainer(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey,  container);
             if (removed) return;
         }
     }
@@ -37,7 +36,7 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
     }
 
     // 2. 위치 계산
-    const { lineIndex, offset, ranges } = resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection);
+    const { lineIndex, offset, ranges } = resolveBackspacePosition(currentState, selectionAPI, domRanges, isSelection);
 
     // 3. 상태 계산
     const result = calculateBackspaceState(currentState, lineIndex, offset, ranges, stateAPI);
@@ -46,9 +45,8 @@ export function executeBackspace(e, { stateAPI, uiAPI, selectionAPI }) {
 
     // 4. UI 반영
     if (result.isListLineMerge) {
-        applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+        mergeListLine(activeKey, result, { stateAPI, uiAPI, selectionAPI });
     } else {
-        applySingleContainerResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
-        //applyBackspaceResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+        updateLine(activeKey, result, { stateAPI, uiAPI, selectionAPI });
     }
 }

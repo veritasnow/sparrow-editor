@@ -1,4 +1,4 @@
-// /core/keyInput/services/backspace/backspacePositionService.js
+// /core/keyInput/services/backspace/resolveBackspacePosition.js
 import { getRanges } from '../../../../../utils/rangeUtils.js';
 import { getLineLengthFromState } from '../../../../../utils/editorStateUtils.js';
 import { chunkRegistry } from '../../../../chunk/chunkRegistry.js';
@@ -6,7 +6,7 @@ import { chunkRegistry } from '../../../../chunk/chunkRegistry.js';
 /**
  * [Step 2] 입력된 Selection 정보를 바탕으로 논리적 삭제 위치를 도출
  */
-export function resolveTargetPosition(currentState, selectionAPI, domRanges, isSelection) {
+export function resolveBackspacePosition(currentState, selectionAPI, domRanges, isSelection) {
     if (isSelection) {
         const ranges = getRanges(currentState, domRanges);
         return {
@@ -16,8 +16,8 @@ export function resolveTargetPosition(currentState, selectionAPI, domRanges, isS
         };
     }
 
-    let lineIndex = domRanges[0].lineIndex;
-    let offset    = domRanges[0].endIndex;
+    const lineIndex   = domRanges[0].lineIndex;
+    let offset        = domRanges[0].endIndex;
     const currentLine = currentState[lineIndex];
 
     // 커서가 0인데 Atomic 청크 뒤에 있는 경우 offset 보정

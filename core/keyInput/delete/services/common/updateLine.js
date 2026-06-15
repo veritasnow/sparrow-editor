@@ -1,11 +1,11 @@
-// /core/keyInput/services/backspace/backspaceApplyService.js
+// /core/keyInput/services/common/updateLine.js
 
 import { normalizeCursorData } from '../../../../../utils/cursorUtils.js';
 
 /**
- * [Step 4] UI 및 에디터 상태 반영 (최적화 버전)
+ * [Step 4] UI 및 에디터 상태 반영
  */
-export function applySingleContainerResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
+export function updateLine(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
     const { newState, newPos, deletedLineIndex, updatedLineIndex } = result;
 
     // 1. 상태 저장

@@ -1,10 +1,10 @@
-// /core/keyInput/services/backspace/backspaceListService.js
+// /core/keyInput/services/backspace/removeListContainer.js
 
 import { normalizeCursorData } from '../../../../../utils/cursorUtils.js';
 
-export function removeList(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey, container) {
+export function removeListContainer(e, { stateAPI, uiAPI, selectionAPI }, currentState, activeKey, container) {
 
-    // 1. 기본 검사 (✅ 수정된 부분)
+    // 1. 삭제 조건 확인: 리스트 컨테이너이고, 그 안의 텍스트가 모두 사라진 경우
     const rawText = (currentState[0]?.chunks || [])
         .filter(chunk => chunk.type === 'text')
         .map(chunk => chunk.text || '')

@@ -10,7 +10,7 @@ export function resolveTargetPosition(currentState, domRanges, isSelection) {
         return {
             ranges,
             lineIndex: ranges[0].lineIndex,
-            offset: ranges[0].startIndex
+            offset   : ranges[0].startIndex
         };
     }
 

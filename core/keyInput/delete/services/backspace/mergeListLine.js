@@ -1,8 +1,8 @@
-// /core/keyInput/services/backspace/backspaceApplyService.js
+// /core/keyInput/services/backspace/mergeListLine.js
 
 import { normalizeCursorData } from '../../../../../utils/cursorUtils.js';
 
-export function applyBackspaceLineResult(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
+export function mergeListLine(activeKey, result, { stateAPI, uiAPI, selectionAPI }) {
     const { 
         newState,       // 메인 에디터의 새 상태 (라인이 하나 삭제된 상태)
         nextLineState,  // 리스트의 새 상태 (마지막 LI에 텍스트가 추가된 상태)

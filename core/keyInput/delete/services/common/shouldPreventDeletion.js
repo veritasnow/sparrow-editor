@@ -1,4 +1,4 @@
-// /core/keyInput/services/common/deletionGuardService.js
+// /core/keyInput/services/common/shouldPreventDeletion.js
 
 import { getLineLengthFromState } from '../../../../../utils/editorStateUtils.js';
 

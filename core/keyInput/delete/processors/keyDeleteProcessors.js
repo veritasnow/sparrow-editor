@@ -1,8 +1,8 @@
 // /core/keyInput/processors/keyDeleteProcessors.js
-import { shouldPreventDeletion } from '../services/common/guardService.js';
-import { resolveTargetPosition } from '../services/delete/positionService.js';
-import { calculateDeleteState } from '../services/delete/stateService.js';
-import { applySingleContainerResult } from '../services/common/applyService.js';
+import { shouldPreventDeletion } from '../services/common/shouldPreventDeletion.js';
+import { resolveTargetPosition } from '../services/delete/resolveTargetPosition.js';
+import { calculateDeleteState } from '../services/delete/calculateDeleteState.js';
+import { updateLine } from '../services/common/updateLine.js';
 
 /**
  * ⌦ Delete 키 실행 메인 함수
@@ -31,5 +31,5 @@ export function executeDelete(e, { stateAPI, uiAPI, selectionAPI }) {
     if (result.newState === currentState) return;
 
     // 4. [UI 반영] 상태 저장 및 DOM 업데이트
-    applySingleContainerResult(activeKey, result, { stateAPI, uiAPI, selectionAPI });
+    updateLine(activeKey, result, { stateAPI, uiAPI, selectionAPI });
 }
