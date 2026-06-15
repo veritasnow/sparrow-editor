@@ -1,46 +1,7 @@
-// /core/input/service/splitInputService.js
-import { EditorLineModel } from '../../../../model/editorLineModel.js';
+// /core/input/services/splitInputRender.js
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
-export function splitChunksByTable(chunks, align) {
-    const lines = [];
-    let temp = [];
-
-    const flushTemp = () => {
-        if (temp.length > 0) {
-            const mergedChunks = temp.reduce((acc, current) => {
-                const last = acc[acc.length - 1];
-                if (last && last.type === 'text' && current.type === 'text') {
-                    if (current.text.includes(last.text)) {
-                        last.text = current.text;
-                    } else {
-                        last.text += current.text;
-                    }
-                } else {
-                    acc.push(current);
-                }
-                return acc;
-            }, []);
-
-            lines.push(EditorLineModel(align, mergedChunks));
-            temp = [];
-        }
-    };
-
-    chunks.forEach(chunk => {
-        if (chunk.type === 'table') {
-            flushTemp();
-            lines.push(EditorLineModel(align, [chunk]));
-        } else {
-            temp.push(chunk);
-        }
-    });
-
-    flushTemp();
-    return lines;
-}
-
-export function handleSplitInput({
+export function splitInputRender({
     stateAPI,
     uiAPI,
     selectionAPI,

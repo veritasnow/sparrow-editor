@@ -1,6 +1,6 @@
 // /core/keyInput/processors/keyEnterProcessors.js
-import { handleListEnter } from '../service/enterListService.js';
-import { handleBaseEnter } from '../service/enterBaseService.js';
+import { listEnter } from '../services/listEnter.js';
+import { baseEnter } from '../services/baseEnter.js';
 
 
 /**
@@ -16,8 +16,8 @@ export function executeEnter({ stateAPI, uiAPI, selectionAPI }) {
     
     // ✅ 리스트 내부 엔터인지 확인
     if (containerId.startsWith('list-')) {
-        handleListEnter({ stateAPI, uiAPI, selectionAPI, containerId });
+        listEnter({ stateAPI, uiAPI, selectionAPI, containerId });
     } else {
-        handleBaseEnter ({ stateAPI, uiAPI, selectionAPI, containerId });
+        baseEnter ({ stateAPI, uiAPI, selectionAPI, containerId });
     }
 }

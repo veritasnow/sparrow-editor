@@ -1,7 +1,7 @@
 // /core/keyInput/input/service/calculateInputService.js
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
-import { inputModelService } from './inputModelService.js';
-import { splitChunksByTable } from './splitInputService.js';
+import { chunkRegistry } from '../../../chunk/chunkRegistry.js'; // 레지스트리 도입
+
 
 export function calculateInputUpdate({ currentLine, selection, activeKey, uiAPI }) {
 
@@ -22,7 +22,7 @@ export function calculateInputUpdate({ currentLine, selection, activeKey, uiAPI 
         const safeText  = getSafeTextFromRange(range);
         const cleanText = safeText.replace(/\u200B/g, '');
 
-        result = inputModelService.updateTextChunk(
+        result = updateTextChunk(
             currentLine,
             dataIndex,
             cleanText,
@@ -90,4 +90,64 @@ function getSafeTextFromRange(range) {
     if (!range) return '';
     const node = range.startContainer;
     return node.nodeType === Node.TEXT_NODE ? (node.nodeValue ?? '') : '';
+}
+
+function updateTextChunk(currentLine, dataIndex, textContent, cursorOffset, lineIndex, containerId) {
+    const oldChunk = currentLine.chunks[dataIndex];
+    if (oldChunk.text === textContent) return null;
+
+    const handler = chunkRegistry.get('text');
+    const newChunks = [...currentLine.chunks];
+    newChunks[dataIndex] = handler.create(textContent, oldChunk.style);
+
+    return {
+        updatedLine: EditorLineModel(currentLine.align, newChunks),
+        restoreData: {
+            containerId,
+            lineIndex,
+            anchor: { 
+                chunkIndex: dataIndex, 
+                type: 'text', 
+                offset: cursorOffset 
+            }
+        }
+    };
+}
+
+function splitChunksByTable(chunks, align) {
+    const lines = [];
+    let temp = [];
+
+    const flushTemp = () => {
+        if (temp.length > 0) {
+            const mergedChunks = temp.reduce((acc, current) => {
+                const last = acc[acc.length - 1];
+                if (last && last.type === 'text' && current.type === 'text') {
+                    if (current.text.includes(last.text)) {
+                        last.text = current.text;
+                    } else {
+                        last.text += current.text;
+                    }
+                } else {
+                    acc.push(current);
+                }
+                return acc;
+            }, []);
+
+            lines.push(EditorLineModel(align, mergedChunks));
+            temp = [];
+        }
+    };
+
+    chunks.forEach(chunk => {
+        if (chunk.type === 'table') {
+            flushTemp();
+            lines.push(EditorLineModel(align, [chunk]));
+        } else {
+            temp.push(chunk);
+        }
+    });
+
+    flushTemp();
+    return lines;
 }

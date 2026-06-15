@@ -138,3 +138,425 @@ extensions/image
 * GitHub: [https://github.com/veritasnow](https://github.com/veritasnow)
 
 ---
+```
+sparrow-editor
+├─ assets
+│  ├─ css
+│  │  ├─ parts
+│  │  │  ├─ contents.css
+│  │  │  ├─ font.css
+│  │  │  ├─ line.css
+│  │  │  ├─ modal.css
+│  │  │  ├─ selection.css
+│  │  │  ├─ table.css
+│  │  │  └─ toolbar.css
+│  │  └─ sparrow-editor.css
+│  └─ fonts
+│     ├─ maple
+│     │  ├─ MaplestoryBold.ttf
+│     │  └─ MaplestoryLight.ttf
+│     ├─ nanum-square-round
+│     │  ├─ NanumSquareRoundB.ttf
+│     │  ├─ NanumSquareRoundEB.ttf
+│     │  ├─ NanumSquareRoundL.ttf
+│     │  ├─ NanumSquareRoundOTFB.otf
+│     │  ├─ NanumSquareRoundOTFEB.otf
+│     │  ├─ NanumSquareRoundOTFL.otf
+│     │  ├─ NanumSquareRoundOTFR.otf
+│     │  └─ NanumSquareRoundR.ttf
+│     └─ pretendard
+│        ├─ Pretendard-Black.subset.woff2
+│        ├─ Pretendard-Bold.subset.woff2
+│        ├─ Pretendard-ExtraBold.subset.woff2
+│        ├─ Pretendard-ExtraLight.subset.woff2
+│        ├─ Pretendard-Light.subset.woff2
+│        ├─ Pretendard-Medium.subset.woff2
+│        ├─ Pretendard-Regular.subset.woff2
+│        ├─ Pretendard-SemiBold.subset.woff2
+│        └─ Pretendard-Thin.subset.woff2
+├─ constants
+│  └─ styleConstants.js
+├─ core
+│  ├─ chunk
+│  │  └─ chunkRegistry.js
+│  ├─ convert
+│  │  ├─ HtmlDeserializer.js
+│  │  └─ HtmlDeserializer_bak.js
+│  ├─ keyInput
+│  │  ├─ delete
+│  │  │  ├─ processors
+│  │  │  │  ├─ keyBackspaceProcessors.js
+│  │  │  │  └─ keyDeleteProcessors.js
+│  │  │  └─ services
+│  │  │     ├─ backspace
+│  │  │     │  ├─ calculateBackspaceState.js
+│  │  │     │  ├─ mergeListLine.js
+│  │  │     │  ├─ removeListContainer.js
+│  │  │     │  └─ resolveBackspacePosition.js
+│  │  │     ├─ common
+│  │  │     │  ├─ calculateDeleteSelectionState.js
+│  │  │     │  ├─ performInternalDelete.js
+│  │  │     │  ├─ shouldPreventDeletion.js
+│  │  │     │  └─ updateLine.js
+│  │  │     └─ delete
+│  │  │        ├─ calculateDeleteState.js
+│  │  │        └─ resolveTargetPosition.js
+│  │  ├─ editorKeyHandler.js
+│  │  ├─ enter
+│  │  │  ├─ processors
+│  │  │  │  └─ keyEnterProcessors.js
+│  │  │  ├─ service
+│  │  │  │  ├─ calculateService.js
+│  │  │  │  ├─ enterBaseService.js
+│  │  │  │  └─ enterListService.js
+│  │  │  └─ utils
+│  │  │     └─ enterUtils.js
+│  │  ├─ historyProcessor.js
+│  │  ├─ input
+│  │  │  ├─ process
+│  │  │  │  └─ editorInputProcessor.js
+│  │  │  └─ service
+│  │  │     ├─ applyInputService.js
+│  │  │     ├─ calculateInputService.js
+│  │  │     ├─ inputModelService.js
+│  │  │     ├─ renderInputService.js
+│  │  │     └─ splitInputService.js
+│  │  └─ paste
+│  │     └─ keyPasteProcessors.js
+│  ├─ layout
+│  │  ├─ components
+│  │  │  └─ editorModal.js
+│  │  └─ editorLayoutBuilder.js
+│  ├─ render
+│  │  └─ editorRenderService.js
+│  └─ selection
+│     ├─ selectionFeatureBinder.js
+│     ├─ service
+│     │  ├─ analyzeService.js
+│     │  ├─ dragService.js
+│     │  ├─ rangeService.js
+│     │  └─ selectionUiService.js
+│     └─ utils
+│        └─ selectionUtils.js
+├─ extensions
+│  ├─ image
+│  │  ├─ componets
+│  │  │  ├─ imagePopupView.js
+│  │  │  └─ imageRenderer.js
+│  │  ├─ imageExtension.js
+│  │  ├─ imageFeatureBinder.js
+│  │  ├─ model
+│  │  │  └─ ImageModel.js
+│  │  ├─ service
+│  │  │  └─ imageInsertService.js
+│  │  └─ utils
+│  │     └─ imageBlockUtil.js
+│  ├─ table
+│  │  ├─ componets
+│  │  │  ├─ tableCellToolbarView.js
+│  │  │  ├─ tablePopupView.js
+│  │  │  └─ tableRenderer.js
+│  │  ├─ model
+│  │  │  └─ tableModel.js
+│  │  ├─ service
+│  │  │  ├─ tableInsertService.js
+│  │  │  ├─ tableResizeService.js
+│  │  │  └─ tableToolbarService.js
+│  │  ├─ tableExtension.js
+│  │  └─ tableFeatureBinder.js
+│  ├─ unorderedList
+│  │  ├─ components
+│  │  │  └─ unorderedListRenderer.js
+│  │  ├─ model
+│  │  │  └─ unorderedListModel.js
+│  │  ├─ service
+│  │  │  └─ unorderedListInsertService.js
+│  │  ├─ unorderedListExtension.js
+│  │  └─ unorderedListFeatureBinder.js
+│  └─ video
+│     ├─ componets
+│     │  ├─ videoPopupView.js
+│     │  └─ videoRenderer.js
+│     ├─ model
+│     │  └─ videoModel.js
+│     ├─ service
+│     │  └─ videoInsertService.js
+│     ├─ videoExtension.js
+│     └─ videoFeatureBinder.js
+├─ factory
+│  ├─ chunkRegistryFactory.js
+│  ├─ editorApiFactory.js
+│  ├─ editorBootstrapFactory.js
+│  ├─ editorContext.js
+│  └─ editorFactory.js
+├─ features
+│  ├─ align
+│  │  ├─ alignFeatureBinder.js
+│  │  └─ editorAlignService.js
+│  ├─ componets
+│  │  └─ textRenderer.js
+│  └─ style
+│     ├─ editorStyleService.js
+│     ├─ styleFeatureBinder.js
+│     └─ styleUtils.js
+├─ index.html
+├─ model
+│  ├─ editorLineModel.js
+│  └─ editorModel.js
+├─ modules
+│  ├─ input
+│  │  ├─ application
+│  │  │  └─ inputApplication.js
+│  │  ├─ constants
+│  │  │  └─ excludedInputTypes.js
+│  │  └─ service
+│  │     ├─ inputBindingService.js
+│  │     └─ keyBindingService.js
+│  ├─ rest
+│  │  ├─ apiApplication.js
+│  │  └─ service
+│  │     └─ restApiService.js
+│  ├─ selection
+│  │  ├─ selectionApplication.js
+│  │  └─ service
+│  │     ├─ keyService.js
+│  │     ├─ rangeService.js
+│  │     └─ restoreCursorService.js
+│  ├─ state
+│  │  ├─ application
+│  │  │  └─ editorApplication.js
+│  │  ├─ constatns
+│  │  │  └─ stateConstants.js
+│  │  ├─ service
+│  │  │  └─ editorSnapshotService.js
+│  │  └─ store
+│  │     ├─ cursorHistoryStore.js
+│  │     └─ historyStore.js
+│  └─ ui
+│     ├─ application
+│     │  └─ uiApplication.js
+│     └─ service
+│        ├─ domParserService.js
+│        └─ renderService.js
+├─ README.md
+├─ sparrow-editor.js
+└─ utils
+   ├─ cursorUtils.js
+   ├─ editorStateUtils.js
+   ├─ emptyUtils.js
+   ├─ mergeUtils.js
+   ├─ rangeUtils.js
+   └─ splitLineChunksUtils.js
+
+```
+```
+sparrow-editor
+├─ assets
+│  ├─ css
+│  │  ├─ parts
+│  │  │  ├─ contents.css
+│  │  │  ├─ font.css
+│  │  │  ├─ line.css
+│  │  │  ├─ modal.css
+│  │  │  ├─ selection.css
+│  │  │  ├─ table.css
+│  │  │  └─ toolbar.css
+│  │  └─ sparrow-editor.css
+│  └─ fonts
+│     ├─ maple
+│     │  ├─ MaplestoryBold.ttf
+│     │  └─ MaplestoryLight.ttf
+│     ├─ nanum-square-round
+│     │  ├─ NanumSquareRoundB.ttf
+│     │  ├─ NanumSquareRoundEB.ttf
+│     │  ├─ NanumSquareRoundL.ttf
+│     │  ├─ NanumSquareRoundOTFB.otf
+│     │  ├─ NanumSquareRoundOTFEB.otf
+│     │  ├─ NanumSquareRoundOTFL.otf
+│     │  ├─ NanumSquareRoundOTFR.otf
+│     │  └─ NanumSquareRoundR.ttf
+│     └─ pretendard
+│        ├─ Pretendard-Black.subset.woff2
+│        ├─ Pretendard-Bold.subset.woff2
+│        ├─ Pretendard-ExtraBold.subset.woff2
+│        ├─ Pretendard-ExtraLight.subset.woff2
+│        ├─ Pretendard-Light.subset.woff2
+│        ├─ Pretendard-Medium.subset.woff2
+│        ├─ Pretendard-Regular.subset.woff2
+│        ├─ Pretendard-SemiBold.subset.woff2
+│        └─ Pretendard-Thin.subset.woff2
+├─ constants
+│  └─ styleConstants.js
+├─ core
+│  ├─ chunk
+│  │  └─ chunkRegistry.js
+│  ├─ convert
+│  │  ├─ HtmlDeserializer.js
+│  │  └─ HtmlDeserializer_bak.js
+│  ├─ keyInput
+│  │  ├─ delete
+│  │  │  ├─ processors
+│  │  │  │  ├─ keyBackspaceProcessors.js
+│  │  │  │  └─ keyDeleteProcessors.js
+│  │  │  └─ services
+│  │  │     ├─ backspace
+│  │  │     │  ├─ calculateBackspaceState.js
+│  │  │     │  ├─ mergeListLine.js
+│  │  │     │  ├─ removeListContainer.js
+│  │  │     │  └─ resolveBackspacePosition.js
+│  │  │     ├─ common
+│  │  │     │  ├─ calculateDeleteSelectionState.js
+│  │  │     │  ├─ performInternalDelete.js
+│  │  │     │  ├─ shouldPreventDeletion.js
+│  │  │     │  └─ updateLine.js
+│  │  │     └─ delete
+│  │  │        ├─ calculateDeleteState.js
+│  │  │        └─ resolveTargetPosition.js
+│  │  ├─ editorKeyHandler.js
+│  │  ├─ enter
+│  │  │  ├─ processors
+│  │  │  │  └─ keyEnterProcessors.js
+│  │  │  ├─ service
+│  │  │  │  ├─ calculateService.js
+│  │  │  │  ├─ enterBaseService.js
+│  │  │  │  └─ enterListService.js
+│  │  │  └─ utils
+│  │  │     └─ enterUtils.js
+│  │  ├─ historyProcessor.js
+│  │  ├─ input
+│  │  │  ├─ process
+│  │  │  │  └─ editorInputProcessor.js
+│  │  │  └─ service
+│  │  │     ├─ applyInputService.js
+│  │  │     ├─ calculateInputService.js
+│  │  │     ├─ inputModelService.js
+│  │  │     ├─ renderInputService.js
+│  │  │     └─ splitInputService.js
+│  │  └─ paste
+│  │     └─ keyPasteProcessors.js
+│  ├─ layout
+│  │  ├─ components
+│  │  │  └─ editorModal.js
+│  │  └─ editorLayoutBuilder.js
+│  ├─ render
+│  │  └─ editorRenderService.js
+│  └─ selection
+│     ├─ selectionFeatureBinder.js
+│     ├─ service
+│     │  ├─ analyzeService.js
+│     │  ├─ dragService.js
+│     │  ├─ rangeService.js
+│     │  └─ selectionUiService.js
+│     └─ utils
+│        └─ selectionUtils.js
+├─ extensions
+│  ├─ image
+│  │  ├─ componets
+│  │  │  ├─ imagePopupView.js
+│  │  │  └─ imageRenderer.js
+│  │  ├─ imageExtension.js
+│  │  ├─ imageFeatureBinder.js
+│  │  ├─ model
+│  │  │  └─ ImageModel.js
+│  │  ├─ service
+│  │  │  └─ imageInsertService.js
+│  │  └─ utils
+│  │     └─ imageBlockUtil.js
+│  ├─ table
+│  │  ├─ componets
+│  │  │  ├─ tableCellToolbarView.js
+│  │  │  ├─ tablePopupView.js
+│  │  │  └─ tableRenderer.js
+│  │  ├─ model
+│  │  │  └─ tableModel.js
+│  │  ├─ service
+│  │  │  ├─ tableInsertService.js
+│  │  │  ├─ tableResizeService.js
+│  │  │  └─ tableToolbarService.js
+│  │  ├─ tableExtension.js
+│  │  └─ tableFeatureBinder.js
+│  ├─ unorderedList
+│  │  ├─ components
+│  │  │  └─ unorderedListRenderer.js
+│  │  ├─ model
+│  │  │  └─ unorderedListModel.js
+│  │  ├─ service
+│  │  │  └─ unorderedListInsertService.js
+│  │  ├─ unorderedListExtension.js
+│  │  └─ unorderedListFeatureBinder.js
+│  └─ video
+│     ├─ componets
+│     │  ├─ videoPopupView.js
+│     │  └─ videoRenderer.js
+│     ├─ model
+│     │  └─ videoModel.js
+│     ├─ service
+│     │  └─ videoInsertService.js
+│     ├─ videoExtension.js
+│     └─ videoFeatureBinder.js
+├─ factory
+│  ├─ chunkRegistryFactory.js
+│  ├─ editorApiFactory.js
+│  ├─ editorBootstrapFactory.js
+│  ├─ editorContext.js
+│  └─ editorFactory.js
+├─ features
+│  ├─ align
+│  │  ├─ alignFeatureBinder.js
+│  │  └─ editorAlignService.js
+│  ├─ componets
+│  │  └─ textRenderer.js
+│  └─ style
+│     ├─ editorStyleService.js
+│     ├─ styleFeatureBinder.js
+│     └─ styleUtils.js
+├─ index.html
+├─ model
+│  ├─ editorLineModel.js
+│  └─ editorModel.js
+├─ modules
+│  ├─ input
+│  │  ├─ application
+│  │  │  └─ inputApplication.js
+│  │  ├─ constants
+│  │  │  └─ excludedInputTypes.js
+│  │  └─ service
+│  │     ├─ inputBindingService.js
+│  │     └─ keyBindingService.js
+│  ├─ rest
+│  │  ├─ apiApplication.js
+│  │  └─ service
+│  │     └─ restApiService.js
+│  ├─ selection
+│  │  ├─ selectionApplication.js
+│  │  └─ service
+│  │     ├─ keyService.js
+│  │     ├─ rangeService.js
+│  │     └─ restoreCursorService.js
+│  ├─ state
+│  │  ├─ application
+│  │  │  └─ editorApplication.js
+│  │  ├─ constatns
+│  │  │  └─ stateConstants.js
+│  │  ├─ service
+│  │  │  └─ editorSnapshotService.js
+│  │  └─ store
+│  │     ├─ cursorHistoryStore.js
+│  │     └─ historyStore.js
+│  └─ ui
+│     ├─ application
+│     │  └─ uiApplication.js
+│     └─ service
+│        ├─ domParserService.js
+│        └─ renderService.js
+├─ README.md
+├─ sparrow-editor.js
+└─ utils
+   ├─ cursorUtils.js
+   ├─ editorStateUtils.js
+   ├─ emptyUtils.js
+   ├─ mergeUtils.js
+   ├─ rangeUtils.js
+   └─ splitLineChunksUtils.js
+
+```

@@ -1,10 +1,10 @@
 // /core/keyInput/input/processors/keyInputProcessor.js
 
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
-import { calculateInputUpdate } from '../service/calculateInputService.js';
-import { handleSplitInput } from '../service/splitInputService.js';
-import { applyInputState } from '../service/applyInputService.js';
-import { executeInputRendering } from '../service/renderInputService.js';
+import { calculateInputUpdate } from '../services/calculateInputUpdate.js';
+import { splitInputRender } from '../services/splitInputRender.js';
+import { updateInputState } from '../services/updateInputState.js';
+import { inputRender } from '../services/inputRender.js';
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
 /**
@@ -38,7 +38,7 @@ function processInputCore({
     if (!result || !result.flags.hasChange) return;
 
     if (result.isSplit) {
-        handleSplitInput({
+        splitInputRender({
             stateAPI,
             uiAPI,
             selectionAPI,
@@ -50,7 +50,7 @@ function processInputCore({
         return;
     }
 
-    applyInputState({
+    updateInputState({
         stateAPI,
         key: activeKey,
         lineIndex: selection.lineIndex,
@@ -63,7 +63,7 @@ function processInputCore({
 
     const finalRestoreData = normalizeCursorData(result.restoreData, activeKey);
 
-    executeInputRendering({
+    inputRender({
         uiAPI,
         selectionAPI,
         updatedLine: result.updatedLine,
@@ -73,9 +73,7 @@ function processInputCore({
     });
 }
 
-/**
- * ✨ execute 스타일로 래핑
- */
+
 export function executeInput({
     stateAPI,
     uiAPI,

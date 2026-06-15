@@ -1,8 +1,8 @@
 import { resolveEnterPosition, commitCursor } from '../utils/enterUtils.js';
-import { calculateEnterState } from '../service/calculateService.js';
+import { calculateEnterState } from './calculateEnterState.js';
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
-export function handleBaseEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
+export function baseEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
     // 해당 컨테이너의 상태와 선택 범위를 가져옵니다.
     const currentState = stateAPI.get(containerId);
     const domRanges    = selectionAPI.getDomSelection(containerId);

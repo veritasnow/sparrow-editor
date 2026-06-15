@@ -1,7 +1,7 @@
-// /core/input/service/applyInputService.js
+// /core/input/service/updateInputState.js
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 
-export function applyInputState({
+export function updateInputState({
     stateAPI,
     key,
     lineIndex,

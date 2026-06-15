@@ -1,5 +1,5 @@
 import { resolveEnterPosition, commitCursor } from '../utils/enterUtils.js';
-import { calculateEnterState } from '../service/calculateService.js';
+import { calculateEnterState } from './calculateEnterState.js';
 import { normalizeCursorData } from '../../../../utils/cursorUtils.js';
 import { isLineEmpty } from '../../../../utils/emptyUtils.js';
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
@@ -7,7 +7,7 @@ import { EditorLineModel } from '../../../../model/editorLineModel.js';
 /**
  * 리스트 전용 엔터 핸들러
  */
-export function handleListEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
+export function listEnter({ stateAPI, uiAPI, selectionAPI, containerId }) {
 
     const listState = stateAPI.get(containerId);
     const domRanges = selectionAPI.getDomSelection(containerId);

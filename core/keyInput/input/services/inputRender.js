@@ -1,5 +1,5 @@
 // /core/input/service/renderInputService.js
-export function executeInputRendering({
+export function inputRender({
     uiAPI,
     selectionAPI,
     updatedLine,
