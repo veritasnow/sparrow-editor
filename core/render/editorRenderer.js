@@ -1,6 +1,6 @@
-// services/editorRenderService.js
+// services/editorRenderer.js
 
-export function createEditorRenderService({ stateAPI, ui }) {
+export function editorRenderer({ stateAPI, ui }) {
 
     function render(data, key, shouldRenderSub = true) {
         ui.render(data, key);
