@@ -1,5 +1,5 @@
 // editor.js
-import { createEditorFactory } from './factory/editorFactory.js';
+import { createEditorFactory } from './factory/createEditorFactory.js';
 import { createVideoExtension } from './extensions/video/videoExtension.js';
 import { createImageExtension } from './extensions/image/imageExtension.js';
 import { createTableExtension } from './extensions/table/tableExtension.js';

@@ -11,7 +11,7 @@ import { createSelectionApplication } from '../modules/selection/selectionApplic
 import { createApiApplication } from '../modules/rest/apiApplication.js';
 
 /**
- * factory/editorBootstrapFactory.js
+ * factory/createEditorBootstrap.js
  */
 export function createEditorBootstrap({ rootId, contentKey, rendererRegistry }) {
     // 1. DOM 뼈대 생성

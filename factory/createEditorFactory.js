@@ -1,5 +1,5 @@
 // factory/editorFactory.js
-import { createEditorBootstrap } from './editorBootstrapFactory.js';
+import { createEditorBootstrap } from './createEditorBootstrap.js';
 import { textRenderer } from '../features/componets/textRenderer.js';
 import { videoRenderer } from '../extensions/video/componets/videoRenderer.js';
 import { imageRenderer } from '../extensions/image/componets/imageRenderer.js';
@@ -11,8 +11,8 @@ import { bindSelectionFeature } from '../core/selection/selectionFeatureBinder.j
 import { bindStyleButtons } from '../features/style/styleFeatureBinder.js';
 import { bindAlignButtons } from '../features/align/alignFeatureBinder.js';
 
-import { registerDefaultChunks } from './chunkRegistryFactory.js';
-import { createEditorAPI } from './editorApiFactory.js';
+import { createChunkRegistry } from './createChunkRegistry.js';
+import { createEditorAPI } from './createEditorAPI.js';
 
 /**
  * 에디터 인스턴스를 생성하는 최상위 팩토리
@@ -33,7 +33,7 @@ export function createEditorFactory() {
      * 1️⃣ 코어 서비스 초기화 (인스턴스 생성)
      * ───────────────────────────── */
     // 청크생성
-    registerDefaultChunks();
+    createChunkRegistry();
 
     // DOM구조, 상태관리 초기화
     const {        

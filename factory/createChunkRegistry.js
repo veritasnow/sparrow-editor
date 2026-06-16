@@ -1,4 +1,4 @@
-// factory/chunkRegistryFactory.js
+// factory/createChunkRegistry.js
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 import { TextChunkModel } from '../model/editorModel.js';
 import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
@@ -6,7 +6,7 @@ import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';
 import { TableChunkModel } from '../extensions/table/model/tableModel.js';
 import { UnorderedListModel } from '../extensions/unorderedList/model/unorderedListModel.js';
 
-export function registerDefaultChunks() {
+export function createChunkRegistry() {
 
   chunkRegistry.register('text', {
     isText    : true,

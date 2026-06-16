@@ -1,14 +1,11 @@
-import { createAnalyzeService } from './service/analyzeService.js';
-import { createSelectionUIService } from './service/selectionUiService.js';
-import { createRangeService } from './service/rangeService.js';
-import { createDragService } from './service/dragService.js';
+import { analyzeSelection } from './services/analyzeSelection.js';
+import { createSelectionUI } from './services/createSelectionUI.js';
+import { applyVisualAndRangeSelection } from './services/applyVisualAndRangeSelection.js';
+import { calculateDragSelection } from './services/calculateDragSelection.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
 export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarElements) {
-    const selectionService = createAnalyzeService(stateAPI, selectionAPI);
-    const uiService        = createSelectionUIService(toolbarElements);
-    const rangeService     = createRangeService();
-    const dragService      = createDragService(editorEl.id);
+    const selectionUi     = createSelectionUI(toolbarElements);
 
     let isDragging        = false;
     let startTD           = null;
@@ -17,8 +14,8 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
     const scheduleUpdate = () => {
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
-            const result = selectionService.analyzeSelection();
-            uiService.updateUI(result);
+            const result = analyzeSelection(stateAPI, selectionAPI);
+            selectionUi.updateUI(result);
         });
     };
 
@@ -56,8 +53,7 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         if (!isDragging || !startTD) return;
 
         // 1. 드래그 계산
-        const { selectedCells, activeId } =
-            dragService.mouseDragCalculate(e, startTD);
+        const { selectedCells, activeId } = calculateDragSelection(editorEl.id, startTD, e);
 
         // 2. selection normalize
         const domRanges  = selectionAPI.getDomSelection(activeId);
@@ -70,7 +66,7 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         }
 
         // 🔥 startTD 추가 전달
-        rangeService.applyVisualAndRangeSelection(
+        applyVisualAndRangeSelection(
             selectedCells,
             normalized,
             stateAPI,
@@ -144,15 +140,15 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
             scheduleUpdate();
         } else {
             if (document.querySelectorAll('.se-table-cell.is-selected').length === 0) {
-                uiService.clearAll();
+                selectionUi.clearAll();
             }
         }
     });
 
     return {
         analyzeNow: () => {
-            const result = selectionService.analyzeSelection();
-            uiService.updateUI(result);
+            const result = analyzeSelection(stateAPI, selectionAPI);
+            selectionUi.updateUI(result);
             return result;
         },
         clearTableSelection: clearCellSelection,
