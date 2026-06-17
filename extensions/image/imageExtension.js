@@ -1,8 +1,8 @@
 // extensions/image/imageExtension.js
 
-import { bindImageButton } from './imageFeatureBinder.js';
+import { imageFeatureBinder } from './imageFeatureBinder.js';
 
-export function createImageExtension(rootId) {
+export function imageExtension(rootId) {
   return {
     name: 'image',
 
@@ -17,7 +17,7 @@ export function createImageExtension(rootId) {
       const imageBtn = editorAPI.getToolbarButton('image');
       if (!imageBtn) return;
 
-      bindImageButton(imageBtn, stateAPI, uiAPI, selectionAPI, rootId);
+      imageFeatureBinder(imageBtn, stateAPI, uiAPI, selectionAPI, rootId);
     }
   };
 }

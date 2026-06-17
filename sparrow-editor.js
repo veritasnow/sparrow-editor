@@ -1,7 +1,7 @@
 // editor.js
 import { createEditorFactory } from './factory/createEditorFactory.js';
 import { createVideoExtension } from './extensions/video/videoExtension.js';
-import { createImageExtension } from './extensions/image/imageExtension.js';
+import { imageExtension } from './extensions/image/imageExtension.js';
 import { createTableExtension } from './extensions/table/tableExtension.js';
 import { createUnorderedListExtension } from './extensions/unorderedList/unorderedListExtension.js';
 
@@ -12,7 +12,7 @@ export function createEditor(rootId) {
     rootId,
     extensions: [
       createVideoExtension(rootId),
-      createImageExtension(rootId),
+      imageExtension(rootId),
       createTableExtension(rootId),
       createUnorderedListExtension(rootId)
     ]

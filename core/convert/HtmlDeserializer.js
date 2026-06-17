@@ -2,7 +2,7 @@
 import { TextChunkModel } from '../../model/editorModel.js';
 import { EditorLineModel } from '../../model/editorLineModel.js';
 import { VideoChunkModel } from '../../extensions/video/model/videoModel.js';
-import { ImageChunkModel } from '../../extensions/image/model/ImageModel.js';
+import { createImageChunk } from '../../extensions/image/model/createImageChunk.js';
 import { TableChunkModel } from '../../extensions/table/model/tableModel.js';
 import { UnorderedListModel } from '../../extensions/unorderedList/model/unorderedListModel.js';
 
@@ -176,7 +176,7 @@ export const HtmlDeserializer = {
         if (this.isBlockElement(node)) return chunks;
 
         if (tagName === 'img') {
-            chunks.push(ImageChunkModel(node.src, node.alt || '', {}));
+            chunks.push(createImageChunk(node.src, node.alt || '', {}));
             return chunks;
         }
 

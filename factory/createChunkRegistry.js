@@ -2,7 +2,7 @@
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 import { TextChunkModel } from '../model/editorModel.js';
 import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
-import { ImageChunkModel } from '../extensions/image/model/ImageModel.js';
+import { createImageChunk } from '../extensions/image/model/createImageChunk.js';
 import { TableChunkModel } from '../extensions/table/model/tableModel.js';
 import { UnorderedListModel } from '../extensions/unorderedList/model/unorderedListModel.js';
 
@@ -30,9 +30,9 @@ export function createChunkRegistry() {
   chunkRegistry.register('image', {
     isText    : false,
     canSplit  : false,
-    create    : (src) => ImageChunkModel(src),
+    create    : (src) => createImageChunk(src),
     getLength : () => 1,
-    clone     : (chunk) => ImageChunkModel(chunk.src),
+    clone     : (chunk) => createImageChunk(chunk.src),
     applyStyle: (chunk) => chunk
   });
 
