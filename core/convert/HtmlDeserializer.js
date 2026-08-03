@@ -1,7 +1,7 @@
 // /core/convert/HtmlDeserializer.js
 import { TextChunkModel } from '../../model/editorModel.js';
 import { EditorLineModel } from '../../model/editorLineModel.js';
-import { VideoChunkModel } from '../../extensions/video/model/videoModel.js';
+import { createVideoChunk } from '../../extensions/video/model/createVideoChunk.js';
 import { createImageChunk } from '../../extensions/image/model/createImageChunk.js';
 import { TableChunkModel } from '../../extensions/table/model/tableModel.js';
 import { UnorderedListModel } from '../../extensions/unorderedList/model/unorderedListModel.js';
@@ -182,7 +182,7 @@ export const HtmlDeserializer = {
 
         if (tagName === 'iframe') {
             const videoId = this.extractYoutubeId(node.getAttribute('src') || '');
-            if (videoId) chunks.push(VideoChunkModel(videoId, node.getAttribute('src')));
+            if (videoId) chunks.push(createVideoChunk(videoId, node.getAttribute('src')));
             return chunks;
         }
 

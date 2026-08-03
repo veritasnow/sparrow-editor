@@ -1,7 +1,7 @@
 // factory/createChunkRegistry.js
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 import { TextChunkModel } from '../model/editorModel.js';
-import { VideoChunkModel } from '../extensions/video/model/videoModel.js';
+import { createVideoChunk } from '../extensions/video/model/createVideoChunk.js';
 import { createImageChunk } from '../extensions/image/model/createImageChunk.js';
 import { TableChunkModel } from '../extensions/table/model/tableModel.js';
 import { UnorderedListModel } from '../extensions/unorderedList/model/unorderedListModel.js';
@@ -21,9 +21,9 @@ export function createChunkRegistry() {
   chunkRegistry.register('video', {
     isText    : false,
     canSplit  : false,
-    create    : (videoId, src) => VideoChunkModel(videoId, src),
+    create    : (videoId, src) => createVideoChunk(videoId, src),
     getLength : () => 1,
-    clone     : (chunk) => VideoChunkModel(chunk.videoId, chunk.src),
+    clone     : (chunk) => createVideoChunk(chunk.videoId, chunk.src),
     applyStyle: (chunk) => chunk
   });
 

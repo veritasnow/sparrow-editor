@@ -78,48 +78,48 @@ export function analyzeSelection(stateAPI, selectionAPI) {
   };
 }
 
-  /**
-   * [성능 핵심] 스타일 비교 및 상태 업데이트 루프 최적화
-   * 매번 배열을 만들지 않고 현재까지의 통일성 상태만 유지합니다.
-   */
-  function updateUniformStatus(unified, current, map, isFirst) {
-    if (isFirst) {
-      // 첫 데이터인 경우 맵 초기화
-      Object.keys(current).forEach(k => map[k] = true);
-      return [current, map, false];
-    }
-
-    // 기존 속성들을 순회하며 통일성이 깨졌는지 확인
-    for (const key in map) {
-      if (map[key] && unified[key] !== current[key]) {
-        map[key] = false; // 한 번 깨진 통일성은 다시 복구되지 않음
-      }
-    }
-    return [unified, map, false];
+/**
+ * [성능 핵심] 스타일 비교 및 상태 업데이트 루프 최적화
+ * 매번 배열을 만들지 않고 현재까지의 통일성 상태만 유지합니다.
+ */
+function updateUniformStatus(unified, current, map, isFirst) {
+  if (isFirst) {
+    // 첫 데이터인 경우 맵 초기화
+    Object.keys(current).forEach(k => map[k] = true);
+    return [current, map, false];
   }
 
-  /**
-   * 통일성이 깨진 속성은 null로 처리하여 최종 결과 반환
-   */
-  function finalizeResult(style, map, defaultStyle) {
-    if (!style) return { isUniform: true, style: defaultStyle };
-    
-    const resultStyle = { ...style };
-    let isAllUniform = true;
-
-    for (const key in map) {
-      if (!map[key]) {
-        resultStyle[key] = null;
-        isAllUniform = false;
-      }
+  // 기존 속성들을 순회하며 통일성이 깨졌는지 확인
+  for (const key in map) {
+    if (map[key] && unified[key] !== current[key]) {
+      map[key] = false; // 한 번 깨진 통일성은 다시 복구되지 않음
     }
+  }
+  return [unified, map, false];
+}
 
-    return { isUniform: isAllUniform, style: resultStyle };
+/**
+ * 통일성이 깨진 속성은 null로 처리하여 최종 결과 반환
+ */
+function finalizeResult(style, map, defaultStyle) {
+  if (!style) return { isUniform: true, style: defaultStyle };
+  
+  const resultStyle = { ...style };
+  let isAllUniform = true;
+
+  for (const key in map) {
+    if (!map[key]) {
+      resultStyle[key] = null;
+      isAllUniform = false;
+    }
   }
 
-  function getEmptyResult() {
-    return {
-      text: { isUniform: true, style: DEFAULT_TEXT_STYLE },
-      line: { isUniform: true, style: DEFAULT_LINE_STYLE }
-    };
-  }
+  return { isUniform: isAllUniform, style: resultStyle };
+}
+
+function getEmptyResult() {
+  return {
+    text: { isUniform: true, style: DEFAULT_TEXT_STYLE },
+    line: { isUniform: true, style: DEFAULT_LINE_STYLE }
+  };
+}

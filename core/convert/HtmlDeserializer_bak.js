@@ -1,6 +1,6 @@
 import { TextChunkModel } from '../../model/editorModel.js';
 import { EditorLineModel } from '../../model/editorLineModel.js';
-import { VideoChunkModel } from '../../extensions/video/model/videoModel.js';
+import { createVideoChunk } from '../../extensions/video/model/createVideoChunk.js';
 import { createImageChunk } from '../../extensions/image/model/createImageChunk.js';
 import { TableChunkModel } from '../../extensions/table/model/tableModel.js';
 
@@ -125,7 +125,7 @@ export const HtmlDeserializer = {
             const src = node.getAttribute('src') || '';
             const videoId = this.extractYoutubeId(src);
             if (videoId) {
-                chunks.push(VideoChunkModel(videoId, src));
+                chunks.push(createVideoChunk(videoId, src));
             }
             return chunks;
         }
