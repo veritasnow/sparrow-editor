@@ -1,4 +1,4 @@
-// extensions/image/model/createImageChunk.js
+// extensions/image/model/imageChunk.js
 export function createImageChunk(src) {
     const model = {
         type : 'image',

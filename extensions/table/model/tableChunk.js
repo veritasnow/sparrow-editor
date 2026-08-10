@@ -1,5 +1,5 @@
-// extensions/table/model/TableChunkModel.js
-export function TableChunkModel(rows, cols) {
+// extensions/table/model/createTableChunk.js
+export function createTableChunk(rows, cols) {
     // 1. 이 테이블 덩어리(Chunk)만의 고유 식별자 생성
     const tableId = Math.random().toString(36).slice(2, 6); 
 

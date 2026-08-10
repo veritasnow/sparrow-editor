@@ -1,9 +1,9 @@
 // /core/convert/HtmlDeserializer.js
 import { TextChunkModel } from '../../model/editorModel.js';
 import { EditorLineModel } from '../../model/editorLineModel.js';
-import { createVideoChunk } from '../../extensions/video/model/createVideoChunk.js';
-import { createImageChunk } from '../../extensions/image/model/createImageChunk.js';
-import { TableChunkModel } from '../../extensions/table/model/tableModel.js';
+import { createVideoChunk } from '../../extensions/video/model/videoChunk.js';
+import { createImageChunk } from '../../extensions/image/model/imageChunk.js';
+import { createTableChunk } from '../../extensions/table/model/tableChunk.js';
 import { UnorderedListModel } from '../../extensions/unorderedList/model/unorderedListModel.js';
 
 export const HtmlDeserializer = {
@@ -137,7 +137,7 @@ export const HtmlDeserializer = {
     parseTable(node, context) {
         const rowCount = node.rows.length;
         const colCount = node.rows[0]?.cells.length || 0;
-        const tableChunk = TableChunkModel(rowCount, colCount);
+        const tableChunk = createTableChunk(rowCount, colCount);
 
         Array.from(node.rows).forEach((row, rIdx) => {
             Array.from(row.cells).forEach((cell, cIdx) => {

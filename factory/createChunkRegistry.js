@@ -1,9 +1,9 @@
 // factory/createChunkRegistry.js
 import { chunkRegistry } from '../core/chunk/chunkRegistry.js';
 import { TextChunkModel } from '../model/editorModel.js';
-import { createVideoChunk } from '../extensions/video/model/createVideoChunk.js';
-import { createImageChunk } from '../extensions/image/model/createImageChunk.js';
-import { TableChunkModel } from '../extensions/table/model/tableModel.js';
+import { createVideoChunk } from '../extensions/video/model/videoChunk.js';
+import { createImageChunk } from '../extensions/image/model/imageChunk.js';
+import { createTableChunk } from '../extensions/table/model/tableChunk.js';
 import { UnorderedListModel } from '../extensions/unorderedList/model/unorderedListModel.js';
 
 export function createChunkRegistry() {
@@ -39,7 +39,7 @@ export function createChunkRegistry() {
   chunkRegistry.register('table', {
     isText   : false,
     canSplit : false,
-    create   : (rows, cols) => TableChunkModel(rows, cols),
+    create   : (rows, cols) => createTableChunk(rows, cols),
     getLength: () => 1,
 
     clone: (chunk) => ({
@@ -70,7 +70,7 @@ export function createChunkRegistry() {
   chunkRegistry.register('table', {
     isText   : false,
     canSplit : false,
-    create   : (rows, cols) => TableChunkModel(rows, cols),
+    create   : (rows, cols) => createTableChunk(rows, cols),
     getLength: () => 1,
     clone    : (chunk) => ({
       ...chunk,
