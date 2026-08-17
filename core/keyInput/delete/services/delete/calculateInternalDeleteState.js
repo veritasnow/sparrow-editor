@@ -1,4 +1,4 @@
-// /core/keyInput/services/backspace/backspaceDeleteService.js
+// /core/keyInput/services/delete/calculateInternalDeleteState.js
 
 import { chunkRegistry } from '../../../../chunk/chunkRegistry.js';
 import { EditorLineModel } from '../../../../../model/editorLineModel.js';
@@ -7,7 +7,7 @@ import { cloneChunk, normalizeLineChunks } from '../../../../../utils/mergeUtils
 /**
  * 줄 내부 청크 삭제 처리 (Delete: 현재 위치의 뒷 글자 삭제)
  */
-export function performInternalDelete(currentState, lineIndex, offset) {
+export function calculateInternalDeleteState(currentState, lineIndex, offset) {
     const currentLine = currentState[lineIndex];
     const { chunks }  = currentLine;
     let targetIndex   = -1;

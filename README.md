@@ -185,8 +185,8 @@ sparrow-editor
 │  ├─ keyInput
 │  │  ├─ delete
 │  │  │  ├─ processors
-│  │  │  │  ├─ keyBackspaceProcessors.js
-│  │  │  │  └─ keyDeleteProcessors.js
+│  │  │  │  ├─ backspaceProcessor.js
+│  │  │  │  └─ deleteProcessor.js
 │  │  │  └─ services
 │  │  │     ├─ backspace
 │  │  │     │  ├─ calculateBackspaceState.js
@@ -195,7 +195,7 @@ sparrow-editor
 │  │  │     │  └─ resolveBackspacePosition.js
 │  │  │     ├─ common
 │  │  │     │  ├─ calculateDeleteSelectionState.js
-│  │  │     │  ├─ performInternalDelete.js
+│  │  │     │  ├─ calculateInternalDeleteState.js
 │  │  │     │  ├─ shouldPreventDeletion.js
 │  │  │     │  └─ updateLine.js
 │  │  │     └─ delete

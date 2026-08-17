@@ -1,4 +1,4 @@
-// /core/keyInput/processors/keyDeleteProcessors.js
+// /core/keyInput/processors/deleteProcessor.js
 import { shouldPreventDeletion } from '../services/common/shouldPreventDeletion.js';
 import { resolveTargetPosition } from '../services/delete/resolveTargetPosition.js';
 import { calculateDeleteState } from '../services/delete/calculateDeleteState.js';

@@ -1,4 +1,4 @@
-// /core/keyInput/processors/keyBackspaceProcessors.js
+// /core/keyInput/processors/backspaceProcessor.js
 
 import { shouldPreventDeletion } from '../services/common/shouldPreventDeletion.js';
 import { resolveBackspacePosition } from '../services/backspace/resolveBackspacePosition.js';

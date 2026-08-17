@@ -1,5 +1,5 @@
-// /core/keyInput/services/backspace/backspaceStateService.js
-import { performInternalDelete } from './performInternalDelete.js';
+// /core/keyInput/services/backspace/calculateBackspaceState.js
+import { calculateInternalDeleteState } from './calculateInternalDeleteState.js';
 import { calculateDeleteSelectionState } from '../common/calculateDeleteSelectionState.js'
 import { EditorLineModel } from '../../../../../model/editorLineModel.js';
 import { chunkRegistry } from '../../../../chunk/chunkRegistry.js';
@@ -29,7 +29,7 @@ export function calculateBackspaceState(currentState, lineIndex, offset, ranges 
     }
 
     // 3. 현재 줄 내부 삭제
-    return performInternalDelete(currentState, lineIndex, offset);
+    return calculateInternalDeleteState(currentState, lineIndex, offset);
 }
 
 
