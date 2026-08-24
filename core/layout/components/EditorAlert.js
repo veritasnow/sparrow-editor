@@ -1,4 +1,4 @@
-export function showEditorAlert(rootId, title, message) {
+export function EditorAlert(rootId, title, message) {
   // body가 아니라 미리 만들어둔 레이어에 넣습니다.
   const layer = document.getElementById(`${rootId}-modal-layer`);
   if (!layer) return;

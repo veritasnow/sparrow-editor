@@ -1,4 +1,4 @@
-// /core/input/service/renderInputService.js
+// /core/input/service/inputRender.js
 export function inputRender({
     uiAPI,
     selectionAPI,

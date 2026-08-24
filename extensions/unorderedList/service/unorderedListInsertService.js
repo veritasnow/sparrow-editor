@@ -1,6 +1,6 @@
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
-import { showEditorAlert } from '../../../core/layout/components/editorModal.js';
+import { EditorAlert } from '../../../core/layout/components/EditorAlert.js';
 import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
@@ -68,7 +68,7 @@ export function createUnorderedListInsertService(stateAPI, uiAPI, selectionAPI) 
             }, 0);
         } else {
             const creatEditorId = selectionAPI.getMainKey();
-            showEditorAlert(
+            EditorAlert(
                 creatEditorId.replace("-content", ""), 
                 "테이블에는 글머리기호 삽입이<br/> 불가능합니다.", 
                 "기본 영역에만 삽입이 가능합니다."

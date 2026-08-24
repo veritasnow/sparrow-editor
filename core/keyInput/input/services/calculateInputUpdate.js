@@ -1,4 +1,4 @@
-// /core/keyInput/input/service/calculateInputService.js
+// /core/keyInput/input/service/calculateInputUpdate.js
 import { EditorLineModel } from '../../../../model/editorLineModel.js';
 import { chunkRegistry } from '../../../chunk/chunkRegistry.js'; // 레지스트리 도입
 
