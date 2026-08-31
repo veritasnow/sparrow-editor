@@ -1,11 +1,11 @@
 import { analyzeSelection } from './services/analyzeSelection.js';
-import { createSelectionUI } from './services/createSelectionUI.js';
-import { applyVisualAndRangeSelection } from './services/applyVisualAndRangeSelection.js';
+import { selectionUI } from './services/selectionUI.js';
+import { applySelection } from './services/applySelection.js';
 import { calculateDragSelection } from './services/calculateDragSelection.js';
 import { normalizeCursorData } from '../../utils/cursorUtils.js';
 
 export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarElements) {
-    const selectionUi     = createSelectionUI(toolbarElements);
+    const selectionUi     = selectionUI(toolbarElements);
 
     let isDragging        = false;
     let startTD           = null;
@@ -66,12 +66,11 @@ export function bindSelectionFeature(stateAPI, selectionAPI, editorEl, toolbarEl
         }
 
         // 🔥 startTD 추가 전달
-        applyVisualAndRangeSelection(
+        applySelection(
             selectedCells,
             normalized,
             stateAPI,
-            editorEl.id,
-            startTD
+            editorEl.id
         );
     });
 

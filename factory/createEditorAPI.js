@@ -1,5 +1,5 @@
 // factory/editorApiFactory.js
-import { editorRenderer } from '../core/render/editorRenderer.js';
+import { createEditorRenderer } from '../core/render/editorRenderer.js';
 
 export function createEditorAPI({
   state,
@@ -38,7 +38,7 @@ export function createEditorAPI({
     /* ─────────────────────────────
     * uiAPI (renderLine 재귀 추가)
     * ───────────────────────────── */
-    const renderService = editorRenderer({
+    const renderService = createEditorRenderer({
         stateAPI,
         ui
     });

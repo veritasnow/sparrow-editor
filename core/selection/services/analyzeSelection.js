@@ -1,3 +1,4 @@
+//selection/services/analyzeSelection.js
 import { DEFAULT_TEXT_STYLE, DEFAULT_LINE_STYLE } from '../../../constants/styleConstants.js';
 
 export function analyzeSelection(stateAPI, selectionAPI) {

@@ -1,5 +1,5 @@
-// features/selection/createSelectionUI.js
-export function createSelectionUI(toolbarElements = {}) {
+// features/selection/selectionUI.js
+export function selectionUI(toolbarElements = {}) {
   const {
     // text style
     boldBtn,

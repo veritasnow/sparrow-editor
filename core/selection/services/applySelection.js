@@ -1,7 +1,7 @@
 /**
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
-export function applyVisualAndRangeSelection(selectedCells, normalized, stateAPI, rootId) {
+export function applySelection(selectedCells, normalized, stateAPI, rootId) {
     if (!selectedCells || selectedCells.length === 0) return;
 
     let newSelectedCells = [];
