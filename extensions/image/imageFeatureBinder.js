@@ -1,4 +1,4 @@
-import { imagePopupView } from './componets/imagePopupView.js';
+import { ImagePopup } from './componets/ImagePopup.js';
 import { insertImage } from './services/insertImage.js';
 
 // features/image/imageFeatureBinder.js
@@ -6,7 +6,7 @@ export function imageFeatureBinder(imageBtn, stateAPI, uiAPI, selectionAPI, root
     const rootEl = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
-    const { popup, inputEl, fileBtn, fileInput, confirmBtn, open, close } = imagePopupView(rootEl, toolbar, imageBtn);
+    const { popup, inputEl, fileBtn, fileInput, confirmBtn, open, close } = ImagePopup(rootEl, toolbar, imageBtn);
 
     const onImageBtnClick = (e) => {
         e.stopPropagation();

@@ -93,7 +93,7 @@ extensions/image
 ├─ service
 │  └─ imageInsertService.js
 ├─ components
-│  └─ imagePopupView.js
+│  └─ ImagePopup.js
 ├─ renderer
 │  └─ imageRenderer.js
 └─ imageExtension.js
@@ -241,7 +241,7 @@ sparrow-editor
 ├─ extensions
 │  ├─ image
 │  │  ├─ componets
-│  │  │  ├─ imagePopupView.js
+│  │  │  ├─ ImagePopup.js
 │  │  │  └─ imageRenderer.js
 │  │  ├─ imageExtension.js
 │  │  ├─ imageFeatureBinder.js

@@ -36,39 +36,11 @@ export function insertImage(src, {stateAPI, uiAPI, selectionAPI}) {
     // 5. 변경된 상태 저장
     stateAPI.save(activeKey, newState);
 
-    // 6. UI 업데이트 최적화 시작
-    const container = document.getElementById(activeKey);
-    if (!container) return false;
+    // 6. UI 렌더링
+    renderImage(newState, activeKey, lineIndex, uiAPI);
 
-    // 🔥 [최적화] 7. DOM 개수 동기화 (이미지 삽입으로 늘어난 라인만큼 미리 DIV/P 생성)
-    // uiAPI.render 내부의 syncParagraphCount를 직접 활용하거나 호출합니다.
-    uiAPI.syncParagraphCount?.(newState, activeKey);
 
-    // 8. 이미지가 들어간 줄부터 커서가 복원될 줄까지 루프를 돌며 업데이트
-    const startUpdateIdx = Math.min(lineIndex, restoreLineIndex);
-    const endUpdateIdx = Math.max(lineIndex, restoreLineIndex);
-
-    for (let i = startUpdateIdx; i < newState.length; i++) {
-        const lineEl = container.children[i];
-        
-        // 💡 현재 라인의 테이블 DOM을 미리 확보 (재사용)
-        // getElementsByClassName이 querySelectorAll보다 빠름
-        const tablePool = lineEl ? Array.from(lineEl.getElementsByClassName('chunk-table')) : [];
-        
-        // 만약 새로 생성된 라인이면 renderLine이 알아서 새 태그를 만듦
-        uiAPI.renderLine(i, newState[i], {
-            key : activeKey,
-            pool: tablePool
-        });
-        
-        // endUpdateIdx까지만 필수 렌더링하고, 이후 라인은 데이터가 변했을 때만 렌더링하도록 
-        // 렌더링 엔진 내부 로직에 맡기거나 여기서 중단 가능
-        if (i > endUpdateIdx && i < areaState.length) {
-                // 줄 번호(index)만 바뀌고 데이터는 같은 경우 렌더링 스킵 로직이 있으면 좋음
-        }
-    }
-
-    // 9. 커서 위치 복원
+    // 7. 커서 위치 복원
     const nextCursorPos = {
         containerId: activeKey,
         lineIndex: restoreLineIndex,
@@ -129,4 +101,29 @@ function applyImageBlock(areaState, src, currentLineIndex, cursorOffset) {
         restoreChunkIndex: targetChunkIndex,
         restoreOffset: 0
     };
+}
+
+function renderImage(newState, activeKey, lineIndex, uiAPI) {
+    // 6. UI 업데이트 최적화 시작
+    const container = document.getElementById(activeKey);
+    if (!container) return false;
+
+    // 🔥 [최적화] 7. DOM 개수 동기화 (이미지 삽입으로 늘어난 라인만큼 미리 DIV/P 생성)
+    // uiAPI.render 내부의 syncParagraphCount를 직접 활용하거나 호출합니다.
+    uiAPI.syncParagraphCount?.(newState, activeKey);
+
+    for (let i = lineIndex; i < newState.length; i++) {
+        const lineEl = container.children[i];
+        
+        // 💡 현재 라인의 테이블 DOM을 미리 확보 (재사용)
+        // getElementsByClassName이 querySelectorAll보다 빠름
+        const tablePool = lineEl ? Array.from(lineEl.getElementsByClassName('chunk-table')) : [];
+        
+        // 만약 새로 생성된 라인이면 renderLine이 알아서 새 태그를 만듦
+        uiAPI.renderLine(i, newState[i], {
+            key : activeKey,
+            pool: tablePool
+        });
+    }
+
 }

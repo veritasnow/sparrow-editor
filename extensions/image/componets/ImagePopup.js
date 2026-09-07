@@ -1,6 +1,6 @@
-// extensions/image/ui/imagePopupView.js
+// extensions/image/ui/ImagePopup.js
 
-export function imagePopupView(rootEl, toolbar, imageBtn) {
+export function ImagePopup(rootEl, toolbar, imageBtn) {
     let popup = rootEl.querySelector('.image-input-popup');
     if (!popup) {
         popup = document.createElement('div');
