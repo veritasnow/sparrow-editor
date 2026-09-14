@@ -1,6 +1,6 @@
-// extensions/table/componets/tablePopupView.js
+// extensions/table/componets/TablePopup.js
 
-export function createTablePopupView(rootEl, toolbar, tableBtn) {
+export function TablePopup(rootEl, toolbar, tableBtn) {
     let popup = rootEl.querySelector('.table-input-popup');
     if (!popup) {
         popup = document.createElement('div');

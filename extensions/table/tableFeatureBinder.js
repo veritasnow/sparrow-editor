@@ -1,22 +1,24 @@
 // extensions/table/tableFeatureBinder.js
-import { createTablePopupView } from './componets/tablePopupView.js';
-import { createTableResizeService } from './service/tableResizeService.js';
-import { createTableInsertService } from './service/tableInsertService.js';
-import { createTableCellToolbarView, showToolbar } from '../table/componets/tableCellToolbarView.js'
-import { createTableToolbarService } from '../table/service/tableToolbarService.js';
+import { TablePopup } from './componets/TablePopup.js';
+import { resizeAttach } from './service/resizeTable.js';
+import { insertTable } from './service/insertTable.js';
+import { TableCellToolbar } from './componets/TableCellToolbar.js';
+import { tableToolbar } from './service/tableToolbar.js';
+import { showTableCellToolbar } from './service/showTableCellToolbar.js';
+
+
 
 export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId) {
     const rootEl  = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
-    const resizeService = createTableResizeService({ stateAPI });    
     /* ---------------- 리사이징 이벤트 위임 ---------------- */
 
     const onMouseOver = (e) => {
         const table = e.target.closest('.se-table');
         if (!table) return;
 
-        resizeService.attach(table);
+        resizeAttach(table, stateAPI);
     };
 
     rootEl.addEventListener('mouseover', onMouseOver);
@@ -25,15 +27,14 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
 
 
     // 1. View & Service 초기화
-    const { popup, grid, sizeText, open, close } = createTablePopupView(rootEl, toolbar, tableBtn);
-    const { insertTable } = createTableInsertService(stateAPI, uiAPI, selectionAPI);
-    const tableToolbarService = createTableToolbarService(
+    const { popup, grid, sizeText, open, close } = TablePopup(rootEl, toolbar, tableBtn);
+    const tableToolbarService = tableToolbar(
         stateAPI,
         uiAPI,
         selectionAPI
     );
 
-    const cellToolbar = createTableCellToolbarView(rootEl, {
+    const cellToolbar = TableCellToolbar(rootEl, {
         "add-row"    : tableToolbarService.addRow,
         "add-col"    : tableToolbarService.addCol,
         "merge"      : tableToolbarService.mergeCells,
@@ -70,7 +71,7 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
         e.stopPropagation();
         if (hoverRows > 0 && hoverCols > 0) {
             // lastCursorPos는 이미 onBtnClick 시점에 확보됨
-            if (insertTable(hoverRows, hoverCols, lastCursorPos)) {
+            if (insertTable(hoverRows, hoverCols, lastCursorPos, { stateAPI, uiAPI, selectionAPI })) {
                 close();
             }
         }
@@ -96,7 +97,7 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
     };
 
     const handleTableClick = (cellEl) => {
-        showToolbar(rootEl, cellEl, cellToolbar);
+        showTableCellToolbar(rootEl, cellEl, cellToolbar);
     };
 
     const hideCellToolbar = () => {

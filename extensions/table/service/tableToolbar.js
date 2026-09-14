@@ -2,11 +2,11 @@ import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
 import { DEFAULT_TEXT_STYLE } from '../../../constants/styleConstants.js';
 
-export function createTableToolbarService(stateAPI, uiAPI, selectionAPI) {
+export function tableToolbar(stateAPI, uiAPI, selectionAPI) {
 
     // --- 🛠️ 내부 공통 유틸리티 함수 ---
 
-    /**
+    /**d
      * 테이블 조작에 필요한 모든 컨텍스트(부모 상태, 위치 등)를 한 번에 가져옴
      */
     function getTableContext(tableId) {
