@@ -4,7 +4,7 @@ import { EditorLineModel } from '../../model/editorLineModel.js';
 import { createVideoChunk } from '../../extensions/video/model/videoChunk.js';
 import { createImageChunk } from '../../extensions/image/model/imageChunk.js';
 import { createTableChunk } from '../../extensions/table/model/tableChunk.js';
-import { UnorderedListModel } from '../../extensions/unorderedList/model/unorderedListModel.js';
+import { createUnorderedListChunk } from '../../extensions/unorderedList/model/unorderedListChunk.js';
 
 export const HtmlDeserializer = {
     allowedStyles: ['fontSize', 'color', 'fontWeight', 'fontStyle', 'textDecoration', 'backgroundColor'],
@@ -121,7 +121,7 @@ export const HtmlDeserializer = {
 
         context.additionalState[listId] = listLines;
 
-        const listModel = UnorderedListModel();
+        const listModel = createUnorderedListChunk();
         listModel.id = listId;
         
         // 💡 렌더러가 즉시 그릴 수 있도록 line 주입 구조 유지

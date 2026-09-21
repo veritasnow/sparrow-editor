@@ -1,15 +1,14 @@
 // extensions/list/listFeatureBinder.js
-import { createUnorderedListInsertService } from './service/unorderedListInsertService.js';
+import { insertUnorderedList } from './service/insertUnorderedList.js';
 
 export function bindUnorderedListButton(listBtn, stateAPI, uiAPI, selectionAPI) {
-    const { insertUnorderedList } = createUnorderedListInsertService(stateAPI, uiAPI, selectionAPI);
 
     const onBtnClick = (e) => {
         e.stopPropagation();
         e.preventDefault();
         
         selectionAPI.updateLastValidPosition();
-        insertUnorderedList();
+        insertUnorderedList(stateAPI, uiAPI, selectionAPI);
     };
 
     listBtn.addEventListener('click', onBtnClick);

@@ -268,7 +268,7 @@ sparrow-editor
 │  │  ├─ components
 │  │  │  └─ unorderedListRenderer.js
 │  │  ├─ model
-│  │  │  └─ unorderedListModel.js
+│  │  │  └─ unorderedListChunk.js
 │  │  ├─ service
 │  │  │  └─ unorderedListInsertService.js
 │  │  ├─ unorderedListExtension.js

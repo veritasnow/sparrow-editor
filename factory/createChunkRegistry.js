@@ -4,7 +4,7 @@ import { TextChunkModel } from '../model/editorModel.js';
 import { createVideoChunk } from '../extensions/video/model/videoChunk.js';
 import { createImageChunk } from '../extensions/image/model/imageChunk.js';
 import { createTableChunk } from '../extensions/table/model/tableChunk.js';
-import { UnorderedListModel } from '../extensions/unorderedList/model/unorderedListModel.js';
+import { createUnorderedListChunk } from '../extensions/unorderedList/model/unorderedListChunk.js';
 
 export function createChunkRegistry() {
 
@@ -96,7 +96,7 @@ export function createChunkRegistry() {
       canSplit: false, // 리스트 자체가 텍스트처럼 쪼개지지는 않음
       
       // 1. 모델 생성 함수 연결
-      create: (itemCount, initialData) => UnorderedListModel(itemCount, initialData),
+      create: (itemCount, initialData) => createUnorderedListChunk(itemCount, initialData),
       
       // 2. 길이는 블록 1개로 취급
       getLength: () => 1,
