@@ -275,7 +275,7 @@ sparrow-editor
 │  │  └─ unorderedListFeatureBinder.js
 │  └─ video
 │     ├─ componets
-│     │  ├─ videoPopupView.js
+│     │  ├─ VideoPopup.js
 │     │  └─ videoRenderer.js
 │     ├─ model
 │     │  └─ createVideoChunk.js

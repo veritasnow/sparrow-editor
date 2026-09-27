@@ -1,5 +1,5 @@
-import { createVideoPopupView } from './componets/videoPopupView.js';
-import { createVideoInsertService } from './service/videoInsertService.js';
+import { VideoPopup } from './componets/VideoPopup.js';
+import { insertVideo } from './service/insertVideo.js';
 
 // features/video/videoFeatureBinder.js
 
@@ -8,8 +8,7 @@ export function bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId)
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
 
     // 1. View & Service 초기화
-    const { popup, inputEl, confirmBtn, open, close } = createVideoPopupView(rootEl, toolbar, videoBtn);
-    const { insertVideo } = createVideoInsertService(stateAPI, uiAPI, selectionAPI);
+    const { popup, inputEl, confirmBtn, open, close } = VideoPopup(rootEl, toolbar, videoBtn);
 
     let lastCursorPos = null;
 
@@ -30,7 +29,7 @@ export function bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId)
     const onConfirmClick = () => {
         const url = inputEl.value.trim();
         if (!url) return;
-        if (insertVideo(url, lastCursorPos)) close();
+        if (insertVideo(url, lastCursorPos, { stateAPI, uiAPI, selectionAPI })) close();
     };
 
     const onDocumentClick = (e) => {

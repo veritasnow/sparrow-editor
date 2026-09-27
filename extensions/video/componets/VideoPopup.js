@@ -1,11 +1,11 @@
-// extensions/video/ui/videoPopupView.js
+// extensions/video/ui/VideoPopup.js
 
 /**
  * 비디오 삽입 팝업의 DOM 구조 및 기본 UI 동작을 관리하는 뷰 모듈.
  *
  * @returns {{ popup: HTMLElement, inputEl: HTMLElement, confirmBtn: HTMLElement, open: Function, close: Function }}
  */
-export function createVideoPopupView(rootEl, toolbar, videoBtn) {
+export function VideoPopup(rootEl, toolbar, videoBtn) {
     let popup = rootEl.querySelector('.video-input-popup');
     const rootId = rootEl.id;
     if (!popup) {
