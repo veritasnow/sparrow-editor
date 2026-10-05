@@ -1,5 +1,5 @@
 // sparrow-editor\service\align\alignFeatureBinder.js
-import { createEditorAlignService } from '../align/editorAlignService.js'; // 💡 분리된 핵심 서비스
+import { applyAlign } from './applyAlign.js'; // 💡 분리된 핵심 서비스
 
 /**
  * 📐 정렬 버튼 이벤트 바인딩 (최상위 컴포지션 레이어)
@@ -8,11 +8,9 @@ import { createEditorAlignService } from '../align/editorAlignService.js'; // �
 export function bindAlignButtons(stateAPI, uiAPI, selectionAPI, { leftBtn, centerBtn, rightBtn }) {
 
     // 정렬 Service 초기화
-    const { applyAlign } = createEditorAlignService(stateAPI, uiAPI, selectionAPI);
-
-    const onLeft   = () => applyAlign("left");
-    const onCenter = () => applyAlign("center");
-    const onRight  = () => applyAlign("right");
+    const onLeft   = () => applyAlign("left", { stateAPI, uiAPI, selectionAPI });
+    const onCenter = () => applyAlign("center", { stateAPI, uiAPI, selectionAPI });
+    const onRight  = () => applyAlign("right", { stateAPI, uiAPI, selectionAPI });
 
     // 이벤트 연결
     leftBtn.addEventListener('click', onLeft);

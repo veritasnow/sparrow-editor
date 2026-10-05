@@ -292,7 +292,7 @@ sparrow-editor
 ├─ features
 │  ├─ align
 │  │  ├─ alignFeatureBinder.js
-│  │  └─ editorAlignService.js
+│  │  └─ applyAlign.js
 │  ├─ componets
 │  │  └─ textRenderer.js
 │  └─ style
