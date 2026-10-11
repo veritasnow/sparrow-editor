@@ -1,7 +1,6 @@
-import { createEditorStyleService } from "./editorStyleService.js";
+import { applyStyle, applyStyleValue } from "./style.js";
 
-export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements, sync) {
-    const { applyStyle, applyStyleValue } = createEditorStyleService(stateAPI, uiAPI, selectionAPI, sync);
+export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements) {
 
     // 공통 핸들러 로직
     const handleEvent = (e) => {
@@ -14,7 +13,13 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements, sync) 
             if (command === 'color-trigger') {
                 currentEl.querySelector('.color-input')?.click();
             } else if (value) {
-                applyStyle(command, value);
+               applyStyle(
+                    command,
+                    value,
+                    stateAPI,
+                    uiAPI,
+                    selectionAPI
+                );
             }
         } 
         else if (e.type === 'change' || e.type === 'input') {
@@ -28,10 +33,22 @@ export function bindStyleButtons(stateAPI, uiAPI, selectionAPI, elements, sync) 
                 const preview = currentEl.querySelector('.color-preview');
                 if (preview) preview.style.background = color;
 
-                applyStyleValue(styleProp, color);
+                applyStyleValue(
+                    styleProp,
+                    color,
+                    stateAPI,
+                    uiAPI,
+                    selectionAPI
+                );
             } else {
                 // 일반 select 박스 등
-                applyStyleValue(command, e.target.value);
+                applyStyleValue(
+                    command,
+                    e.target.value,
+                    stateAPI,
+                    uiAPI,
+                    selectionAPI
+                );
             }
         }
     };

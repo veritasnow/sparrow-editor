@@ -296,7 +296,7 @@ sparrow-editor
 │  ├─ componets
 │  │  └─ textRenderer.js
 │  └─ style
-│     ├─ editorStyleService.js
+│     ├─ style.js
 │     ├─ styleFeatureBinder.js
 │     └─ styleUtils.js
 ├─ index.html
