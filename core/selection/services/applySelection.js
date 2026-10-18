@@ -111,6 +111,44 @@ function applySingleSelectionVisuals(ranges, rootContainer) {
 }
 
 // 복수 셀 선택 시 시각적 처리 (기존 로직 그대로)
+
+function applyMultiSelectionVisuals(allCollectedCells, originalSelectedCells) {
+    // 1. 수집된 전체 셀(부모 + 하위 테이블 셀)을 선택 상태로 표시
+    allCollectedCells.forEach(td => {
+        td.classList.add('is-selected');
+        td.classList.remove('is-not-selected');
+    });
+
+    // 2. 실제 선택된 부모 셀을 기준으로 처리 대상 테이블 수집
+    const tablesToProcess = new Set();
+
+    originalSelectedCells.forEach(td => {
+        const table = td.closest('.se-table');
+        if (table) tablesToProcess.add(table);
+    });
+
+    // 3. 실제 선택된 셀과 그 하위 셀을 제외한 형제 셀은 어둡게 처리
+    tablesToProcess.forEach(table => {
+        const directCells = Array.from(
+            table.querySelectorAll(
+                ':scope > tbody > tr > .se-table-cell, :scope > tr > .se-table-cell'
+            )
+        );
+
+        directCells.forEach(td => {
+            const isSelected = originalSelectedCells.some(
+                selected => selected.id === td.id
+            );
+
+            if (!isSelected) {
+                td.classList.add('is-not-selected');
+                td.classList.remove('is-selected');
+            }
+        });
+    });
+}
+
+/*
 function applyMultiSelectionVisuals(allCollectedCells, originalSelectedCells) {
     // 1. 모든 셀에서 클래스 초기화 (이미 상위에서 수행됨)
     
@@ -141,6 +179,10 @@ function applyMultiSelectionVisuals(allCollectedCells, originalSelectedCells) {
         });
     });
 }
+*/
+
+
+
 function collectAllCellIdsFromState(lines, idSet, stateAPI) {
     if (!lines || !Array.isArray(lines)) return;
 

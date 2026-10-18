@@ -1,58 +1,82 @@
+
 import { VideoPopup } from './componets/VideoPopup.js';
-import { insertVideo } from './service/insertVideo.js';
+import { createVideoInsert } from './service/insertVideo.js';
 
-// features/video/videoFeatureBinder.js
-
-export function bindVideoButton(videoBtn, stateAPI, uiAPI, selectionAPI, rootId) {
+export function bindVideoButton(
+    videoBtn,
+    stateAPI,
+    uiAPI,
+    selectionAPI,
+    rootId
+) {
     const rootEl = document.getElementById(rootId);
-    const toolbar = rootEl.querySelector('.sparrow-toolbar');
+    if (!rootEl) return;
 
-    // 1. View & Service 초기화
-    const { popup, inputEl, confirmBtn, open, close } = VideoPopup(rootEl, toolbar, videoBtn);
+    const toolbar = rootEl.querySelector('.sparrow-toolbar');
+    if (!toolbar) return;
+
+    // 1. 에디터별 비디오 삽입 기능 생성
+    const { insertVideo } = createVideoInsert({
+        stateAPI,
+        uiAPI,
+        selectionAPI
+    });
+
+    // 2. 팝업 초기화
+    const {
+        popup,
+        inputEl,
+        confirmBtn,
+        open,
+        close
+    } = VideoPopup(rootEl, toolbar, videoBtn);
 
     let lastCursorPos = null;
 
-    // 2. Event Handlers
+    // 3. 이벤트 핸들러
     const onVideoBtnClick = (e) => {
         e.stopPropagation();
-        
+
         if (popup.style.display === 'block') {
             close();
-        } else {
-            // ✨ 핵심: 팝업이 열리기 전(포커스가 본문에 있을 때) 절대 좌표 강제 갱신
-            selectionAPI.updateLastValidPosition(); 
-            open();
-            inputEl.focus();
+            return;
         }
+
+        // 팝업에 포커스가 이동하기 전에 본문 커서 위치 저장
+        selectionAPI.updateLastValidPosition();
+        lastCursorPos = selectionAPI.getLastValidPosition();
+
+        open();
+        inputEl.focus();
     };
 
     const onConfirmClick = () => {
         const url = inputEl.value.trim();
         if (!url) return;
-        if (insertVideo(url, lastCursorPos, { stateAPI, uiAPI, selectionAPI })) close();
+
+        if (insertVideo(url, lastCursorPos)) {
+            close();
+        }
     };
 
     const onDocumentClick = (e) => {
-        if (!popup.contains(e.target) && e.target !== videoBtn) close();
+        if (!popup.contains(e.target) && e.target !== videoBtn) {
+            close();
+        }
     };
 
-    // 3. Event Binding
+    // 4. 이벤트 등록
     videoBtn.addEventListener('click', onVideoBtnClick);
     confirmBtn.addEventListener('click', onConfirmClick);
     document.addEventListener('click', onDocumentClick);
 
-    // 4. ✨ 핵심: 통합 Disposer
+    // 5. 정리 함수
     return function destroy() {
-        console.log("[VideoFeature] Cleaning up...");
-        
-        // A. 이벤트 리스너 해제 (메모리 누수 방지)
         videoBtn.removeEventListener('click', onVideoBtnClick);
         confirmBtn.removeEventListener('click', onConfirmClick);
         document.removeEventListener('click', onDocumentClick);
 
-        // B. DOM 정리 (UI 오염 방지)
-        // 팝업이 툴바나 바디에 append 되어 있다면 반드시 제거해야 합니다.
-        if (popup && popup.parentNode) {
+        if (popup?.parentNode) {
             popup.parentNode.removeChild(popup);
         }
     };

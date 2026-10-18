@@ -1,3 +1,4 @@
+
 import { EditorLineModel } from '../../../model/editorLineModel.js';
 import { TextChunkModel } from '../../../model/editorModel.js';
 import { EditorAlert } from '../../../core/layout/components/EditorAlert.js';
@@ -5,104 +6,139 @@ import { chunkRegistry } from '../../../core/chunk/chunkRegistry.js';
 import { splitLineChunks } from '../../../utils/splitLineChunksUtils.js';
 
 /**
- * 리스트(ul/li) 삽입 및 전환 서비스
+ * 리스트 삽입 기능 생성
  */
-export function insertUnorderedList(stateAPI, uiAPI, selectionAPI) {
-    const activeKey = selectionAPI.getActiveKey();
+export function createUnorderedListInsert({
+    stateAPI,
+    uiAPI,
+    selectionAPI
+}) {
+    function insertUnorderedList() {
+        const activeKey = selectionAPI.getActiveKey();
 
-    if (activeKey === selectionAPI.getMainKey()) {
-        const pos = selectionAPI.getLastValidPosition();
-        if (!pos) return false;
+        if (!activeKey) return false;
 
-        const editorState = stateAPI.get(activeKey);
-        const { lineIndex, absoluteOffset } = pos;
+        if (activeKey === selectionAPI.getMainKey()) {
+            const pos = selectionAPI.getLastValidPosition();
+            if (!pos) return false;
 
-        const {
-            newState,
-            listChunk,
-            combinedText
-        } = buildListInsertion(
-            editorState,
-            lineIndex,
-            absoluteOffset
-        );
+            const editorState = stateAPI.get(activeKey);
+            if (!editorState) return false;
 
-        const initialLines = [
-            EditorLineModel('left', [
-                TextChunkModel('text', combinedText || '', {})
-            ])
-        ];
+            const { lineIndex, absoluteOffset } = pos;
 
-        stateAPI.save(listChunk.id, initialLines, false);
-        stateAPI.save(activeKey, newState);
+            const {
+                newState,
+                listChunk,
+                combinedText
+            } = buildListInsertion(
+                editorState,
+                lineIndex,
+                absoluteOffset
+            );
 
-        const nextCursorPos = {
-            containerId: listChunk.id,
-            lineIndex: 0,
-            anchor: {
-                chunkIndex: 0,
-                type: 'text',
-                offset: combinedText.length
-            }
-        };
+            if (!listChunk) return false;
 
-        stateAPI.saveCursor(nextCursorPos);
+            const initialLines = [
+                EditorLineModel('left', [
+                    TextChunkModel('text', combinedText || '', {})
+                ])
+            ];
 
-        uiAPI.renderLine(lineIndex, newState[lineIndex], {
-            key: activeKey,
-            shouldRenderSub: true
-        });
+            // 리스트 내부 컨테이너 초기화
+            stateAPI.save(listChunk.id, initialLines, false);
 
-        setTimeout(() => {
-            selectionAPI.restoreCursor(nextCursorPos);
-        }, 0);
+            // 부모 컨테이너 상태 저장
+            stateAPI.save(activeKey, newState);
 
-        return true;
+            const nextCursorPos = {
+                containerId: listChunk.id,
+                lineIndex: 0,
+                anchor: {
+                    chunkIndex: 0,
+                    type: 'text',
+                    offset: combinedText.length
+                }
+            };
+
+            stateAPI.saveCursor(nextCursorPos);
+
+            uiAPI.renderLine(lineIndex, newState[lineIndex], {
+                key: activeKey,
+                shouldRenderSub: true
+            });
+
+            setTimeout(() => {
+                selectionAPI.restoreCursor(nextCursorPos);
+            }, 0);
+
+            return true;
+        }
+
+        const editorId = selectionAPI.getMainKey();
+
+        if (editorId) {
+            EditorAlert(
+                editorId.replace('-content', ''),
+                '테이블에는 글머리기호 삽입이<br/> 불가능합니다.',
+                '기본 영역에만 삽입이 가능합니다.'
+            );
+        }
+
+        return false;
     }
 
-    const editorId = selectionAPI.getMainKey();
-
-    EditorAlert(
-        editorId.replace("-content", ""),
-        "테이블에는 글머리기호 삽입이<br/> 불가능합니다.",
-        "기본 영역에만 삽입이 가능합니다."
-    );
-
-    return false;
+    return { insertUnorderedList };
 }
 
-
-function buildListInsertion(editorState, currentLineIndex, cursorOffset = 0) {
+/**
+ * 리스트 청크를 생성하고 부모 상태를 계산한다.
+ */
+function buildListInsertion(
+    editorState,
+    currentLineIndex,
+    cursorOffset = 0
+) {
     const currentLine = editorState[currentLineIndex];
-    if (!currentLine) return { newState: editorState, combinedText: "" };
+
+    if (!currentLine) {
+        return {
+            newState: editorState,
+            listChunk: null,
+            combinedText: ''
+        };
+    }
 
     const listHandler = chunkRegistry.get('unorderedList');
 
-    // 1. 텍스트 추출
-    const { beforeChunks, afterChunks } = splitLineChunks(currentLine.chunks, cursorOffset);
+    // 커서 앞뒤의 텍스트를 합친다.
+    const { beforeChunks, afterChunks } = splitLineChunks(
+        currentLine.chunks,
+        cursorOffset
+    );
+
     const combinedText = [...beforeChunks, ...afterChunks]
-        .filter(c => c.type === 'text')
-        .map(c => c.text)
+        .filter(chunk => chunk.type === 'text')
+        .map(chunk => chunk.text)
         .join('')
         .replace(/\u200B/g, '');
 
-    // 2. 리스트 청크 생성
+    // 리스트 청크 생성
     const listChunk = listHandler.create(1, [combinedText]);
 
-    // 💡 렌더러가 기대하는 데이터 구조로 일단 초기화 (id는 ul의 id를 기반으로 하거나 규칙 생성)
-    // 렌더러에서 li.id = itemData.id 를 쓰므로 id가 필요합니다.
-    listChunk.data = [{ 
-        //id: `${listChunk.id}-item-0`, // li 요소에 부여될 고유 ID
-        //id: `${listChunk.id}-item-0`, // li 요소에 부여될 고유 ID
-        index: 0 
-    }];
+    // 렌더러가 기대하는 데이터 구조 유지
+    listChunk.data = [{ index: 0 }];
 
     const newState = [...editorState];
-    newState[currentLineIndex] = EditorLineModel(currentLine.align, [listChunk]);
+
+    newState[currentLineIndex] = EditorLineModel(
+        currentLine.align,
+        [listChunk]
+    );
 
     return {
         newState,
         listChunk,
-        combinedText: combinedText || "" // 👈 이게 있어야 length 에러가 안 남
+        combinedText
     };
 }

@@ -1,6 +1,6 @@
 // /module/inputModule/application/inputApplication.js
-import { createInputBindingService } from "../service/inputBindingService.js";
-import { createKeyBindingService   } from "../service/keyBindingService.js";
+import { createInputBinding } from "../service/inputBinding.js";
+import { createKeyBinding   } from "../service/keyBinding.js";
 
 /**
  * 에디터의 DOM 이벤트 바인딩 서비스를 통합하는 애플리케이션입니다.
@@ -12,8 +12,8 @@ export function createInputApplication({ editorEl }) {
         throw new Error("editorEl is required to create InputApplication.");
     }
 
-    const inputService = createInputBindingService(editorEl);
-    const keyService   = createKeyBindingService(editorEl);
+    const inputService = createInputBinding(editorEl);
+    const keyService   = createKeyBinding(editorEl);
 
     let destroyed = false;
 

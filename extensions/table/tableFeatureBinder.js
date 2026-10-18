@@ -1,7 +1,7 @@
 // extensions/table/tableFeatureBinder.js
 import { TablePopup } from './componets/TablePopup.js';
-import { resizeAttach } from './service/resizeTable.js';
-import { insertTable } from './service/insertTable.js';
+import { createTableResize  } from './service/resizeTable.js';
+import { createTableInsert } from './service/insertTable.js';
 import { TableCellToolbar } from './componets/TableCellToolbar.js';
 import { tableToolbar } from './service/tableToolbar.js';
 import { showTableCellToolbar } from './service/showTableCellToolbar.js';
@@ -11,6 +11,12 @@ import { showTableCellToolbar } from './service/showTableCellToolbar.js';
 export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId) {
     const rootEl  = document.getElementById(rootId);
     const toolbar = rootEl.querySelector('.sparrow-toolbar');
+    const { insertTable } = createTableInsert({
+        stateAPI,
+        uiAPI,
+        selectionAPI
+    });    
+    const { resizeAttach } = createTableResize({ stateAPI });
 
     /* ---------------- 리사이징 이벤트 위임 ---------------- */
 
@@ -18,7 +24,7 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
         const table = e.target.closest('.se-table');
         if (!table) return;
 
-        resizeAttach(table, stateAPI);
+        resizeAttach(table);
     };
 
     rootEl.addEventListener('mouseover', onMouseOver);
@@ -71,7 +77,7 @@ export function bindTableButton(tableBtn, stateAPI, uiAPI, selectionAPI, rootId)
         e.stopPropagation();
         if (hoverRows > 0 && hoverCols > 0) {
             // lastCursorPos는 이미 onBtnClick 시점에 확보됨
-            if (insertTable(hoverRows, hoverCols, lastCursorPos, { stateAPI, uiAPI, selectionAPI })) {
+            if (insertTable(hoverRows, hoverCols, lastCursorPos)) {
                 close();
             }
         }

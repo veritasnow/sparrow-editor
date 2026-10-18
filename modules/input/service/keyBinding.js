@@ -1,7 +1,7 @@
 /**
  * 🎧 에디터 키보드 입력 및 클립보드 이벤트 바인딩 서비스
  */
-export function createKeyBindingService(editorEl) {
+export function createKeyBinding(editorEl) {
 
     if (!editorEl) {
         throw new Error("Editor element is required for key binding service.");

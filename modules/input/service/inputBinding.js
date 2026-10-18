@@ -1,6 +1,6 @@
 import { EXCLUDED_INPUT_TYPES, PUNCTUATION_MARKS } from '../constants/excludedInputTypes.js';
 
-export function createInputBindingService(editorEl) {
+export function createInputBinding(editorEl) {
     if (!editorEl) throw new Error("Editor element required.");
     
     let composing          = false;
