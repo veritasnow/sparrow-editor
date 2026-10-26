@@ -1,7 +1,7 @@
 /**
  * modules/api/application/apiApplication.js
  */
-import { createRestApiService } from "./service/restApiService.js";
+import { createRestApi } from "./service/restApi.js";
 
 export function createApiApplication() {
     
@@ -14,7 +14,7 @@ export function createApiApplication() {
     };
 
     // 2. 범용 서비스 인스턴스
-    const restService = createRestApiService();
+    const restService = createRestApi();
 
     // 3. 상태 제어 API
     function initTokens({ csrfToken, csrfHeader, authToken }) {

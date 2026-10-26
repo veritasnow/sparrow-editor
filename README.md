@@ -315,7 +315,7 @@ sparrow-editor
 │  ├─ rest
 │  │  ├─ apiApplication.js
 │  │  └─ service
-│  │     └─ restApiService.js
+│  │     └─ restApi.js
 │  ├─ selection
 │  │  ├─ selectionApplication.js
 │  │  └─ service

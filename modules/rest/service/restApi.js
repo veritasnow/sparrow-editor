@@ -1,8 +1,8 @@
 /**
- * modules/api/service/restApiService.js
+ * modules/api/service/restApi.js
  * 상태를 가지지 않고 주입받은 데이터로 통신만 수행하는 순수 서비스
  */
-export function createRestApiService() {
+export function createRestApi() {
 
     async function request(method, url, options = {}, apiState) {
         const fullUrl = apiState.baseUrl + url;
