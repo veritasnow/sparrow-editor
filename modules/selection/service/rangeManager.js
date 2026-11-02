@@ -1,7 +1,7 @@
 /**
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
-export function createRangeService(root) {
+export function rangeManager(root) {
     
     /**
      * 1. Dom기준으로 선택영역 range 반환

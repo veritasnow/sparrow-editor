@@ -1,7 +1,7 @@
 /**
  * 활성 컨테이너(ID) 추출 및 분석 서비스
  */
-export function createKeyService(root) {
+export function keyManager(root) {
     
     /**
      * 1. 실제로 콘텐츠가 선택된 모든 컨테이너 ID 반환
