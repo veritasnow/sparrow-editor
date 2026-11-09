@@ -328,7 +328,7 @@ sparrow-editor
 │  │  ├─ constatns
 │  │  │  └─ stateConstants.js
 │  │  ├─ service
-│  │  │  └─ editorSnapshotService.js
+│  │  │  └─ snapshotService.js
 │  │  └─ store
 │  │     ├─ cursorHistoryStore.js
 │  │     └─ historyStore.js

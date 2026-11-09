@@ -1,7 +1,7 @@
 // application/editorApplication.js
 import { createHistoryStore } from "../store/historyStore.js";
 import { createCursorHistoryStore } from "../store/cursorHistoryStore.js";
-import { createEditorSnapshotService } from "../service/editorSnapshotService.js";
+import { editorSnapshot } from "../service/editorSnapshot.js";
 
 export function createStateApplication(initialState = {}) {
   // ----------------------------
@@ -12,7 +12,7 @@ export function createStateApplication(initialState = {}) {
   // initialState는 이제 { "root-main": [...] } 와 같은 Map 구조여야 합니다.
   let store           = createHistoryStore(initialState);
   let cursorStore     = createCursorHistoryStore(null);
-  let snapshotService = createEditorSnapshotService(store);
+  let snapshot        = editorSnapshot(store);
 
   function assertAlive() {
     if (destroyed) {
@@ -44,31 +44,31 @@ export function createStateApplication(initialState = {}) {
   // ----------------------------
   const saveEditorState = (key, state, options) => {
     assertAlive();
-    // snapshotService로 options(saveHistory 등)를 전달합니다.
-    snapshotService.saveEditorState(key, state, options);
+    // snapshot로 options(saveHistory 등)를 전달합니다.
+    snapshot.saveEditorState(key, state, options);
   };
 
   // 💡 [배치 API 추가]
   const saveEditorBatchState = (updates, options) => {
     assertAlive();
-    snapshotService.saveEditorBatchState(updates, options);
+    snapshot.saveEditorBatchState(updates, options);
   };  
 
   // 💡 [단일 삭제 API 추가]
   const deleteEditorState = (key, options) => {
     assertAlive();
-    snapshotService.deleteEditorState(key, options);
+    snapshot.deleteEditorState(key, options);
   };
 
   // 💡 [배치 삭제 API 추가]
   const deleteEditorBatchState = (keys, options) => {
     assertAlive();
-    snapshotService.deleteEditorBatchState(keys, options);
+    snapshot.deleteEditorBatchState(keys, options);
   };  
 
   const deleteEditorLine = (key, lineIndex, options) => {
     assertAlive();
-    snapshotService.removeEditorLine(key, lineIndex, options);
+    snapshot.removeEditorLine(key, lineIndex, options);
   };
 
   const saveCursorState = (cursor) => {
@@ -79,7 +79,7 @@ export function createStateApplication(initialState = {}) {
 
   const setPrevEditorState = (clone) => {
     assertAlive();
-    snapshotService.setPrevEditorState(clone);
+    snapshot.setPrevEditorState(clone);
   };
 
   // ----------------------------
@@ -149,7 +149,7 @@ export function createStateApplication(initialState = {}) {
 
     store           = null;
     cursorStore     = null;
-    snapshotService = null;
+    snapshot = null;
   };
 
   // ----------------------------
