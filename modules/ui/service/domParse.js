@@ -1,4 +1,4 @@
-export function createDOMParseService() {
+export function domParse() {
 
     /**
      * 라인 DOM을 분석하여 데이터 모델(Chunks)로 변환

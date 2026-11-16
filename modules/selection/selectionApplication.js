@@ -1,6 +1,6 @@
-import { keyManager } from "./service/keyManager.js";
-import { rangeManager } from "./service/rangeManager.js";
-import { RestoreCursorManager } from "./service/restoreCursorManager.js";
+import { createKeyManager } from "./service/keyManager.js";
+import { createRangeManager } from "./service/rangeManager.js";
+import { createCursorManager } from "./service/restoreCursorManager.js";
 
 export function createSelectionApplication({ rootId }) {
     let lastValidPos      = null;
@@ -10,8 +10,9 @@ export function createSelectionApplication({ rootId }) {
     
     const root           = document.getElementById(rootId);
     // 외부 서비스 주입
-    const keyService     = keyManager(root);
-    const rangeService   = rangeManager(root);
+    const keyService     = createKeyManager(root);
+    const rangeService   = createRangeManager(root);
+    const restoreService = createCursorManager(root);
 
     function getMainKey() {
         return `${rootId}-content`;
@@ -115,7 +116,6 @@ export function createSelectionApplication({ rootId }) {
         return 'range';
     }
 
-    const restoreService = RestoreCursorManager(root);    
 
     function restoreCursor(cursorData) {
         restoreService.restoreCursor(cursorData, getActiveContainer());

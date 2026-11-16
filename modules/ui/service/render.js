@@ -1,4 +1,4 @@
-export function createRenderService({ rootId, rendererRegistry }) { 
+export function createRenderer({ rootId, rendererRegistry }) { 
 
     const getTagNameForLine = (lineData, targetKey) => {
         if (!lineData || !lineData.chunks) return "P";
@@ -166,7 +166,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
             }
             Object.assign(chunkEl.style, chunkData.style || {});
         } else {
-            this.renderLine(lineIndex, chunkData, targetKey);
+            renderLine(lineIndex, chunkData, targetKey, null, true);
         }
     }
 
@@ -210,7 +210,7 @@ export function createRenderService({ rootId, rendererRegistry }) {
         if (!container) return;
 
         state.forEach((line, i) => {
-            this.renderLine(i, line, targetKey, null, true);
+            renderLine(i, line, targetKey, null, true);
         });
         
         syncLineIndexes(container);

@@ -1,6 +1,6 @@
 // application/uiApplication.js
-import { createRenderService } from "../service/renderService.js";
-import { createDOMParseService } from "../service/domParserService.js";
+import { createRenderer } from "../service/render.js";
+import { domParse } from "../service/domParse.js";
 
 /**
  * UI 애플리케이션을 생성합니다.
@@ -17,9 +17,9 @@ export function createUiApplication({ rootId, rendererRegistry }) {
     throw new Error(`❌ UI root element not found: ${rootId}`);
   }
 
-  // 💡 renderService 생성 시 rootId 전달 (기본 컨테이너로 설정)
-  const renderService        = createRenderService({ rootId, rendererRegistry });
-  const domParserService     = createDOMParseService();
+  // 💡 renderer 생성 시 rootId 전달 (기본 컨테이너로 설정)
+  const renderer  = createRenderer({ rootId, rendererRegistry });
+  const domParser = domParse();
 
   let destroyed = false;
 
@@ -60,44 +60,44 @@ export function createUiApplication({ rootId, rendererRegistry }) {
      */
     render(editorState, targetKey = rootId) {
       assertAlive();
-      renderService.render(editorState, targetKey);
+      renderer.render(editorState, targetKey);
     },
 
     renderLine(lineIndex, lineData, targetKey = rootId, externalPool = null, skipSync, options) {
       assertAlive();
-      renderService.renderLine(lineIndex, lineData, targetKey, externalPool, skipSync, options);
+      renderer.renderLine(lineIndex, lineData, targetKey, externalPool, skipSync, options);
     },
 
     renderChunk(lineIndex, chunkIndex, chunkData, targetKey = rootId) {
       assertAlive();
-      renderService.renderChunk(lineIndex, chunkIndex, chunkData, targetKey);
+      renderer.renderChunk(lineIndex, chunkIndex, chunkData, targetKey);
     },
 
     ensureFirstLine(targetKey = rootId) {
       assertAlive();
-      renderService.ensureFirstLine(targetKey);
+      renderer.ensureFirstLine(targetKey);
     },
 
     shiftLinesDown(fromIndex, targetKey = rootId) {
       assertAlive();
-      renderService.shiftLinesDown(fromIndex, targetKey);
+      renderer.shiftLinesDown(fromIndex, targetKey);
     },
 
     // ───────── DOM 구조 조작 ─────────
 
     insertLine(lineIndex, align, targetKey = rootId) {
       assertAlive();
-      renderService.insertLine(lineIndex, align, targetKey);
+      renderer.insertLine(lineIndex, align, targetKey);
     },
 
     insertLineAfter(refEl, newIndex, align, targetKey) {
       assertAlive();
-      renderService.insertLineAfter(refEl, newIndex, align, targetKey);
+      renderer.insertLineAfter(refEl, newIndex, align, targetKey);
     },
 
     removeLine(lineIndex, targetKey = rootId) {
       assertAlive();
-      renderService.removeLine(lineIndex, targetKey);
+      renderer.removeLine(lineIndex, targetKey);
     },
 
     // ───────── DOM → Model 파싱 ─────────
@@ -110,7 +110,7 @@ export function createUiApplication({ rootId, rendererRegistry }) {
       lineIndex
     ) {
       assertAlive();
-      return domParserService.parseLineDOM(
+      return domParser.parseLineDOM(
         parentDom,
         currentLineChunks,
         selectionContainer,

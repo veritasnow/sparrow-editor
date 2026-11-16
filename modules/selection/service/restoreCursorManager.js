@@ -1,7 +1,7 @@
 /**
  * 가상 스크롤 및 중첩 컨테이너(테이블 등) 대응 커서 복원 서비스
  */
-export function RestoreCursorManager(root) {
+export function createCursorManager(root) {
     
     let isRestoringCursor = false;
 

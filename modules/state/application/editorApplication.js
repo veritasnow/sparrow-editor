@@ -1,7 +1,7 @@
 // application/editorApplication.js
 import { createHistoryStore } from "../store/historyStore.js";
 import { createCursorHistoryStore } from "../store/cursorHistoryStore.js";
-import { editorSnapshot } from "../service/editorSnapshot.js";
+import { createEditorSnapshot } from "../service/editorSnapshot.js";
 
 export function createStateApplication(initialState = {}) {
   // ----------------------------
@@ -12,7 +12,7 @@ export function createStateApplication(initialState = {}) {
   // initialState는 이제 { "root-main": [...] } 와 같은 Map 구조여야 합니다.
   let store           = createHistoryStore(initialState);
   let cursorStore     = createCursorHistoryStore(null);
-  let snapshot        = editorSnapshot(store);
+  let snapshot        = createEditorSnapshot(store);
 
   function assertAlive() {
     if (destroyed) {

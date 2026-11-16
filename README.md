@@ -336,7 +336,7 @@ sparrow-editor
 │     ├─ application
 │     │  └─ uiApplication.js
 │     └─ service
-│        ├─ domParserService.js
+│        ├─ domParser.js
 │        └─ renderService.js
 ├─ README.md
 ├─ sparrow-editor.js

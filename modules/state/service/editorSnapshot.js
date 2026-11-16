@@ -1,7 +1,7 @@
 /**
  * 에디터 상태 저장 및 삭제 관리 서비스
  */
-export function editorSnapshot(store) {
+export function createEditorSnapshot(store) {
   // --- [Internal State] ---
   let prevSnapshot = null;
 
